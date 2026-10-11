@@ -119,7 +119,7 @@ def permissions_view(request):
 
     if request.method == 'POST' and request.POST.get('table') == 'users':
         if not can_manage_users:
-            messages.warning(request, "Acesso negado: usuário sem permissão para gerenciar usuários.")
+            messages.warning(request, "Acesso negado: você não tem permissão para gerenciar usuários.")
             return redirect(f"/permissions/?user_id={selected_user.id}" if selected_user else "/permissions/")
 
         action = request.POST.get('action')
@@ -241,8 +241,8 @@ def permissions_view(request):
         if request.user.user_type != USER_TYPE_ADMINISTRATOR:
             messages.warning(
                 request,
-                "Acesso negado: somente administrator pode alterar permissões "
-                "e acessos por titular.",
+                "Acesso negado: você não tem permissão para alterar permissões "
+                "e acessos por titular (somente administrator).",
             )
             return redirect(f"/permissions/?user_id={selected_user.id}")
 
@@ -446,7 +446,7 @@ def settings_profile_view(request):
 def settings_update_theme_view(request):
     if request.method == 'POST':
         new_theme = update_user_ui_theme(request.user, request.POST.get('theme', ''))
-        messages.success(request, f"Tema alterado para: {UI_THEME_LABELS.get(new_theme, 'Light')}")
+        messages.success(request, f"Tema alterado para: {UI_THEME_LABELS.get(new_theme, 'Light')}.")
     return redirect('core:settings_profile')
 
 
@@ -606,7 +606,7 @@ def settings_close_month_view(request):
         month = int(request.POST.get('month'))
         account = FinancialAccount.objects.get(id=account_id)
         if not can_access_account(request.user, account.id, "update"):
-            raise ValueError("Acesso negado: usuário sem permissão para fechar este mês.")
+            raise ValueError("Acesso negado: você não tem permissão para fechar este mês.")
         # O saldo é calculado dentro de `close_month`, depois do lock da conta.
         closed = close_month(
             account,
@@ -643,7 +643,7 @@ def settings_reopen_month_view(request):
         month = int(request.POST.get('month'))
         account = FinancialAccount.objects.get(id=account_id)
         if not can_access_account(request.user, account.id, "update"):
-            raise ValueError("Acesso negado: usuário sem permissão para reabrir este mês.")
+            raise ValueError("Acesso negado: você não tem permissão para reabrir este mês.")
         reopened = reopen_month(
             account,
             year,
