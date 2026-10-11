@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static icons dict_filters navegacao %}
+{% load i18n static icons dict_filters navegacao %}
 
-{% block title %}Segurança • Permissões{% endblock %}
+{% block title %}{% trans "Segurança • Permissões" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/permissions.css' %}">
@@ -10,10 +10,10 @@
 {% block page_header %}
 <div class="permissions-header">
     <div>
-        <h1>Administração de permissões</h1>
+        <h1>{% trans "Administração de permissões" %}</h1>
     </div>
     <form method="get" class="permissions-user-form" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
-        <label for="user_id">Usuário
+        <label for="user_id">{% trans "Usuário" %}
             <select id="user_id" name="user_id" class="form-control">
                 {% for u in users %}
                 <option value="{{ u.id }}" {% if selected_user and selected_user.id == u.id %}selected{% endif %}>{{ u.username }} — {{ u.get_user_type_display }}</option>
@@ -33,40 +33,40 @@
     não cifrado. Ver `_render_permissions` em `core/views.py`.
     {% endcomment %}
     <div class="section-card full-width senha-temporaria" role="status">
-        <h4>Senha temporária de {{ senha_de }}</h4>
+        <h4>{% blocktrans trimmed with nome=senha_de %}Senha temporária de {{ nome }}{% endblocktrans %}</h4>
         <p><code class="senha-temporaria-valor">{{ senha_temporaria }}</code></p>
         <p class="permissions-help">
-            Anote agora: ela não será mostrada de novo. Quem entrar com ela deverá
-            trocá-la antes de usar o sistema.
+            {% blocktrans trimmed %}Anote agora: ela não será mostrada de novo. Quem entrar com ela deverá
+            trocá-la antes de usar o sistema.{% endblocktrans %}
         </p>
     </div>
     {% endif %}
 
     {% if not selected_user %}
     <div class="section-card full-width">
-        <div class="empty-state">Cadastre pelo menos um usuário antes de configurar permissões.</div>
+        <div class="empty-state">{% trans "Cadastre pelo menos um usuário antes de configurar permissões." %}</div>
     </div>
     {% else %}
 
     <div class="section-card full-width permissions-compact-card">
-        <h4>Resumo efetivo do usuário selecionado</h4>
-        <p class="permissions-help">Este resumo considera permissões marcadas e dependências automáticas. Administradores mantêm as permissões funcionais e o acesso a titulares definidos pela regra sistêmica, mas também precisam de concessão explícita para usar uma conta como destino de transferência.</p>
+        <h4>{% trans "Resumo efetivo do usuário selecionado" %}</h4>
+        <p class="permissions-help">{% trans "Este resumo considera permissões marcadas e dependências automáticas. Administradores mantêm as permissões funcionais e o acesso a titulares definidos pela regra sistêmica, mas também precisam de concessão explícita para usar uma conta como destino de transferência." %}</p>
         <div class="summary-grid">
-            <div class="summary-card"><strong>{{ summary.owner_view_count }}</strong><span>titulares com visualização</span></div>
-            <div class="summary-card"><strong>{{ summary.owner_create_count }}</strong><span>titulares com criação</span></div>
-            <div class="summary-card"><strong>{{ summary.owner_update_count }}</strong><span>titulares com edição</span></div>
-            <div class="summary-card"><strong>{{ summary.owner_delete_count }}</strong><span>titulares com exclusão</span></div>
-            <div class="summary-card"><strong>{{ summary.function_allowed_count }}/{{ summary.function_total_count }}</strong><span>permissões funcionais marcadas</span></div>
-            <div class="summary-card"><strong>{{ summary.critical_allowed_count }}/{{ summary.critical_total_count }}</strong><span>permissões críticas marcadas</span></div>
+            <div class="summary-card"><strong>{{ summary.owner_view_count }}</strong><span>{% trans "titulares com visualização" %}</span></div>
+            <div class="summary-card"><strong>{{ summary.owner_create_count }}</strong><span>{% trans "titulares com criação" %}</span></div>
+            <div class="summary-card"><strong>{{ summary.owner_update_count }}</strong><span>{% trans "titulares com edição" %}</span></div>
+            <div class="summary-card"><strong>{{ summary.owner_delete_count }}</strong><span>{% trans "titulares com exclusão" %}</span></div>
+            <div class="summary-card"><strong>{{ summary.function_allowed_count }}/{{ summary.function_total_count }}</strong><span>{% trans "permissões funcionais marcadas" %}</span></div>
+            <div class="summary-card"><strong>{{ summary.critical_allowed_count }}/{{ summary.critical_total_count }}</strong><span>{% trans "permissões críticas marcadas" %}</span></div>
         </div>
         {% if summary.missing_recommended_permissions %}
-        <p class="permissions-help">Faltam permissões comuns do perfil Operador: {{ summary.missing_recommended_permissions|join:", " }}.</p>
+        <p class="permissions-help">{% blocktrans trimmed with permissoes=summary.missing_recommended_permissions|join:", " %}Faltam permissões comuns do perfil Operador: {{ permissoes }}.{% endblocktrans %}</p>
         {% endif %}
     </div>
 
     <div class="section-card full-width permissions-compact-card">
-        <h4>Perfis rápidos</h4>
-        <p class="permissions-help">Use como ponto de partida. Após aplicar um perfil, ajuste permissões individuais se necessário.</p>
+        <h4>{% trans "Perfis rápidos" %}</h4>
+        <p class="permissions-help">{% trans "Use como ponto de partida. Após aplicar um perfil, ajuste permissões individuais se necessário." %}</p>
         <div class="quick-profiles">
             {% for profile_key, profile in profile_definitions.items %}
             <form method="post" class="profile-card">
@@ -76,7 +76,7 @@
                 <input type="hidden" name="profile_key" value="{{ profile_key }}">
                 <h5>{{ profile.label }}</h5>
                 <p>{{ profile.description }}</p>
-                {% if pode_conceder %}<button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="Aplicar o perfil {{ profile.label }} a este usuário?" data-sa-titulo="Confirmar perfil" data-sa-severidade="warning" data-sa-ok="Aplicar">Aplicar perfil {{ profile.label }}</button>{% endif %}
+                {% if pode_conceder %}<button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="{% blocktrans trimmed with rotulo=profile.label %}Aplicar o perfil {{ rotulo }} a este usuário?{% endblocktrans %}" data-sa-titulo="{% trans 'Confirmar perfil' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Aplicar' %}">{% blocktrans trimmed with rotulo=profile.label %}Aplicar perfil {{ rotulo }}{% endblocktrans %}</button>{% endif %}
             </form>
             {% endfor %}
         </div>
@@ -85,41 +85,41 @@
     <div class="permissions-paired-grid">
         {% if can_manage_users %}
         <div class="section-card">
-            <div class="section-header"><h4>Usuários</h4></div>
+            <div class="section-header"><h4>{% trans "Usuários" %}</h4></div>
             <form method="post" class="add-form">
                 {% csrf_token %}
                 <input type="hidden" name="table" value="users">
                 <input type="hidden" name="action" value="add">
-                <input type="text" name="username" aria-label="Nome do usuário" placeholder="Nome do usuário…" maxlength="150" required data-ui="flex-1">
-                <select name="user_type" aria-label="Tipo de usuário" required data-ui="w-170">
+                <input type="text" name="username" aria-label="{% trans 'Nome do usuário' %}" placeholder="{% trans 'Nome do usuário…' %}" maxlength="150" required data-ui="flex-1">
+                <select name="user_type" aria-label="{% trans 'Tipo de usuário' %}" required data-ui="w-170">
                     {% for user_type in user_type_options %}
                     <option value="{{ user_type }}">{{ user_type }}</option>
                     {% endfor %}
                 </select>
-                <input type="password" name="password" aria-label="Senha inicial" placeholder="Senha inicial…" maxlength="256" required data-ui="flex-1">
-                <input type="password" name="password_confirm" aria-label="Confirmar senha inicial" placeholder="Confirmar senha…" maxlength="256" required data-ui="flex-1">
-                <button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="Cadastrar este usuário?" data-sa-titulo="Confirmar usuário" data-sa-severidade="info" data-sa-ok="Cadastrar">{% icon 'plus' %}<span>Incluir</span></button>
+                <input type="password" name="password" aria-label="{% trans 'Senha inicial' %}" placeholder="{% trans 'Senha inicial…' %}" maxlength="256" required data-ui="flex-1">
+                <input type="password" name="password_confirm" aria-label="{% trans 'Confirmar senha inicial' %}" placeholder="{% trans 'Confirmar senha…' %}" maxlength="256" required data-ui="flex-1">
+                <button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="{% trans 'Cadastrar este usuário?' %}" data-sa-titulo="{% trans 'Confirmar usuário' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Cadastrar' %}">{% icon 'plus' %}<span>{% trans "Incluir" %}</span></button>
             </form>
             <div class="table-container" data-ui="table-plain-flex">
                 <table>
-                    <thead><tr><th>Nome</th><th>Tipo</th><th data-ui="w-100">Ações</th></tr></thead>
+                    <thead><tr><th>{% trans "Nome" %}</th><th>{% trans "Tipo" %}</th><th data-ui="w-100">{% trans "Ações" %}</th></tr></thead>
                     <tbody>
                         {% for u in users %}
                         <tr>
                             <td>{{ u.username }}</td>
                             <td>{{ u.get_user_type_display }}</td>
                             <td class="actions">
-                                <button type="button" class="btn btn-primary btn-sm" data-toggle-edit="edit-user-{{ u.id }}">{% icon 'edit' %}<span>Editar</span></button>
+                                <button type="button" class="btn btn-primary btn-sm" data-toggle-edit="edit-user-{{ u.id }}">{% icon 'edit' %}<span>{% trans "Editar" %}</span></button>
                                 <form method="post" data-ui="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="table" value="users">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="{{ u.id }}">
                                     <button type="submit" class="btn btn-danger btn-sm"
-                                            data-sa-confirmar="Excluir usuário {{ u.username }}? Esta ação não poderá ser desfeita."
-                                            data-sa-titulo="Excluir usuário"
+                                            data-sa-confirmar="{% blocktrans trimmed with nome=u.username %}Excluir usuário {{ nome }}? Esta ação não poderá ser desfeita.{% endblocktrans %}"
+                                            data-sa-titulo="{% trans 'Excluir usuário' %}"
                                             data-sa-severidade="error"
-                                            data-sa-ok="Excluir">{% icon 'delete' %}<span>Excluir</span></button>
+                                            data-sa-ok="{% trans 'Excluir' %}">{% icon 'delete' %}<span>{% trans "Excluir" %}</span></button>
                                 </form>
                                 {% comment %}
                                 Sem campo de senha: quem administra não escolhe mais a senha
@@ -132,10 +132,10 @@
                                     <input type="hidden" name="action" value="reset_password">
                                     <input type="hidden" name="id" value="{{ u.id }}">
                                     <button type="submit" class="btn btn-secondary btn-sm"
-                                            data-sa-confirmar="Redefinir a senha de {{ u.username }}? O sistema vai gerar uma senha temporária, mostrada uma única vez."
-                                            data-sa-titulo="Redefinir senha"
+                                            data-sa-confirmar="{% blocktrans trimmed with nome=u.username %}Redefinir a senha de {{ nome }}? O sistema vai gerar uma senha temporária, mostrada uma única vez.{% endblocktrans %}"
+                                            data-sa-titulo="{% trans 'Redefinir senha' %}"
                                             data-sa-severidade="warning"
-                                            data-sa-ok="Redefinir"><span>Redefinir senha</span></button>
+                                            data-sa-ok="{% trans 'Redefinir' %}"><span>{% trans "Redefinir senha" %}</span></button>
                                 </form>
                             </td>
                         </tr>
@@ -145,23 +145,23 @@
                                 <input type="hidden" name="table" value="users">
                                 <input type="hidden" name="action" value="edit">
                                 <input type="hidden" name="id" value="{{ u.id }}">
-                                <input type="text" name="username" value="{{ u.username }}" aria-label="Nome do usuário" maxlength="150" required data-ui="flex-1">
-                                <select name="user_type" aria-label="Tipo de usuário" required data-ui="w-170">
+                                <input type="text" name="username" value="{{ u.username }}" aria-label="{% trans 'Nome do usuário' %}" maxlength="150" required data-ui="flex-1">
+                                <select name="user_type" aria-label="{% trans 'Tipo de usuário' %}" required data-ui="w-170">
                                     {% for user_type in user_type_options %}
                                     <option value="{{ user_type }}" {% if u.user_type == user_type %}selected{% endif %}>{{ user_type }}</option>
                                     {% endfor %}
                                 </select>
-                                <input type="password" name="password" aria-label="Nova senha" placeholder="Nova senha (opcional)" maxlength="256" data-ui="flex-1">
-                                <input type="password" name="password_confirm" aria-label="Confirmar nova senha" placeholder="Confirmar nova senha" maxlength="256" data-ui="flex-1">
+                                <input type="password" name="password" aria-label="{% trans 'Nova senha' %}" placeholder="{% trans 'Nova senha (opcional)' %}" maxlength="256" data-ui="flex-1">
+                                <input type="password" name="password_confirm" aria-label="{% trans 'Confirmar nova senha' %}" placeholder="{% trans 'Confirmar nova senha' %}" maxlength="256" data-ui="flex-1">
                                 <label class="checkbox-label">
                                     <input type="checkbox" name="must_change_password" {% if u.must_change_password %}checked{% endif %}>
-                                    Trocar no próximo login
+                                    {% trans "Trocar no próximo login" %}
                                 </label>
-                                <button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="Salvar as alterações deste usuário?" data-sa-titulo="Confirmar usuário" data-sa-severidade="info" data-sa-ok="Salvar">{% icon 'save' %}<span>Salvar</span></button>
+                                <button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="{% trans 'Salvar as alterações deste usuário?' %}" data-sa-titulo="{% trans 'Confirmar usuário' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
                             </form>
                         </td></tr>
                         {% empty %}
-                        <tr><td colspan="3" class="empty-state">Nenhum usuário cadastrado.</td></tr>
+                        <tr><td colspan="3" class="empty-state">{% trans "Nenhum usuário cadastrado." %}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -172,8 +172,8 @@
         <div class="section-card">
             <div class="section-header" data-ui="section-header-start">
                 <div>
-                    <h4>Usuário × titular</h4>
-                    <p class="permissions-help">Controla o escopo dos dados financeiros. Criar, editar ou excluir pressupõe visualizar o titular.</p>
+                    <h4>{% trans "Usuário × titular" %}</h4>
+                    <p class="permissions-help">{% trans "Controla o escopo dos dados financeiros. Criar, editar ou excluir pressupõe visualizar o titular." %}</p>
                 </div>
             </div>
             <form method="post">
@@ -181,70 +181,69 @@
                 <input type="hidden" name="action" value="save_owner_access">
                 <input type="hidden" name="user_id" value="{{ selected_user.id }}">
                 <div class="matrix-toolbar">
-                    <input type="search" class="filter-input" data-filter-target="owner-row" aria-label="Filtrar titulares" placeholder="Filtrar titulares…">
+                    <input type="search" class="filter-input" data-filter-target="owner-row" aria-label="{% trans 'Filtrar titulares' %}" placeholder="{% trans 'Filtrar titulares…' %}">
                     <div class="button-row">
-                        <button type="button" class="btn btn-sm" data-owner-bulk="view">Marcar ver</button>
-                        <button type="button" class="btn btn-sm" data-owner-bulk="create">Marcar criar</button>
-                        <button type="button" class="btn btn-sm" data-owner-bulk="update">Marcar editar</button>
-                        <button type="button" class="btn btn-sm" data-owner-bulk="delete">Marcar excluir</button>
-                        <button type="button" class="btn btn-warning btn-sm" data-owner-clear>Limpar titulares</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="view">{% trans "Marcar ver" %}</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="create">{% trans "Marcar criar" %}</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="update">{% trans "Marcar editar" %}</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="delete">{% trans "Marcar excluir" %}</button>
+                        <button type="button" class="btn btn-warning btn-sm" data-owner-clear>{% trans "Limpar titulares" %}</button>
                     </div>
                 </div>
                 <div class="table-container" data-ui="table-plain">
                     <table class="matrix-table">
-                        <thead><tr><th>Titular</th><th>Ver</th><th>Criar</th><th>Editar</th><th>Excluir</th></tr></thead>
+                        <thead><tr><th>{% trans "Titular" %}</th><th>{% trans "Ver" %}</th><th>{% trans "Criar" %}</th><th>{% trans "Editar" %}</th><th>{% trans "Excluir" %}</th></tr></thead>
                         <tbody>
                             {% for owner in owners %}
                             {% with access=owner_access_by_owner_id|get_item:owner.id %}
                             <tr data-filter-row="owner-row">
                                 <td>{{ owner.name }}</td>
-                                <td><input type="checkbox" data-owner-action="view" name="owner_{{ owner.id }}_view" aria-label="Permitir ver {{ owner.name }}" {% if access.can_view %}checked{% endif %}></td>
-                                <td><input type="checkbox" data-owner-action="create" name="owner_{{ owner.id }}_create" aria-label="Permitir criar para {{ owner.name }}" {% if access.can_create %}checked{% endif %}></td>
-                                <td><input type="checkbox" data-owner-action="update" name="owner_{{ owner.id }}_update" aria-label="Permitir editar {{ owner.name }}" {% if access.can_update %}checked{% endif %}></td>
-                                <td><input type="checkbox" data-owner-action="delete" name="owner_{{ owner.id }}_delete" aria-label="Permitir excluir {{ owner.name }}" {% if access.can_delete %}checked{% endif %}></td>
+                                <td><input type="checkbox" data-owner-action="view" name="owner_{{ owner.id }}_view" aria-label="{% blocktrans trimmed with titular=owner.name %}Permitir ver {{ titular }}{% endblocktrans %}" {% if access.can_view %}checked{% endif %}></td>
+                                <td><input type="checkbox" data-owner-action="create" name="owner_{{ owner.id }}_create" aria-label="{% blocktrans trimmed with titular=owner.name %}Permitir criar para {{ titular }}{% endblocktrans %}" {% if access.can_create %}checked{% endif %}></td>
+                                <td><input type="checkbox" data-owner-action="update" name="owner_{{ owner.id }}_update" aria-label="{% blocktrans trimmed with titular=owner.name %}Permitir editar {{ titular }}{% endblocktrans %}" {% if access.can_update %}checked{% endif %}></td>
+                                <td><input type="checkbox" data-owner-action="delete" name="owner_{{ owner.id }}_delete" aria-label="{% blocktrans trimmed with titular=owner.name %}Permitir excluir {{ titular }}{% endblocktrans %}" {% if access.can_delete %}checked{% endif %}></td>
                             </tr>
                             {% endwith %}
                             {% empty %}
-                            <tr><td colspan="5" class="empty-state">Nenhum titular cadastrado.</td></tr>
+                            <tr><td colspan="5" class="empty-state">{% trans "Nenhum titular cadastrado." %}</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 <div class="form-footer">
-                    {% if pode_conceder %}<button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar os acessos por titular?" data-sa-titulo="Confirmar permissões" data-sa-severidade="warning" data-sa-ok="Salvar">Salvar acessos por titular</button>{% endif %}
+                    {% if pode_conceder %}<button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar os acessos por titular?' %}" data-sa-titulo="{% trans 'Confirmar permissões' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar acessos por titular" %}</button>{% endif %}
                 </div>
             </form>
         </div>
     </div>
 
     <div class="section-card full-width">
-        <div class="section-header"><div><h4>Usuário × conta destino de transferência</h4><p class="permissions-help">A concessão é obrigatória inclusive para administradores e permite apenas usar a conta como destino.</p></div></div>
+        <div class="section-header"><div><h4>{% trans "Usuário × conta destino de transferência" %}</h4><p class="permissions-help">{% trans "A concessão é obrigatória inclusive para administradores e permite apenas usar a conta como destino." %}</p></div></div>
         <form method="post">
             {% csrf_token %}<input type="hidden" name="action" value="save_transfer_destinations"><input type="hidden" name="user_id" value="{{ selected_user.id }}">
-            <div class="table-container" data-ui="table-plain"><table class="matrix-table"><thead><tr><th>Conta destino</th><th>Permitido</th></tr></thead><tbody>
-            {% for account in transfer_destination_accounts %}<tr><td>{{ account.owner.name }} / {{ account.institution.institution_name }} / {{ account.account_name }}</td><td><input type="checkbox" name="transfer_destination_{{ account.id }}" aria-label="Permitir {{ account.owner.name }} / {{ account.institution.institution_name }} / {{ account.account_name }} como destino de transferência" {% if account.id in transfer_destination_access_ids %}checked{% endif %}></td></tr>{% empty %}<tr><td colspan="2">Nenhuma conta cadastrada.</td></tr>{% endfor %}
+            <div class="table-container" data-ui="table-plain"><table class="matrix-table"><thead><tr><th>{% trans "Conta destino" %}</th><th>{% trans "Permitido" %}</th></tr></thead><tbody>
+            {% for account in transfer_destination_accounts %}<tr><td>{{ account.owner.name }} / {{ account.institution.institution_name }} / {{ account.account_name }}</td><td><input type="checkbox" name="transfer_destination_{{ account.id }}" aria-label="{% blocktrans trimmed with titular=account.owner.name instituicao=account.institution.institution_name conta=account.account_name %}Permitir {{ titular }} / {{ instituicao }} / {{ conta }} como destino de transferência{% endblocktrans %}" {% if account.id in transfer_destination_access_ids %}checked{% endif %}></td></tr>{% empty %}<tr><td colspan="2">{% trans "Nenhuma conta cadastrada." %}</td></tr>{% endfor %}
             </tbody></table></div>
-            {% if pode_conceder %}<div class="form-footer"><button type="submit" class="btn btn-primary">Salvar destinos permitidos</button></div>{% endif %}
+            {% if pode_conceder %}<div class="form-footer"><button type="submit" class="btn btn-primary">{% trans "Salvar destinos permitidos" %}</button></div>{% endif %}
         </form>
     </div>
 
     <div class="section-card full-width">
-        <h4>Regularizar recorrências internas legadas</h4>
-        <p class="permissions-help">Atribua o usuário selecionado somente quando ele já possuir concessão ao destino. Sem responsável, a recorrência permanece pausada.</p>
-        {% for operation in legacy_transfer_operations %}<form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="action" value="assign_operation_responsible"><input type="hidden" name="user_id" value="{{ selected_user.id }}"><input type="hidden" name="operation_id" value="{{ operation.id }}"><span>{{ operation.operation_key }}</span>{% if pode_conceder %}<button type="submit" class="btn btn-sm">Atribuir responsável</button>{% endif %}</form>{% empty %}<p class="permissions-help">Não há recorrências internas sem responsável.</p>{% endfor %}
+        <h4>{% trans "Regularizar recorrências internas legadas" %}</h4>
+        <p class="permissions-help">{% trans "Atribua o usuário selecionado somente quando ele já possuir concessão ao destino. Sem responsável, a recorrência permanece pausada." %}</p>
+        {% for operation in legacy_transfer_operations %}<form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="action" value="assign_operation_responsible"><input type="hidden" name="user_id" value="{{ selected_user.id }}"><input type="hidden" name="operation_id" value="{{ operation.id }}"><span>{{ operation.operation_key }}</span>{% if pode_conceder %}<button type="submit" class="btn btn-sm">{% trans "Atribuir responsável" %}</button>{% endif %}</form>{% empty %}<p class="permissions-help">{% trans "Não há recorrências internas sem responsável." %}</p>{% endfor %}
     </div>
 
     <div class="section-card full-width">
         <div class="section-header" data-ui="section-header-start">
             <div>
-                <h4>Usuário × permissões funcionais</h4>
-                <p class="permissions-help">Controla quais telas e ações o usuário pode executar. Permissões críticas ficam destacadas.</p>
+                <h4>{% trans "Usuário × permissões funcionais" %}</h4>
+                <p class="permissions-help">{% trans "Controla quais telas e ações o usuário pode executar. Permissões críticas ficam destacadas." %}</p>
             </div>
         </div>
 
         <div class="warning-panel">
-            Permissões críticas incluem exclusão de lançamentos, otimização de banco, gestão de usuários e gestão de permissões.
-            O sistema impede que o usuário ativo remova o próprio acesso a <span class="permission-key">permissions.manage</span>.
+            {% blocktrans trimmed %}Permissões críticas incluem exclusão de lançamentos, otimização de banco, gestão de usuários e gestão de permissões. O sistema impede que o usuário ativo remova o próprio acesso a{% endblocktrans %} <span class="permission-key">permissions.manage</span>.
         </div>
 
         <form method="post">
@@ -252,10 +251,10 @@
             <input type="hidden" name="action" value="save_function_permissions">
             <input type="hidden" name="user_id" value="{{ selected_user.id }}">
             <div class="matrix-toolbar">
-                <input type="search" class="filter-input" data-filter-target="permission-row" aria-label="Filtrar permissões" placeholder="Filtrar permissões…">
+                <input type="search" class="filter-input" data-filter-target="permission-row" aria-label="{% trans 'Filtrar permissões' %}" placeholder="{% trans 'Filtrar permissões…' %}">
                 <div class="button-row">
-                    <button type="button" class="btn btn-sm" data-permission-bulk="all">Marcar todas visíveis</button>
-                    <button type="button" class="btn btn-warning btn-sm" data-permission-clear>Limpar visíveis</button>
+                    <button type="button" class="btn btn-sm" data-permission-bulk="all">{% trans "Marcar todas visíveis" %}</button>
+                    <button type="button" class="btn btn-warning btn-sm" data-permission-clear>{% trans "Limpar visíveis" %}</button>
                 </div>
             </div>
             <div class="table-container" data-ui="table-plain">
@@ -265,9 +264,9 @@
                 <table class="matrix-table permission-table-root">
                     <thead>
                         <tr>
-                            <th data-ui="w-347">Permissão</th>
-                            <th>Descrição</th>
-                            <th data-ui="w-110">Permitido</th>
+                            <th data-ui="w-347">{% trans "Permissão" %}</th>
+                            <th>{% trans "Descrição" %}</th>
+                            <th data-ui="w-110">{% trans "Permitido" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -282,20 +281,20 @@
                         <tr data-filter-row="permission-row" class="permission-row{% if group.has_subgroup %} permission-row-child{% endif %}{% if is_critical %} permission-critical{% endif %}">
                             <td class="permission-key">
                                 {{ permission.name }}
-                                {% if is_critical %}<span class="critical-badge">Crítica</span>{% endif %}
+                                {% if is_critical %}<span class="critical-badge">{% trans "Crítica" %}</span>{% endif %}
                             </td>
                             <td class="permission-description">{{ permission.description }}</td>
                             <td>
                                 {% if protect_self_permissions_manage and permission.name == 'permissions.manage' %}
                                 <input type="hidden" name="permission_{{ permission.name }}" value="on">
-                                <input type="checkbox" data-permission-checkbox data-permission-key="{{ permission.name }}" data-protected-permission="permissions.manage" checked disabled aria-disabled="true" aria-label="Permissão {{ permission.name }}" title="Você não pode remover o próprio acesso a permissions.manage.">
+                                <input type="checkbox" data-permission-checkbox data-permission-key="{{ permission.name }}" data-protected-permission="permissions.manage" checked disabled aria-disabled="true" aria-label="{% blocktrans trimmed with chave=permission.name %}Permissão {{ chave }}{% endblocktrans %}" title="{% trans 'Você não pode remover o próprio acesso a permissions.manage.' %}">
                                 {% else %}
                                 <input type="checkbox"
                                        data-permission-checkbox
                                        data-permission-key="{{ permission.name }}"
                                        {% if implied_keys %}data-implies-permissions="{{ implied_keys|join:"," }}"{% endif %}
                                        name="permission_{{ permission.name }}"
-                                       aria-label="Permissão {{ permission.name }}"
+                                       aria-label="{% blocktrans trimmed with chave=permission.name %}Permissão {{ chave }}{% endblocktrans %}"
                                        {% if permission.name in allowed_permission_keys %}checked{% endif %}>
                                 {% endif %}
                             </td>
@@ -307,11 +306,11 @@
                 </table>
                 {% if section.has_subgroups %}</div>{% endif %}
                 {% empty %}
-                <div class="empty-state">Nenhuma permissão funcional cadastrada.</div>
+                <div class="empty-state">{% trans "Nenhuma permissão funcional cadastrada." %}</div>
                 {% endfor %}
             </div>
             <div class="form-footer">
-                {% if pode_conceder %}<button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar as permissões funcionais?" data-sa-titulo="Confirmar permissões" data-sa-severidade="warning" data-sa-ok="Salvar">Salvar permissões funcionais</button>{% endif %}
+                {% if pode_conceder %}<button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar as permissões funcionais?' %}" data-sa-titulo="{% trans 'Confirmar permissões' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar permissões funcionais" %}</button>{% endif %}
             </div>
         </form>
     </div>
