@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Final
 
+from django.utils.translation import gettext, gettext_lazy
+
 ENTRY_TYPE_INCOME: Final = "receita"
 ENTRY_TYPE_EXPENSE: Final = "despesa"
 VALID_ENTRY_TYPES: Final = (
@@ -20,9 +22,9 @@ VALID_STATUSES: Final = (
     STATUS_REALIZED,
 )
 STATUS_OPTIONS: Final = (
-    (STATUS_PROJECTED, "A vencer"),
-    (STATUS_PENDING, "Vencidos"),
-    (STATUS_REALIZED, "Realizado"),
+    (STATUS_PROJECTED, gettext_lazy("A vencer")),
+    (STATUS_PENDING, gettext_lazy("Vencidos")),
+    (STATUS_REALIZED, gettext_lazy("Realizado")),
 )
 # Os filtros oferecem explicitamente todas as opcoes validas. Evite fatias:
 # uma nova ordenacao poderia retirar silenciosamente um status valido.
@@ -42,9 +44,9 @@ VALID_CATEGORY_KINDS: Final = (
     CATEGORY_KIND_MOVEMENT,
 )
 CATEGORY_KIND_OPTIONS: Final = (
-    (CATEGORY_KIND_MANAGERIAL, "Gerencial (receita ou despesa)"),
-    (CATEGORY_KIND_TRANSFER, "Transferência entre contas"),
-    (CATEGORY_KIND_MOVEMENT, "Movimentação (não é receita nem despesa)"),
+    (CATEGORY_KIND_MANAGERIAL, gettext_lazy("Gerencial (receita ou despesa)")),
+    (CATEGORY_KIND_TRANSFER, gettext_lazy("Transferência entre contas")),
+    (CATEGORY_KIND_MOVEMENT, gettext_lazy("Movimentação (não é receita nem despesa)")),
 )
 # Os dois que não entram em receita nem em despesa gerencial.
 NON_MANAGERIAL_CATEGORY_KINDS: Final = (
@@ -85,8 +87,8 @@ VALID_CURRENCIES: Final = (
     CURRENCY_USD,
 )
 CURRENCY_OPTIONS: Final = (
-    (CURRENCY_BRL, "Real (R$)"),
-    (CURRENCY_USD, "Dólar (US$)"),
+    (CURRENCY_BRL, gettext_lazy("Real (R$)")),
+    (CURRENCY_USD, gettext_lazy("Dólar (US$)")),
 )
 CURRENCY_SYMBOLS: Final = {
     CURRENCY_BRL: "R$",
@@ -110,10 +112,10 @@ class MixedCurrencyError(ValueError):
     def __init__(self, currencies) -> None:
         self.currencies = tuple(sorted(currencies))
         super().__init__(
-            "As contas selecionadas têm moedas diferentes ("
-            + ", ".join(self.currencies)
-            + "), e este sistema não converte moeda. Filtre por uma conta, um "
-            "titular ou uma instituição de uma moeda só."
+            gettext(
+                "As contas selecionadas têm moedas diferentes (%(moedas)s), e este sistema não converte moeda. Filtre por uma conta, um titular ou uma instituição de uma moeda só."
+            )
+            % {"moedas": ", ".join(self.currencies)}
         )
 
 MAX_TRANSACTION_INSTALLMENTS: Final = 48
@@ -125,10 +127,10 @@ VIEW_PENDING: Final = STATUS_PENDING
 VIEW_REALIZED: Final = STATUS_REALIZED
 VIEW_ALL: Final = "todos"
 VIEW_MODE_OPTIONS: Final = (
-    (VIEW_ALL, "Todos os modos"),
-    (VIEW_PROJECTED, "A vencer"),
-    (VIEW_PENDING, "Vencidos"),
-    (VIEW_REALIZED, "Realizado"),
+    (VIEW_ALL, gettext_lazy("Todos os modos")),
+    (VIEW_PROJECTED, gettext_lazy("A vencer")),
+    (VIEW_PENDING, gettext_lazy("Vencidos")),
+    (VIEW_REALIZED, gettext_lazy("Realizado")),
 )
 # O seletor de modo segue integralmente o vocabulario valido acima.
 VIEW_FILTER_MODE_OPTIONS: Final = VIEW_MODE_OPTIONS
@@ -151,9 +153,9 @@ ACCOUNT_KIND_REGULAR: Final = "conta"
 ACCOUNT_KIND_CREDIT_CARD: Final = "cartao_credito"
 ACCOUNT_KIND_INVESTMENT: Final = "aplicacao"
 ACCOUNT_KIND_OPTIONS: Final = (
-    (ACCOUNT_KIND_REGULAR, "Conta"),
-    (ACCOUNT_KIND_CREDIT_CARD, "Cartão de crédito"),
-    (ACCOUNT_KIND_INVESTMENT, "Aplicação"),
+    (ACCOUNT_KIND_REGULAR, gettext_lazy("Conta")),
+    (ACCOUNT_KIND_CREDIT_CARD, gettext_lazy("Cartão de crédito")),
+    (ACCOUNT_KIND_INVESTMENT, gettext_lazy("Aplicação")),
 )
 VALID_ACCOUNT_KINDS: Final = (ACCOUNT_KIND_REGULAR, ACCOUNT_KIND_CREDIT_CARD, ACCOUNT_KIND_INVESTMENT)
 # Os tipos sem dado de cartão: tudo que não é cartão.
@@ -167,8 +169,8 @@ NON_CARD_ACCOUNT_KINDS: Final = (ACCOUNT_KIND_REGULAR, ACCOUNT_KIND_INVESTMENT)
 ACCOUNT_PURPOSE_PERSONAL: Final = "pessoal"
 ACCOUNT_PURPOSE_ADMINISTERED: Final = "administrada"
 ACCOUNT_PURPOSE_OPTIONS: Final = (
-    (ACCOUNT_PURPOSE_PERSONAL, "Pessoal"),
-    (ACCOUNT_PURPOSE_ADMINISTERED, "Administrada (de terceiros)"),
+    (ACCOUNT_PURPOSE_PERSONAL, gettext_lazy("Pessoal")),
+    (ACCOUNT_PURPOSE_ADMINISTERED, gettext_lazy("Administrada (de terceiros)")),
 )
 VALID_ACCOUNT_PURPOSES: Final = (ACCOUNT_PURPOSE_PERSONAL, ACCOUNT_PURPOSE_ADMINISTERED)
 CARD_DAY_MIN: Final = 1
