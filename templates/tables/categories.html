@@ -23,7 +23,7 @@
     <div class="section-header"><h4>Nova categoria</h4></div>
     <form method="post" data-cadastro-htmx="#categoriesTableBody" id="cadastro-form" action="{% url 'transactions:create_category' %}" class="add-form">
         {% csrf_token %}
-        <input type="text" name="category_name" aria-label="Nome da categoria" placeholder="Nome da categoria..." maxlength="100" required data-ui="flex-1">
+        <input type="text" name="category_name" aria-label="Nome da categoria" placeholder="Nome da categoria…" maxlength="100" required data-ui="flex-1">
         <select name="kind" aria-label="Tipo da categoria" required data-ui="w-260">
             {% for value, label in category_kind_options %}
             <option value="{{ value }}">{{ label }}</option>
