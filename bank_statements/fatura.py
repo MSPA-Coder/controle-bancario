@@ -312,10 +312,10 @@ def _categoria_escolhida(plano: Plano, escolhas: dict) -> CashFlowCategory:
         try:
             return CashFlowCategory.objects.get(id=int(escolhida), kind=CATEGORY_KIND_MANAGERIAL)
         except (CashFlowCategory.DoesNotExist, ValueError, TypeError) as exc:
-            raise ValueError(f"Categoria inválida para \"{plano.linha.description}\".") from exc
+            raise ValueError(f"Categoria inválida para “{plano.linha.description}”.") from exc
     if plano.categoria is None:
         raise ValueError(
-            f"Sem categoria para \"{plano.linha.description}\": escolha uma ou cadastre \"Outros\"."
+            f"Sem categoria para “{plano.linha.description}”: escolha uma ou cadastre “Outros”."
         )
     return plano.categoria
 
@@ -367,7 +367,7 @@ def processar(user, batch_id, escolhas: dict, audit_context=None) -> dict[str, i
     lote = lote_de_fatura(user, batch_id, "update")
     conta = lote.account
     if not can_access_account(user, conta.id, "create"):
-        raise ValueError("Acesso negado para lançar neste cartão.")
+        raise ValueError("Acesso negado: você não tem permissão para lançar neste cartão.")
 
     contagem: dict[str, int] = {}
     with db_transaction.atomic():

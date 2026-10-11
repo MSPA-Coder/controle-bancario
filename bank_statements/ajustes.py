@@ -244,7 +244,7 @@ def _converter_em_transferencia(user, spec: dict, relatorio: Relatorio, audit_co
     ):
         raise ValueError(f"O lançamento #{entrada.id} não é um avulso gerencial realizado.")
     if outra.id == entrada.account_id or outra.owner_id != entrada.account.owner_id:
-        raise ValueError("A outra conta tem de ser outra conta do mesmo titular.")
+        raise ValueError("A outra conta deve ser outra conta do mesmo titular.")
     if outra.currency != entrada.account.currency:
         raise ValueError("Transferência entre moedas diferentes é lançada à mão.")
     if not (can_access_account(user, entrada.account_id, "update") and can_access_account(user, outra.id, "create")):
