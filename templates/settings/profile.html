@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static icons dict_filters i18n %}
 
-{% block title %}Configurações • Perfil{% endblock %}
+{% block title %}{% trans "Configurações • Perfil" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/profile.css' %}">
@@ -10,7 +10,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Configurações • Perfil</h1>
+        <h1>{% trans "Configurações • Perfil" %}</h1>
         <p>{% trans "Aparência, idioma, formatos e preferências pessoais de grade." %}</p>
     </div>
 </div>
@@ -18,14 +18,14 @@
 
 {% block content %}
 <div class="section-card">
-    <h3>Aparência</h3>
-    <p>Escolha o tema visual padrão do aplicativo:</p>
+    <h3>{% trans "Aparência" %}</h3>
+    <p>{% trans "Escolha o tema visual padrão do aplicativo:" %}</p>
     <form method="post" action="{% url 'core:settings_update_theme' %}" id="theme-form">
         {% csrf_token %}
         <div class="theme-grid">
             {% for theme_value, theme_label in theme_options.items %}
             <label class="theme-option">
-                <input type="radio" name="theme" value="{{ theme_value }}" aria-label="Tema {{ theme_label }}" {% if current_theme == theme_value %}checked{% endif %}>
+                <input type="radio" name="theme" value="{{ theme_value }}" aria-label="{% blocktrans trimmed with tema=theme_label %}Tema {{ tema }}{% endblocktrans %}" {% if current_theme == theme_value %}checked{% endif %}>
                 <div class="theme-preview preview-{{ theme_value }}"></div>
                 <span class="theme-name">{{ theme_label }}</span>
                 <span class="theme-desc">{{ theme_descriptions|get_item:theme_value }}</span>
@@ -73,15 +73,15 @@
 </div>
 
 <div class="section-card">
-    <h3>Grades</h3>
-    <p>Quantidade de registros exibidos antes da barra de rolagem vertical.</p>
+    <h3>{% trans "Grades" %}</h3>
+    <p>{% trans "Quantidade de registros exibidos antes da barra de rolagem vertical." %}</p>
     <form method="post" action="{% url 'core:settings_update_table_scroll' %}" class="btn-group" data-ui="items-end">
         {% csrf_token %}
         <div class="form-group" data-ui="field-220">
-            <label>Registros antes do scroll</label>
+            <label>{% trans "Registros antes do scroll" %}</label>
             <input type="number" name="table_scroll_rows" class="form-control" min="5" max="200" value="{{ current_table_scroll_rows }}" required>
         </div>
-        <button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar a quantidade de registros da grade?" data-sa-titulo="Confirmar preferência" data-sa-severidade="info" data-sa-ok="Salvar">{% icon 'save' %}<span>Salvar</span></button>
+        <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar a quantidade de registros da grade?' %}" data-sa-titulo="{% trans 'Confirmar preferência' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
     </form>
 </div>
 {% endblock %}
