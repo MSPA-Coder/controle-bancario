@@ -16,6 +16,7 @@ from decimal import Decimal
 
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
+from django.utils.translation import gettext
 
 from banking.models import FinancialAccount
 from banking.services import accessible_account_ids, can_access_account
@@ -68,7 +69,7 @@ def _clean_account_id(raw_account_id) -> int:
         if account_id <= 0:
             raise ValueError
     except (TypeError, ValueError) as exc:
-        raise ValueError("Informe a conta e o arquivo do extrato.") from exc
+        raise ValueError(gettext("Informe a conta e o arquivo do extrato.")) from exc
     return account_id
 
 
@@ -83,13 +84,13 @@ def _adapter_for(account: FinancialAccount, uploaded_file: UploadedFile):
     eh_csv = name.endswith(".csv") or "csv" in (getattr(uploaded_file, "content_type", "") or "").lower()
     if account.is_credit_card:
         if not eh_csv:
-            raise ValueError("Conta de cartão de crédito recebe a fatura em CSV (C6 ou XP).")
+            raise ValueError(gettext("Conta de cartão de crédito recebe a fatura em CSV (C6 ou XP)."))
         return CartaoCsvAdapter(account.card_closing_day)
     if eh_csv and formato_da_fatura(read_statement_upload(uploaded_file, label="CSV")) is not None:
-        raise ValueError(
+        raise ValueError(gettext(
             "Este arquivo é uma fatura de cartão de crédito. Importe-o na conta do cartão "
             "(tipo “Cartão de crédito” em Cadastros > Contas)."
-        )
+        ))
     return get_statement_adapter(uploaded_file, institution=account.institution)
 
 
@@ -102,21 +103,21 @@ def import_statement_file(
     Levanta `ValueError` para entrada inválida ou acesso negado.
     """
     if uploaded_file is None:
-        raise ValueError("Informe a conta e o arquivo do extrato.")
+        raise ValueError(gettext("Informe a conta e o arquivo do extrato."))
     clean_account_id = _clean_account_id(account_id)
     if not can_access_account(user, clean_account_id, "create"):
-        raise ValueError("Acesso negado: você não tem permissão para importar extrato nesta conta.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para importar extrato nesta conta."))
 
     try:
         account = FinancialAccount.objects.select_related("institution").get(id=clean_account_id)
     except FinancialAccount.DoesNotExist as exc:
-        raise ValueError("Conta não encontrada.") from exc
+        raise ValueError(gettext("Conta não encontrada.")) from exc
 
     parsed = _adapter_for(account, uploaded_file).parse(uploaded_file, clean_account_id)
     # Fatura de cartão não traz saldo; extrato de conta traz, às vezes.
     saldo = None if account.is_credit_card else extract_statement_balance(uploaded_file)
     if not parsed and saldo is None:
-        raise ValueError("O extrato não tem movimento nem saldo: não há o que importar.")
+        raise ValueError(gettext("O extrato não tem movimento nem saldo: não há o que importar."))
     # Sem movimento mas com saldo é um mês sem movimentação de verdade: o lote
     # entra sem linhas, e o saldo dele cobre o mês (Situação das Contas,
     # fechamento) e é conferido com o do CB como qualquer outro.
