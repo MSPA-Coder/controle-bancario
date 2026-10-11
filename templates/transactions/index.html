@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static money_filters icons sharedauth_tags navegacao contas %}
-{% block title %}Lançamentos{% endblock %}
+{% block title %}Movimentação • Lançamentos{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/transactions.css' %}">
@@ -36,13 +36,13 @@
                 <option value="a_vencer" {% if view_mode == 'a_vencer' %}selected{% endif %}>A vencer</option>
                 <option value="vencidos" {% if view_mode == 'vencidos' %}selected{% endif %}>Vencidos</option>
                 <option value="realizado" {% if view_mode == 'realizado' %}selected{% endif %}>Realizado</option>
-                <option value="todos" {% if view_mode == 'todos' %}selected{% endif %}>Todos os modos</option>
+                <option value="todos" {% if view_mode == 'todos' %}selected{% endif %}>Todos</option>
             </select>
         </label>
         <label class="top-filter-field">
             Titular
             <select name="owner_id" aria-label="Titular">
-                <option value="">Todos os Titulares</option>
+                <option value="">Todos os titulares</option>
                 {% for owner in owners %}
                 <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                 {% endfor %}
@@ -51,7 +51,7 @@
         <label class="top-filter-field">
             Instituição
             <select name="institution_id" aria-label="Instituição">
-                <option value="">Todas as Instituições</option>
+                <option value="">Todas as instituições</option>
                 {% for bank in banks %}
                 <option value="{{ bank.id }}" {% if bank.id == current_institution_id %}selected{% endif %}>{{ bank.institution_name }}</option>
                 {% endfor %}
@@ -60,7 +60,7 @@
         <label class="top-filter-field">
             Conta
             <select name="account_id" aria-label="Conta">
-                <option value="">Todas as Contas</option>
+                <option value="">Todas as contas</option>
                 {% for titular, contas in accounts|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for account in contas %}
@@ -119,16 +119,16 @@
 
 <div id="realizeModal" class="app-modal">
     <div class="modal-content">
-        <h3>Marcar como Realizado</h3>
+        <h3>Marcar como realizado</h3>
         <form id="realizeForm" data-tx-htmx method="POST" action="{% url 'transactions:mark_realized' 0 %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
             {% csrf_token %}
             <input type="hidden" id="modal_tx_id" name="tx_id">
             <div class="form-group" data-ui="mt-075">
-                <label>Data de Realização</label>
-                <input type="date" name="realized_date" aria-label="Data de realizacao" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
+                <label>Data de realização</label>
+                <input type="date" name="realized_date" aria-label="Data de realização" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
             </div>
             <div class="form-group" data-ui="mt-055-mb-085">
-                <label>Valor Realizado (<span data-realize-currency-symbol>R$</span>)</label>
+                <label>Valor realizado (<span data-realize-currency-symbol>R$</span>)</label>
                 <input type="number" step="0.01" name="realized_amount" aria-label="Valor realizado">
             </div>
             <div class="modal-actions">
@@ -146,7 +146,7 @@
 <div id="unrealizeModal" class="app-modal" role="dialog" aria-modal="true" aria-labelledby="unrealizeTitle">
     <div class="modal-content">
         <h3 id="unrealizeTitle">Desfazer realização</h3>
-        <p class="modal-message">O lançamento deixará de compor o saldo realizado e voltará a ficar em aberto: A vencer ou Vencido, conforme a data de vencimento.</p>
+        <p class="modal-message">O lançamento deixará de compor o saldo realizado e voltará a ficar em aberto: a vencer ou vencido, conforme a data de vencimento.</p>
         <form id="unrealizeForm" data-tx-htmx method="POST" action="{% url 'transactions:mark_unrealized' 0 %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
             {% csrf_token %}
             <div class="modal-actions">
@@ -170,7 +170,7 @@
             <input type="hidden" name="current_future_confirmation_token" id="deleteCurrentFutureConfirmationToken" value="">
             <div id="deleteScopeOptions" data-ui="delete-scope-hidden">
                 <label data-ui="delete-scope-label">Excluir</label>
-                <select id="deleteScopeSelect" name="operation_scope" class="form-control" aria-label="Escopo de exclusao" required disabled>
+                <select id="deleteScopeSelect" name="operation_scope" class="form-control" aria-label="Escopo de exclusão" required disabled>
                     <option value="single" selected>Somente este registro</option>
                     <option value="all">Todos os registros do grupo</option>
                     <option value="current_future">Este registro e os próximos</option>
