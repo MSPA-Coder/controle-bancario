@@ -6,10 +6,10 @@
                 <th>Titular</th>
                 <th>Instituição</th>
                 <th>Conta</th>
-                <th class="value-col">Saldo Inicial</th>
-                <th class="value-col">Geração de Caixa</th>
-                <th class="value-col">Transf. Int.</th>
-                <th class="value-col">Saldo Final</th>
+                <th class="value-col">Saldo inicial</th>
+                <th class="value-col">Geração de caixa</th>
+                <th class="value-col">Transferências internas</th>
+                <th class="value-col">Saldo final</th>
             </tr>
         </thead>
         <tbody>
@@ -37,7 +37,7 @@
             {% for bloco in blocos %}
             {% if bloco.rows %}
             <tr class="summary-row">
-                <td colspan="3">TOTAL{% if blocos|length > 1 %} · {{ bloco.currency|currency_label }}{% endif %}</td>
+                <td colspan="3">Total{% if blocos|length > 1 %} · {{ bloco.currency|currency_label }}{% endif %}</td>
                 <td class="value-col {{ bloco.total_start|amount_class }}">{{ bloco.total_start|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ bloco.total_generation|amount_class }}">{{ bloco.total_generation|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ bloco.total_transfers|amount_class }}">{{ bloco.total_transfers|money_signed:bloco.currency }}</td>

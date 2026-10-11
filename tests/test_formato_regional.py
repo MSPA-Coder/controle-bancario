@@ -6,7 +6,7 @@ usuário vazar para a requisição seguinte. O que é gravado, importado e
 exportado não passa por esta camada e não deve mudar.
 """
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -48,6 +48,15 @@ def test_datas_no_formato_dos_eua(eua):
     assert regional.formatar_data_hora(datetime(2026, 12, 31, 8, 5, 9), segundos=True) == "12/31/2026 08:05:09"
     assert regional.formatar_dia_mes(date(2026, 12, 31)) == "12/31"
     assert regional.formatar_mes(date(2026, 12, 31)) == "12/2026"
+
+
+def test_hora_gravada_em_utc_aparece_no_fuso_do_sistema():
+    # O banco devolve UTC. 02:30 UTC de 11/10 ainda é 23:30 de 10/10 em Brasília:
+    # a hora e o DIA têm de sair no fuso do sistema, não em UTC.
+    utc = datetime(2026, 10, 11, 2, 30, tzinfo=UTC)
+    assert regional.formatar_data_hora(utc) == "10/10/2026 23:30"
+    assert regional.formatar_data(utc) == "10/10/2026"
+    assert _renderizar("{{ t|udatetime }}", t=utc) == "10/10/2026 23:30"
 
 
 def test_data_ausente_nao_vira_texto():

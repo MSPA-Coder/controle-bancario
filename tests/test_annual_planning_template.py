@@ -54,7 +54,7 @@ def test_annual_planning_partial_uses_summary_headers_without_transfer_card():
         ],
         "summary_rows": [
             {
-                "label": "Movimentações Internas",
+                "label": "Transferências internas",
                 "owner_values": [Decimal("120.00"), Decimal("80.00")],
                 "months": [
                     {"value": Decimal("200.00"), "is_current": True},
@@ -108,7 +108,7 @@ def test_annual_planning_partial_uses_summary_headers_without_transfer_card():
     )
     assert cabecalhos_de_titular == ["Ana", "Bia"]
     assert "Custos fixos" in rendered
-    assert "Transferências internas" not in rendered
+    assert "Transferências internas" in rendered
     assert "Mês de referência · mar/2026" in rendered
     assert "Todos os modos" in rendered
     assert "200,00" in rendered

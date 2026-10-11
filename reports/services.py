@@ -1023,12 +1023,12 @@ def annual_planning_presentation(
         for month in months
     ]
     summary_rows = [
-        {"label": "Geração de Caixa", "owner_values": generation_owner, "months": _month_values(generation_months)},
-        {"label": "Saldo Previsto / Final", "owner_values": end_owner, "months": _month_values(end_months)},
-        {"label": "Total Receitas", "owner_values": income_owner, "months": _month_values(income_months)},
-        {"label": "Total Despesas", "owner_values": expense_owner, "months": _month_values(expense_months)},
-        {"label": "Movimentações Internas", "owner_values": transfer_owner_values, "months": _month_values(transfer_months)},
-        {"label": "Saldo Atual / Inicial", "owner_values": start_owner, "months": _month_values(start_months)},
+        {"label": "Geração de caixa", "owner_values": generation_owner, "months": _month_values(generation_months)},
+        {"label": "Saldo previsto / final", "owner_values": end_owner, "months": _month_values(end_months)},
+        {"label": "Total receitas", "owner_values": income_owner, "months": _month_values(income_months)},
+        {"label": "Total despesas", "owner_values": expense_owner, "months": _month_values(expense_months)},
+        {"label": "Transferências internas", "owner_values": transfer_owner_values, "months": _month_values(transfer_months)},
+        {"label": "Saldo atual / inicial", "owner_values": start_owner, "months": _month_values(start_months)},
     ]
 
     return {
@@ -1670,15 +1670,15 @@ def _account_action(minimum_balance: Decimal, minimum_balance_date: date, *, has
             (-minimum_balance).quantize(MONEY_QUANT),
         )
     if not has_movements:
-        return ("neutral", "Sem movimentos", "Não há lançamentos no período.", Decimal("0.00"))
-    return ("success", "Suficiente", "Saldo cobre os movimentos previstos.", Decimal("0.00"))
+        return ("neutral", "Sem lançamentos", "Não há lançamentos no período.", Decimal("0.00"))
+    return ("success", "Suficiente", "Saldo cobre os lançamentos previstos.", Decimal("0.00"))
 
 
 def _summary_action(rows: list[UpcomingMovementAccountRow], minimum_balance: Decimal, minimum_balance_date: date, *, has_movements: bool, has_candidate_accounts: bool) -> tuple[str, str, str, Decimal]:
     if not has_candidate_accounts:
         return ("neutral", "Sem contas", "Nenhuma conta disponível para os filtros selecionados.", Decimal("0.00"))
     if not has_movements:
-        return ("neutral", "Sem movimentos", "Não há lançamentos no período selecionado.", Decimal("0.00"))
+        return ("neutral", "Sem lançamentos", "Não há lançamentos no período selecionado.", Decimal("0.00"))
     if minimum_balance < 0:
         return (
             "danger",
@@ -1695,7 +1695,7 @@ def _summary_action(rows: list[UpcomingMovementAccountRow], minimum_balance: Dec
             f"{len(deficit_rows)} conta(s) ficam negativas, mas o caixa total cobre o período.",
             total_transfer,
         )
-    return ("success", "Tudo coberto", "Os saldos previstos cobrem os movimentos do período.", Decimal("0.00"))
+    return ("success", "Tudo coberto", "Os saldos previstos cobrem os lançamentos do período.", Decimal("0.00"))
 
 
 def upcoming_movements_report(account_ids: list[int], start_date: date, end_date: date, view_mode: str) -> UpcomingMovementsReport:

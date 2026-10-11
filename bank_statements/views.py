@@ -149,7 +149,7 @@ def undo_import_view(request, batch_id):
         texto = f"Importação desfeita: {line_count} linha(s) de extrato removida(s)"
         if reconciled_count:
             texto += (
-                f", {reconciled_count} conciliação(ões) revertida(s) -- os lançamentos "
+                f", {reconciled_count} conciliação(ões) revertida(s) — os lançamentos "
                 "voltaram a ficar em aberto, conforme o vencimento, sem serem apagados."
             )
         else:
@@ -169,7 +169,7 @@ def import_status_view(request, batch_id):
     """Status resumido de um lote de importação, em JSON."""
     status = statement_import_status(request.user, batch_id)
     if status is None:
-        return JsonResponse({"error": "Lote não encontrado"}, status=404)
+        return JsonResponse({"error": "Lote não encontrado."}, status=404)
     return JsonResponse(status)
 
 
@@ -452,7 +452,7 @@ def reconcile_view(request):
         if correcao:
             messages.success(request, f"Linha conciliada; realização corrigida pelo extrato ({correcao}).")
         else:
-            messages.success(request, "Linha conciliada e movimento marcado como realizado.")
+            messages.success(request, "Linha conciliada e lançamento marcado como realizado.")
     except ValueError as exc:
         messages.error(request, str(exc))
 
@@ -556,7 +556,7 @@ def undo_reconciliation_view(request):
         reconciliation.undo_reconciliation(request.user, line_id=line_id)
         messages.success(
             request,
-            "Conciliação desfeita. A linha voltou a pendente e o movimento "
+            "Conciliação desfeita. A linha voltou a pendente e o lançamento "
             "voltou a ficar em aberto, conforme o vencimento.",
         )
     except ValueError as exc:

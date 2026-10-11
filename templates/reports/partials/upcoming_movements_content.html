@@ -44,7 +44,7 @@ sempre foi.
                 <th class="value-col">Saldo inicial</th>
                 <th class="value-col">Entradas</th>
                 <th class="value-col">Saídas</th>
-                <th class="value-col">Transf. int.</th>
+                <th class="value-col">Transferências internas</th>
                 <th class="value-col">Menor saldo</th>
                 <th class="value-col">Saldo final</th>
                 <th class="status-col">Ação</th>
@@ -70,11 +70,11 @@ sempre foi.
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="10" data-ui="empty-2">Nenhuma conta com movimento no período.</td></tr>
+            <tr><td colspan="10" data-ui="empty-2">Nenhuma conta com lançamentos no período.</td></tr>
             {% endfor %}
             {% if bloco.report.account_rows %}
             <tr class="summary-row">
-                <td colspan="3">TOTAL</td>
+                <td colspan="3">Total</td>
                 <td class="value-col {{ bloco.report.summary.start_balance|amount_class }}">{{ bloco.report.summary.start_balance|money_signed:bloco.currency }}</td>
                 <td class="value-col amount-positive">{{ bloco.report.summary.income|money_signed:bloco.currency }}</td>
                 <td class="value-col amount-negative">{{ bloco.report.summary.expense|neg|money_signed:bloco.currency }}</td>

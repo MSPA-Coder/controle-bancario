@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static icons dict_filters navegacao %}
 
-{% block title %}Permissões{% endblock %}
+{% block title %}Segurança • Permissões{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/permissions.css' %}">
@@ -10,7 +10,7 @@
 {% block page_header %}
 <div class="permissions-header">
     <div>
-        <h1>Administração de Permissões</h1>
+        <h1>Administração de permissões</h1>
     </div>
     <form method="get" class="permissions-user-form" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
         <label for="user_id">Usuário
@@ -36,8 +36,8 @@
         <h4>Senha temporária de {{ senha_de }}</h4>
         <p><code class="senha-temporaria-valor">{{ senha_temporaria }}</code></p>
         <p class="permissions-help">
-            Anote agora: ela não será mostrada de novo. Quem entrar com ela terá
-            de trocá-la antes de usar o sistema.
+            Anote agora: ela não será mostrada de novo. Quem entrar com ela deverá
+            trocá-la antes de usar o sistema.
         </p>
     </div>
     {% endif %}
@@ -50,7 +50,7 @@
 
     <div class="section-card full-width permissions-compact-card">
         <h4>Resumo efetivo do usuário selecionado</h4>
-        <p class="permissions-help">Este resumo considera permissões marcadas e dependências automáticas. Administrators mantêm as permissões funcionais e o acesso a titulares definidos pela regra sistêmica, mas também precisam de concessão explícita para usar uma conta como destino de transferência.</p>
+        <p class="permissions-help">Este resumo considera permissões marcadas e dependências automáticas. Administradores mantêm as permissões funcionais e o acesso a titulares definidos pela regra sistêmica, mas também precisam de concessão explícita para usar uma conta como destino de transferência.</p>
         <div class="summary-grid">
             <div class="summary-card"><strong>{{ summary.owner_view_count }}</strong><span>titulares com visualização</span></div>
             <div class="summary-card"><strong>{{ summary.owner_create_count }}</strong><span>titulares com criação</span></div>
@@ -90,14 +90,14 @@
                 {% csrf_token %}
                 <input type="hidden" name="table" value="users">
                 <input type="hidden" name="action" value="add">
-                <input type="text" name="username" aria-label="Nome do usuário" placeholder="Nome do usuário..." maxlength="150" required data-ui="flex-1">
+                <input type="text" name="username" aria-label="Nome do usuário" placeholder="Nome do usuário…" maxlength="150" required data-ui="flex-1">
                 <select name="user_type" aria-label="Tipo de usuário" required data-ui="w-170">
                     {% for user_type in user_type_options %}
                     <option value="{{ user_type }}">{{ user_type }}</option>
                     {% endfor %}
                 </select>
-                <input type="password" name="password" aria-label="Senha inicial" placeholder="Senha inicial..." maxlength="256" required data-ui="flex-1">
-                <input type="password" name="password_confirm" aria-label="Confirmar senha inicial" placeholder="Confirmar senha..." maxlength="256" required data-ui="flex-1">
+                <input type="password" name="password" aria-label="Senha inicial" placeholder="Senha inicial…" maxlength="256" required data-ui="flex-1">
+                <input type="password" name="password_confirm" aria-label="Confirmar senha inicial" placeholder="Confirmar senha…" maxlength="256" required data-ui="flex-1">
                 <button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="Cadastrar este usuário?" data-sa-titulo="Confirmar usuário" data-sa-severidade="info" data-sa-ok="Cadastrar">{% icon 'plus' %}<span>Incluir</span></button>
             </form>
             <div class="table-container" data-ui="table-plain-flex">
@@ -172,7 +172,7 @@
         <div class="section-card">
             <div class="section-header" data-ui="section-header-start">
                 <div>
-                    <h4>Usuário x Titular</h4>
+                    <h4>Usuário × titular</h4>
                     <p class="permissions-help">Controla o escopo dos dados financeiros. Criar, editar ou excluir pressupõe visualizar o titular.</p>
                 </div>
             </div>
@@ -181,12 +181,12 @@
                 <input type="hidden" name="action" value="save_owner_access">
                 <input type="hidden" name="user_id" value="{{ selected_user.id }}">
                 <div class="matrix-toolbar">
-                    <input type="search" class="filter-input" data-filter-target="owner-row" aria-label="Filtrar titulares" placeholder="Filtrar titulares...">
+                    <input type="search" class="filter-input" data-filter-target="owner-row" aria-label="Filtrar titulares" placeholder="Filtrar titulares…">
                     <div class="button-row">
-                        <button type="button" class="btn btn-sm" data-owner-bulk="view">Marcar Ver</button>
-                        <button type="button" class="btn btn-sm" data-owner-bulk="create">Marcar Criar</button>
-                        <button type="button" class="btn btn-sm" data-owner-bulk="update">Marcar Editar</button>
-                        <button type="button" class="btn btn-sm" data-owner-bulk="delete">Marcar Excluir</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="view">Marcar ver</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="create">Marcar criar</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="update">Marcar editar</button>
+                        <button type="button" class="btn btn-sm" data-owner-bulk="delete">Marcar excluir</button>
                         <button type="button" class="btn btn-warning btn-sm" data-owner-clear>Limpar titulares</button>
                     </div>
                 </div>
@@ -218,7 +218,7 @@
     </div>
 
     <div class="section-card full-width">
-        <div class="section-header"><div><h4>Usuário x Conta destino de transferência</h4><p class="permissions-help">A concessão é obrigatória inclusive para administradores e permite apenas usar a conta como destino.</p></div></div>
+        <div class="section-header"><div><h4>Usuário × conta destino de transferência</h4><p class="permissions-help">A concessão é obrigatória inclusive para administradores e permite apenas usar a conta como destino.</p></div></div>
         <form method="post">
             {% csrf_token %}<input type="hidden" name="action" value="save_transfer_destinations"><input type="hidden" name="user_id" value="{{ selected_user.id }}">
             <div class="table-container" data-ui="table-plain"><table class="matrix-table"><thead><tr><th>Conta destino</th><th>Permitido</th></tr></thead><tbody>
@@ -237,7 +237,7 @@
     <div class="section-card full-width">
         <div class="section-header" data-ui="section-header-start">
             <div>
-                <h4>Usuário x Permissões Funcionais</h4>
+                <h4>Usuário × permissões funcionais</h4>
                 <p class="permissions-help">Controla quais telas e ações o usuário pode executar. Permissões críticas ficam destacadas.</p>
             </div>
         </div>
@@ -252,7 +252,7 @@
             <input type="hidden" name="action" value="save_function_permissions">
             <input type="hidden" name="user_id" value="{{ selected_user.id }}">
             <div class="matrix-toolbar">
-                <input type="search" class="filter-input" data-filter-target="permission-row" aria-label="Filtrar permissões" placeholder="Filtrar permissões...">
+                <input type="search" class="filter-input" data-filter-target="permission-row" aria-label="Filtrar permissões" placeholder="Filtrar permissões…">
                 <div class="button-row">
                     <button type="button" class="btn btn-sm" data-permission-bulk="all">Marcar todas visíveis</button>
                     <button type="button" class="btn btn-warning btn-sm" data-permission-clear>Limpar visíveis</button>
@@ -282,7 +282,7 @@
                         <tr data-filter-row="permission-row" class="permission-row{% if group.has_subgroup %} permission-row-child{% endif %}{% if is_critical %} permission-critical{% endif %}">
                             <td class="permission-key">
                                 {{ permission.name }}
-                                {% if is_critical %}<span class="critical-badge">crítica</span>{% endif %}
+                                {% if is_critical %}<span class="critical-badge">Crítica</span>{% endif %}
                             </td>
                             <td class="permission-description">{{ permission.description }}</td>
                             <td>

@@ -266,7 +266,7 @@ def test_tela_leva_cada_celula_para_onde_resolve(cenario):
     assert f'href="/banking/import/{lote_cartao.id}/fatura/"' in html  # pendência de cartão: a fatura
     assert f'href="/banking/import/{lote_cdb.id}/extrato/"' in html  # conciliado: o extrato
     assert 'href="/banking/imports/"' in html  # sem importação: Importação de Dados
-    assert "Situação das Contas" in html
+    assert "Situação das contas" in html
 
 
 @pytest.mark.django_db

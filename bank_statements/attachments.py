@@ -115,13 +115,13 @@ def can_access_entry(user, entry: CashFlowEntry | None, action: str = "update") 
 
 def save_entry_attachment(user, entry_id, uploaded_file: UploadedFile | None) -> EntryAttachment:
     if not entry_id or uploaded_file is None:
-        raise ValueError("Informe o movimento e o arquivo do anexo.")
+        raise ValueError("Informe o lançamento e o arquivo do anexo.")
     try:
         entry = CashFlowEntry.objects.get(id=entry_id)
     except (CashFlowEntry.DoesNotExist, ValueError, TypeError):
-        raise ValueError("Movimento não encontrado.") from None
+        raise ValueError("Lançamento não encontrado.") from None
     if not can_access_entry(user, entry, "update"):
-        raise ValueError("Acesso negado para gerenciar comprovante deste movimento.")
+        raise ValueError("Acesso negado: você não tem permissão para gerenciar comprovante deste lançamento.")
 
     safe_original = _sanitize_filename(uploaded_file.name)
     extension = Path(safe_original).suffix.lower()
@@ -184,7 +184,7 @@ def delete_entry_attachment(user, *, attachment_id) -> None:
     except (EntryAttachment.DoesNotExist, ValueError, TypeError):
         raise ValueError("Anexo não encontrado.") from None
     if not can_access_entry(user, attachment.entry, "update"):
-        raise ValueError("Acesso negado para gerenciar este comprovante.")
+        raise ValueError("Acesso negado: você não tem permissão para gerenciar este comprovante.")
 
     path = _attachment_removal_path(attachment)
     attachment.delete()

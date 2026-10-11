@@ -56,7 +56,7 @@ def is_month_closed(account: FinancialAccount, year: int, month: int) -> bool:
 def validate_month_not_closed(account: FinancialAccount, due_date: date) -> None:
     """Valida que o mês da data de vencimento não está fechado."""
     if is_month_closed(account, due_date.year, due_date.month):
-        raise ValueError(f"Mês {due_date.month}/{due_date.year} está fechado para a conta {account}")
+        raise ValueError(f"Mês {due_date.month}/{due_date.year} está fechado para a conta {account}.")
 
 
 def assert_entry_period_open(entry: CashFlowEntry, action_label: str = "alterar") -> None:
@@ -94,9 +94,9 @@ def assert_transfer_destination_authorized(user, entry: CashFlowEntry, action: s
     """Revalida origem e grant do destino em toda mutação de um par interno."""
     origin, destination = transfer_origin_and_destination(entry)
     if origin is None or destination is None or not can_access_account(user, origin.account_id, action):
-        raise ValueError("Acesso negado: conta de origem não autorizada para transferência.")
+        raise ValueError("Acesso negado: você não tem permissão para usar a conta de origem.")
     if not can_use_transfer_destination(user, destination.account_id):
-        raise ValueError("Acesso negado: conta destino não autorizada para transferência.")
+        raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
 
 
 def assert_transfer_entries_authorized(user, entries: list[CashFlowEntry], action: str) -> None:
@@ -236,7 +236,7 @@ def realize_transaction(
         entry, locked_entries = _lock_entry_graph(entry)
 
     if entry.status == STATUS_REALIZED:
-        raise ValueError("Lançamento já está realizado")
+        raise ValueError("Lançamento já está realizado.")
     if getattr(entry, "operation_type", None) == OPERATION_INTERNAL_TRANSFER:
         assert_transfer_destination_authorized(user, entry, "update")
 
@@ -387,7 +387,7 @@ def close_month(
     calculou dentro da própria transação.
     """
     if not can_access_account(user, account.id, "update"):
-        raise ValueError("Acesso negado: usuário sem permissão para fechar este mês.")
+        raise ValueError("Acesso negado: você não tem permissão para fechar este mês.")
 
     # O registro é único mesmo depois de uma reabertura. Trancar a conta
     # serializa dois fechamentos concorrentes do mesmo período e permite
@@ -416,7 +416,7 @@ def close_month(
         )
     else:
         if month_close.active:
-            raise ValueError(f"Mês {month}/{year} já está fechado para esta conta")
+            raise ValueError(f"Mês {month}/{year} já está fechado para esta conta.")
         month_close.active = True
         month_close.closing_balance = closing_balance
         month_close.closed_at = timezone.now()
@@ -449,7 +449,7 @@ def reopen_month(
 ) -> AccountMonthClose:
     """Reabre um mês fechado."""
     if not can_access_account(user, account.id, "update"):
-        raise ValueError("Acesso negado: usuário sem permissão para reabrir este mês.")
+        raise ValueError("Acesso negado: você não tem permissão para reabrir este mês.")
     reason = (reason or "").strip()
     if not reason:
         raise ValueError("O motivo da reabertura é obrigatório.")
@@ -462,7 +462,7 @@ def reopen_month(
             active=True,
         )
     except AccountMonthClose.DoesNotExist as err:
-        raise ValueError(f"Mês {month}/{year} não está fechado para esta conta") from err
+        raise ValueError(f"Mês {month}/{year} não está fechado para esta conta.") from err
 
     month_close.active = False
     month_close.reopened_at = timezone.now()
@@ -785,7 +785,7 @@ def counterparty_amount_for_transfer(
         raise ValueError(
             f"Esta transferência sai em {account.currency} e entra em "
             f"{counterparty_account.currency}: informe também quanto foi creditado na conta "
-            "destino. Este sistema não converte moeda -- quem diz quanto entrou é o extrato."
+            "destino. Este sistema não converte moeda — quem diz quanto entrou é o extrato."
         )
 
     amount = req.counterparty_amount
@@ -1112,7 +1112,7 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
     counterparty_account = None
     if eh_transferencia:
         if not req.counterparty_account_id:
-            raise ValueError("Conta destino é obrigatória para categoria interna.")
+            raise ValueError("Conta destino é obrigatória para transferência interna.")
         if req.counterparty_account_id == req.account_id:
             raise ValueError("Conta destino deve ser diferente da conta de origem.")
         try:
@@ -1122,14 +1122,14 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
         except FinancialAccount.DoesNotExist as exc:
             raise ValueError("Conta destino inválida.") from exc
         if not can_use_transfer_destination(user, counterparty_account.id):
-            raise ValueError("Acesso negado: conta destino não autorizada para transferência.")
+            raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
 
     try:
         account = FinancialAccount.objects.select_related("owner", "institution").get(id=req.account_id)
     except FinancialAccount.DoesNotExist as exc:
         raise ValueError("Conta inválida.") from exc
     if not can_access_account(user, account.id, "create"):
-        raise ValueError("Acesso negado: conta de origem não autorizada para transferência.")
+        raise ValueError("Acesso negado: você não tem permissão para usar esta conta.")
 
     locked_accounts = _lock_accounts(
         [account.id, counterparty_account.id if counterparty_account is not None else None]
@@ -1426,7 +1426,7 @@ def _update_single(tx: CashFlowEntry, req: TransactionRequest, user=None) -> lis
 
 def _convert_single_to_internal_transfer(tx: CashFlowEntry, req: TransactionRequest, user=None) -> list[CashFlowEntry]:
     if not req.counterparty_account_id:
-        raise ValueError("Conta destino é obrigatória para categoria interna.")
+        raise ValueError("Conta destino é obrigatória para transferência interna.")
     if req.counterparty_account_id == req.account_id:
         raise ValueError("Conta destino deve ser diferente da conta de origem.")
     try:
@@ -1436,10 +1436,10 @@ def _convert_single_to_internal_transfer(tx: CashFlowEntry, req: TransactionRequ
     except FinancialAccount.DoesNotExist as exc:
         raise ValueError("Conta destino inválida.") from exc
     if not can_use_transfer_destination(user, counterparty_account.id):
-        raise ValueError("Acesso negado: conta destino não autorizada para transferência.")
+        raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
     account = FinancialAccount.objects.select_related("owner", "institution").get(id=req.account_id)
     if not can_access_account(user, account.id, "update"):
-        raise ValueError("Acesso negado: conta de origem não autorizada para transferência.")
+        raise ValueError("Acesso negado: você não tem permissão para usar a conta de origem.")
 
     installments, monthly_amount = _parcelas_e_valor(req)
     counterparty_amount = counterparty_amount_for_transfer(
@@ -1513,7 +1513,7 @@ def _replace_current_future_block(
 
     start_installment = entries[0].current_installment or 1
     if operation_type == OPERATION_INSTALLMENT and start_installment + len(entries) - 1 > installments:
-        raise ValueError("Quantidade de parcelas menor que o bloco atual/futuro selecionado.")
+        raise ValueError("A quantidade de parcelas é menor que o bloco atual/futuro selecionado.")
 
     account = FinancialAccount.objects.get(id=req.account_id)
     bank_operation = tx.bank_operation
@@ -1644,7 +1644,7 @@ def _update_internal_transfer(
 
     counterparty_account_id = req.counterparty_account_id or _get_counterparty_account_id(tx)
     if not counterparty_account_id:
-        raise ValueError("Conta destino é obrigatória para categoria interna.")
+        raise ValueError("Conta destino é obrigatória para transferência interna.")
     if counterparty_account_id == req.account_id:
         raise ValueError("Conta destino deve ser diferente da conta de origem.")
 
@@ -1655,7 +1655,7 @@ def _update_internal_transfer(
         id=counterparty_account_id
     )
     if not can_use_transfer_destination(user, counterparty_account.id):
-        raise ValueError("Acesso negado: conta destino não autorizada para transferência.")
+        raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
     counterparty_amount = counterparty_amount_for_transfer(
         req, account, counterparty_account, installments=installments
     )

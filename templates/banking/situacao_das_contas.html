@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Banking • Situação das Contas{% endblock %}
+{% block title %}Movimentação • Situação das contas{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -11,7 +11,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>🚦 Situação das Contas</h1>
+        <h1>🚦 Situação das contas</h1>
         <p>Para cada conta e mês: se o extrato (ou a fatura) foi importado e se as linhas já foram conciliadas.</p>
     </div>
 </div>
@@ -31,7 +31,7 @@
     </div>
     {% if resumo.aplicaveis %}
     <div class="situacao-cartoes">
-        <div class="situacao-cartao situacao-cartao-ok"><strong>{{ resumo.em_dia }}</strong><span>de {{ resumo.aplicaveis }} contas em dia</span></div>
+        <div class="situacao-cartao situacao-cartao-ok"><strong>{{ resumo.em_dia }}</strong><span>de {{ resumo.aplicaveis }} conta{{ resumo.aplicaveis|pluralize }} em dia</span></div>
         <div class="situacao-cartao situacao-cartao-pendente"><strong>{{ resumo.pendentes }}</strong><span>com pendências</span></div>
         <div class="situacao-cartao situacao-cartao-falta"><strong>{{ resumo.sem_importacao }}</strong><span>sem importação</span></div>
     </div>

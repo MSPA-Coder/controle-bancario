@@ -3,7 +3,7 @@
 {% load money_filters %}
 {% load icons contas %}
 
-{% block title %}Fechamento Mensal{% endblock %}
+{% block title %}Movimentação • Fechamento mensal{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/monthly-close.css' %}">
@@ -12,8 +12,8 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Fechamento Mensal</h1>
-        <p>Bloqueia alterações em movimentos de meses já consolidados.</p>
+        <h1>Fechamento mensal</h1>
+        <p>Bloqueia alterações em lançamentos de meses já consolidados.</p>
     </div>
 </div>
 <div class="top-filter-card">
@@ -21,7 +21,7 @@
         <label class="top-filter-field">
             Conta
             <select name="filter_account_id">
-                <option value="">Todas as Contas</option>
+                <option value="">Todas as contas</option>
                 {% for titular, contas in close_accounts|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for account in contas %}
@@ -66,7 +66,7 @@
 
 {% block content %}
 <div class="section-card">
-    <h3>Fechamento Mensal</h3>
+    <h3>Fechamento mensal</h3>
     <form method="post" {% nav_escrita %} action="{% url 'core:settings_close_month' %}{% if monthly_close_filter_query %}?{{ monthly_close_filter_query }}{% endif %}" class="btn-group monthly-close-form" data-ui="monthly-close-form">
         {% csrf_token %}
         <input type="hidden" name="filter_account_id" value="{{ monthly_close_filters.account_id|default:'' }}">
@@ -76,7 +76,7 @@
         <div class="form-group" data-ui="field-260">
             <label>Conta</label>
             <select name="account_id" class="form-control" required>
-                <option value="">Selecione...</option>
+                <option value="">Selecione…</option>
                 {% for titular, contas in monthly_close_form_accounts|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for account in contas %}
@@ -98,7 +98,7 @@
                 data-sa-confirmar="Fechar este mês para a conta selecionada? As alterações no período ficarão bloqueadas até uma reabertura explícita."
                 data-sa-titulo="Confirmar fechamento mensal"
                 data-sa-severidade="warning"
-                data-sa-ok="Fechar mês">{% icon 'close-month' %}<span>Fechar Mês</span></button>
+                data-sa-ok="Fechar mês">{% icon 'close-month' %}<span>Fechar mês</span></button>
     </form>
 </div>
 
@@ -108,7 +108,7 @@
     <div class="table-inspection-scroll">
         <table>
             <thead>
-                <tr><th>Conta</th><th>Período</th><th>Saldo Fechado</th><th>Status</th><th>Ação</th></tr>
+                <tr><th>Conta</th><th>Período</th><th>Saldo fechado</th><th>Status</th><th>Ação</th></tr>
             </thead>
             <tbody>
                 {% for close in recent_month_closes %}

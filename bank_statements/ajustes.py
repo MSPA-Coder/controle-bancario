@@ -154,7 +154,7 @@ def _mover_ponta(user, spec: dict, relatorio: Relatorio, audit_context) -> None:
     if destino.id == entrada.account_id:
         raise ValueError(f"O lançamento #{entrada.id} já está na conta de destino.")
     if not (can_access_account(user, entrada.account_id, "update") and can_access_account(user, destino.id, "update")):
-        raise ValueError("Acesso negado para mover este lançamento.")
+        raise ValueError("Acesso negado: você não tem permissão para mover este lançamento.")
     if entrada.operation_type == OPERATION_INTERNAL_TRANSFER:
         contraparte = transfer_counterparty(entrada)
         if contraparte is not None and contraparte.account_id == destino.id:
@@ -244,11 +244,11 @@ def _converter_em_transferencia(user, spec: dict, relatorio: Relatorio, audit_co
     ):
         raise ValueError(f"O lançamento #{entrada.id} não é um avulso gerencial realizado.")
     if outra.id == entrada.account_id or outra.owner_id != entrada.account.owner_id:
-        raise ValueError("A outra conta tem de ser outra conta do mesmo titular.")
+        raise ValueError("A outra conta deve ser outra conta do mesmo titular.")
     if outra.currency != entrada.account.currency:
         raise ValueError("Transferência entre moedas diferentes é lançada à mão.")
     if not (can_access_account(user, entrada.account_id, "update") and can_access_account(user, outra.id, "create")):
-        raise ValueError("Acesso negado para converter este lançamento.")
+        raise ValueError("Acesso negado: você não tem permissão para converter este lançamento.")
     dia = entrada.realized_date
     if is_month_closed(outra, dia.year, dia.month):
         raise ValueError(f"O mês {dia.month:02d}/{dia.year} está fechado na conta {_account_label(outra)}.")

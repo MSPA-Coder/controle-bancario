@@ -146,19 +146,32 @@ def test_fechamento_revalida_criacao_e_mutacao_de_lancamento(cenario):
     assert not CashFlowEntry.objects.filter(due_date=date(2026, 9, 10)).exists()
 
 
+def _dia_10_do_mes(deslocamento: int) -> date:
+    """Dia 10 do mês de hoje deslocado em `deslocamento` meses."""
+    hoje = date.today()
+    total = hoje.year * 12 + (hoje.month - 1) + deslocamento
+    return date(total // 12, total % 12 + 1, 10)
+
+
 def test_edicao_composta_reverte_recriacao_se_novo_periodo_estiver_fechado(cenario):
     user, origem, _destino, _transferencia, normal = cenario
+    # A 1ª parcela tem de estar vencida e a 2ª a vencer, qualquer que seja o dia em
+    # que a suíte roda: o dia 10 do mês anterior (se hoje já passou do dia 10, o do
+    # mês corrente) e o dia 10 do mês seguinte a ele. Datas fixas apodrecem.
+    primeira = _dia_10_do_mes(0 if date.today().day > 10 else -1)
+    segunda = _dia_10_do_mes(1 if date.today().day > 10 else 0)
+    destino_da_edicao = _dia_10_do_mes(2 if date.today().day > 10 else 1)
     entradas = services.create_transaction_batch(
         _request(
             origem,
             normal,
-            due_date=date(2026, 9, 10),
+            due_date=primeira,
             installments=2,
         ),
         user=user,
     )
     ids_originais = [entrada.id for entrada in entradas]
-    services.close_month(origem, 2026, 11, Decimal("0.00"), user)
+    services.close_month(origem, destino_da_edicao.year, destino_da_edicao.month, Decimal("0.00"), user)
 
     with pytest.raises(ValueError, match="fechado"):
         services.update_transaction_operation(
@@ -166,7 +179,7 @@ def test_edicao_composta_reverte_recriacao_se_novo_periodo_estiver_fechado(cenar
             _request(
                 origem,
                 normal,
-                due_date=date(2026, 11, 10),
+                due_date=destino_da_edicao,
                 installments=2,
             ),
             operation_scope=OPERATION_SCOPE_CURRENT_FUTURE,
@@ -181,7 +194,10 @@ def test_edicao_composta_reverte_recriacao_se_novo_periodo_estiver_fechado(cenar
         .order_by("id")
         .values_list("id", "due_date", "status")
     ) == [
-        (ids_originais[0], date(2026, 9, 10), STATUS_PENDING),
-        (ids_originais[1], date(2026, 10, 10), STATUS_PROJECTED),
+        (ids_originais[0], primeira, STATUS_PENDING),
+        (ids_originais[1], segunda, STATUS_PROJECTED),
     ]
-    assert AccountMonthClose.objects.filter(account=origem, year=2026, month=11, active=True).exists()
+    assert AccountMonthClose.objects.filter(
+        account=origem, year=destino_da_edicao.year, month=destino_da_edicao.month, active=True
+    ).exists()
+

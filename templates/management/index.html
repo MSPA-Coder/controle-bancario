@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load icons navegacao contas %}
-{% block title %}Gestão • Painel gerencial{% endblock %}
+{% block title %}Relatórios • Controle gerencial{% endblock %}
 
 {% block page_header %}
 <div class="top-filter-card">
@@ -8,7 +8,7 @@
         <label class="top-filter-field">
             Titular
             <select name="owner_id">
-                <option value="">Todos os Titulares</option>
+                <option value="">Todos os titulares</option>
                 {% for owner in owners %}
                 <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                 {% endfor %}
@@ -17,7 +17,7 @@
         <label class="top-filter-field">
             Instituição
             <select name="institution_id">
-                <option value="">Todas as Instituições</option>
+                <option value="">Todas as instituições</option>
                 {% for bank in banks %}
                 <option value="{{ bank.id }}" {% if bank.id == current_institution_id %}selected{% endif %}>{{ bank.institution_name }}</option>
                 {% endfor %}
@@ -26,7 +26,7 @@
         <label class="top-filter-field">
             Conta
             <select name="account_id">
-                <option value="">Todas as Contas</option>
+                <option value="">Todas as contas</option>
                 {% for titular, contas in accounts|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for account in contas %}

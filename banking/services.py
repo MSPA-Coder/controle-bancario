@@ -281,7 +281,7 @@ def _parse_card_day(raw_value: str | None, label: str) -> int:
     except ValueError as exc:
         raise ValueError(f"{label} do cartão é obrigatório (1 a 31).") from exc
     if not CARD_DAY_MIN <= day <= CARD_DAY_MAX:
-        raise ValueError(f"{label} do cartão tem de estar entre 1 e 31.")
+        raise ValueError(f"{label} do cartão deve estar entre 1 e 31.")
     return day
 
 
@@ -343,9 +343,9 @@ def _clean_card_fields(
         if payment.id == account_id:
             raise ValueError("O cartão não pode pagar a própria fatura.")
         if payment.account_kind == ACCOUNT_KIND_CREDIT_CARD:
-            raise ValueError("A conta de pagamento tem de ser uma conta comum, não outro cartão.")
+            raise ValueError("A conta de pagamento deve ser uma conta comum, não outro cartão.")
         if payment.currency != currency:
-            raise ValueError("A conta de pagamento tem de estar na mesma moeda do cartão.")
+            raise ValueError("A conta de pagamento deve estar na mesma moeda do cartão.")
     return {
         "account_kind": kind,
         "card_closing_day": _parse_card_day(card_closing_day, "Dia de fechamento"),
@@ -375,11 +375,11 @@ def _clean_movement_account(
     if movement.id == account_id:
         raise ValueError("A aplicação não pode ser a própria conta de movimento.")
     if movement.account_kind != ACCOUNT_KIND_REGULAR:
-        raise ValueError("A conta de movimento tem de ser uma conta comum, não cartão nem outra aplicação.")
+        raise ValueError("A conta de movimento deve ser uma conta comum, não cartão nem outra aplicação.")
     if movement.owner_id != int(owner_id):
-        raise ValueError("A conta de movimento tem de ser do mesmo titular da aplicação.")
+        raise ValueError("A conta de movimento deve ser do mesmo titular da aplicação.")
     if movement.currency != currency:
-        raise ValueError("A conta de movimento tem de estar na mesma moeda da aplicação.")
+        raise ValueError("A conta de movimento deve estar na mesma moeda da aplicação.")
     return movement
 
 
@@ -414,7 +414,7 @@ def create_account(
     clean_currency = _parse_currency(currency)
     clean_balance_date = _parse_initial_balance_date(initial_balance_date)
     if not can_access_owner(user, clean_owner_id, "create"):
-        raise ValueError("Acesso negado: você não pode criar contas para este titular.")
+        raise ValueError("Acesso negado: você não tem permissão para criar contas para este titular.")
     if not FinancialInstitution.objects.filter(id=clean_institution_id).exists():
         raise ValueError("Instituição não encontrada.")
     card = _clean_card_fields(
@@ -470,9 +470,9 @@ def update_account(
     clean_currency = _parse_currency(currency)
     clean_balance_date = _parse_initial_balance_date(initial_balance_date)
     if not can_access_owner(user, account.owner_id, "update"):
-        raise ValueError("Acesso negado: você não pode alterar contas deste titular.")
+        raise ValueError("Acesso negado: você não tem permissão para alterar contas deste titular.")
     if not can_access_owner(user, clean_owner_id, "update"):
-        raise ValueError("Acesso negado: você não pode transferir a conta para este titular.")
+        raise ValueError("Acesso negado: você não tem permissão para transferir a conta para este titular.")
     if not FinancialInstitution.objects.filter(id=clean_institution_id).exists():
         raise ValueError("Instituição não encontrada.")
     # Trocar a moeda de uma conta com lançamento reescreveria em silêncio o
@@ -506,7 +506,7 @@ def update_account(
     # Idem para a conta de movimento de uma aplicação: ela tem de continuar conta comum.
     if card["account_kind"] != ACCOUNT_KIND_REGULAR and account.linked_investments.exists():
         raise ValueError(
-            "Esta conta é a conta de movimento de uma aplicação e tem de continuar conta comum. "
+            "Esta conta é a conta de movimento de uma aplicação e deve continuar conta comum. "
             "Troque antes a conta de movimento dessa aplicação."
         )
     movement = _clean_movement_account(
@@ -534,7 +534,7 @@ def update_account(
 
 def delete_account(user, account: FinancialAccount) -> None:
     if not can_access_owner(user, account.owner_id, "delete"):
-        raise ValueError("Acesso negado: você não pode excluir contas deste titular.")
+        raise ValueError("Acesso negado: você não tem permissão para excluir contas deste titular.")
     try:
         account.delete()
     except ProtectedError as exc:

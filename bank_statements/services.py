@@ -88,7 +88,7 @@ def _adapter_for(account: FinancialAccount, uploaded_file: UploadedFile):
     if eh_csv and formato_da_fatura(read_statement_upload(uploaded_file, label="CSV")) is not None:
         raise ValueError(
             "Este arquivo é uma fatura de cartão de crédito. Importe-o na conta do cartão "
-            "(tipo \"Cartão de crédito\" em Cadastros > Contas)."
+            "(tipo “Cartão de crédito” em Cadastros > Contas)."
         )
     return get_statement_adapter(uploaded_file, institution=account.institution)
 
@@ -105,7 +105,7 @@ def import_statement_file(
         raise ValueError("Informe a conta e o arquivo do extrato.")
     clean_account_id = _clean_account_id(account_id)
     if not can_access_account(user, clean_account_id, "create"):
-        raise ValueError("Acesso negado para importar extrato nesta conta.")
+        raise ValueError("Acesso negado: você não tem permissão para importar extrato nesta conta.")
 
     try:
         account = FinancialAccount.objects.select_related("institution").get(id=clean_account_id)

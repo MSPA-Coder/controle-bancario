@@ -161,7 +161,7 @@ def institutions_view(request):
 def create_institution_view(request):
     try:
         create_institution(request.POST.get('institution_name', ''), request.POST.get('institution_type', ''))
-        messages.success(request, "Instituição cadastrada com sucesso.")
+        messages.success(request, "Instituição cadastrada.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:institutions_view', sucesso=False)
@@ -180,7 +180,7 @@ def update_institution_view(request, institution_id):
             request.POST.get('institution_name', ''),
             request.POST.get('institution_type', ''),
         )
-        messages.success(request, "Instituição atualizada com sucesso.")
+        messages.success(request, "Instituição atualizada.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:institutions_view', sucesso=False)
@@ -195,7 +195,7 @@ def delete_institution_view(request, institution_id):
     institution = get_object_or_404(FinancialInstitution, id=institution_id)
     try:
         delete_institution(institution)
-        messages.success(request, "Instituição excluída com sucesso.")
+        messages.success(request, "Instituição excluída.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:institutions_view', sucesso=False)
@@ -282,7 +282,7 @@ def create_account_view(request):
             statement_identifier=request.POST.get('statement_identifier', ''),
             **_card_fields_from_post(request),
         )
-        messages.success(request, "Conta cadastrada com sucesso.")
+        messages.success(request, "Conta cadastrada.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:accounts_view', sucesso=False)
@@ -313,7 +313,7 @@ def update_account_view(request, account_id):
         from bank_statements.fatura_projetada import atualizar
 
         atualizar(account)
-        messages.success(request, "Conta atualizada com sucesso.")
+        messages.success(request, "Conta atualizada.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:accounts_view', sucesso=False)
@@ -328,7 +328,7 @@ def delete_account_view(request, account_id):
     account = get_object_or_404(FinancialAccount, id=account_id)
     try:
         delete_account(request.user, account)
-        messages.success(request, "Conta excluída com sucesso.")
+        messages.success(request, "Conta excluída.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:accounts_view', sucesso=False)

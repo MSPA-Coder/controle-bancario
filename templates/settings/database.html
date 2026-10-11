@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load icons navegacao %}
 
-{% block title %}Banco de Dados{% endblock %}
+{% block title %}Configurações • Banco de dados{% endblock %}
 
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Banco de Dados</h1>
+        <h1>Banco de dados</h1>
         <p>Diagnóstico de integridade e otimização (VACUUM ANALYZE).</p>
     </div>
 </div>
@@ -34,10 +34,10 @@
 
 {% if pode_inspecionar %}
 <div class="section-card">
-    <h3>Inspeção de Dados</h3>
+    <h3>Inspeção de dados</h3>
     <form method="get" class="btn-group form-spaced" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
         <select name="table_name" class="form-control form-control-fit" aria-label="Tabela para inspeção">
-            <option value="">Selecione uma tabela...</option>
+            <option value="">Selecione uma tabela…</option>
             {% for t in available_tables %}
             <option value="{{ t }}" {% if t == selected_table %}selected{% endif %}>{{ t }}</option>
             {% endfor %}

@@ -14,6 +14,8 @@ from __future__ import annotations
 from contextvars import ContextVar
 from datetime import date, datetime
 
+from django.utils import timezone
+
 from core.domain.settings import REGIONAL_FORMAT_BR, REGIONAL_FORMAT_US, normalize_regional_format
 
 _formato: ContextVar[str] = ContextVar("formato_regional", default=REGIONAL_FORMAT_BR)
@@ -37,29 +39,41 @@ def _eua() -> bool:
     return _formato.get() == REGIONAL_FORMAT_US
 
 
+def _local(valor: date | datetime) -> date | datetime:
+    """Leva um `datetime` com fuso para o fuso do sistema antes de formatar.
+
+    O banco devolve `DateTimeField` em UTC; formatar direto mostraria a hora (e,
+    perto da meia-noite, o dia) três horas à frente de Brasília. `date` e
+    `datetime` sem fuso passam como vieram.
+    """
+    if isinstance(valor, datetime) and timezone.is_aware(valor):
+        return timezone.localtime(valor)
+    return valor
+
+
 def formatar_data(valor: date | datetime | None, *, ausente: str = "") -> str:
     if not valor:
         return ausente
-    return valor.strftime(_PADRAO_DATA[_formato.get()])
+    return _local(valor).strftime(_PADRAO_DATA[_formato.get()])
 
 
 def formatar_data_hora(valor: datetime | None, *, segundos: bool = False, ausente: str = "") -> str:
     if not valor:
         return ausente
     hora = "%H:%M:%S" if segundos else "%H:%M"
-    return valor.strftime(f"{_PADRAO_DATA[_formato.get()]} {hora}")
+    return _local(valor).strftime(f"{_PADRAO_DATA[_formato.get()]} {hora}")
 
 
 def formatar_mes(valor: date | datetime | None, *, ausente: str = "") -> str:
     if not valor:
         return ausente
-    return valor.strftime(_PADRAO_MES[_formato.get()])
+    return _local(valor).strftime(_PADRAO_MES[_formato.get()])
 
 
 def formatar_dia_mes(valor: date | datetime | None, *, ausente: str = "") -> str:
     if not valor:
         return ausente
-    return valor.strftime(_PADRAO_DIA_MES[_formato.get()])
+    return _local(valor).strftime(_PADRAO_DIA_MES[_formato.get()])
 
 
 def adaptar_numero(texto: str) -> str:
