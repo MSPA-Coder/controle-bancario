@@ -69,7 +69,7 @@ def test_quem_so_ve_configuracoes_nao_inspeciona_tabela_nenhuma(dois_titulares):
         assert "pbkdf2_" not in corpo, f"hash de senha na página ({tabela})"
         assert "admin_da_casa" not in corpo, f"linha de outro usuário na página ({tabela})"
         assert "Titular Bia" not in corpo, f"titular sem acesso na página ({tabela})"
-        assert "Inspeção de Dados" not in corpo
+        assert "Inspeção de dados" not in corpo
 
 
 def test_administrador_inspeciona_mas_o_hash_de_senha_fica_oculto(dois_titulares):
@@ -79,7 +79,7 @@ def test_administrador_inspeciona_mas_o_hash_de_senha_fica_oculto(dois_titulares
     corpo = resposta.content.decode("utf-8")
 
     assert resposta.status_code == 200
-    assert "Inspeção de Dados" in corpo
+    assert "Inspeção de dados" in corpo
     assert "admin_da_casa" in corpo, "o administrador deve conseguir inspecionar"
     assert "pbkdf2_" not in corpo
     assert "•••" in corpo

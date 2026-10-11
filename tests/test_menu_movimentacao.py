@@ -50,11 +50,11 @@ def test_movimentacao_na_ordem_pedida_e_sem_o_nivel_banking():
 
     assert [i["label"] for i in movimentacao["children"]] == [
         "Lançamentos",
-        "Saldo Aplicações",
+        "Saldo aplicações",
         "Importação",
         "Reclassificação",
-        "Fechamento Mensal",
-        "Parcelas e Recorrências",
+        "Fechamento mensal",
+        "Parcelas e recorrências",
         "Comprovantes",
     ]
     assert [i["label"] for i in _item(menu, "Movimentação", "Importação")["children"]] == [
@@ -62,7 +62,7 @@ def test_movimentacao_na_ordem_pedida_e_sem_o_nivel_banking():
         "Conciliação",
         "Extratos importados",
         "Faturas e projeção",
-        "Situação das Contas",
+        "Situação das contas",
     ]
     assert _item(menu, "Movimentação", "Banking") is None
 
@@ -107,5 +107,5 @@ def test_quem_so_consulta_enxerga_o_grupo_importacao_com_as_telas_de_leitura():
     assert [i["label"] for i in _item(menu, "Movimentação", "Importação")["children"]] == [
         "Extratos importados",
         "Faturas e projeção",
-        "Situação das Contas",
+        "Situação das contas",
     ]

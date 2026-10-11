@@ -50,7 +50,7 @@ parâmetro, a grade é a de sempre, e o total geral não muda com o agrupamento.
   depois.
 - Despesas e receitas são divididas por `is_recurring`; parcelas sem
   recorrência pertencem às seções não recorrentes.
-- A linha **Movimentações Internas** do resumo mostra as transferências que
+- A linha **Transferências internas** do resumo mostra as transferências que
   afetam os saldos, sem misturá-las à geração de caixa. No mês de referência,
   ela inclui também transferências já realizadas; nas colunas mensais, mostra
   o volume de cada transferência uma única vez.

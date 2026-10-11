@@ -36,7 +36,7 @@
                 <option value="a_vencer" {% if view_mode == 'a_vencer' %}selected{% endif %}>A vencer</option>
                 <option value="vencidos" {% if view_mode == 'vencidos' %}selected{% endif %}>Vencidos</option>
                 <option value="realizado" {% if view_mode == 'realizado' %}selected{% endif %}>Realizado</option>
-                <option value="todos" {% if view_mode == 'todos' %}selected{% endif %}>Todos</option>
+                <option value="todos" {% if view_mode == 'todos' %}selected{% endif %}>Todos os modos</option>
             </select>
         </label>
         <label class="top-filter-field">
@@ -105,7 +105,7 @@
 {% if operation_id %}
 <div class="flash info sa-info" data-ui="mb-1">
     {% sharedauth_icon 'info' %}
-    <span data-ui="flex-1">Exibindo lançamentos da operação selecionada. <a href="{% url 'transactions:operations_view' %}">Voltar para Operações</a> ou <a href="{% url_sem 'transactions:transactions_view' 'operation_id' 'entry_id' %}">limpar filtro</a>.</span>
+    <span data-ui="flex-1">Exibindo lançamentos da operação selecionada. <a href="{% url 'transactions:operations_view' %}">Voltar para parcelas e recorrências</a> ou <a href="{% url_sem 'transactions:transactions_view' 'operation_id' 'entry_id' %}">limpar filtro</a>.</span>
 </div>
 {% endif %}
 {% if entry_id %}

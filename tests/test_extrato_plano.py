@@ -306,7 +306,7 @@ def test_sem_permissao_de_destino_a_transferencia_pede_decisao(mundo):
     entrada = _linha(contas["c6"], "Pix recebido de MARIANO", "200.00", date(2026, 9, 24))
     planos = {plano.linha.id: plano for plano in extrato.planejar(user, [saida, entrada])}
     assert planos[saida.id].acao == extrato.MANUAL
-    assert "permissão de destino" in planos[saida.id].motivo
+    assert "permissão para receber transferência" in planos[saida.id].motivo
     feitas, erros = extrato.aplicar(user, [saida, entrada])
     assert not feitas and erros
     assert CashFlowEntry.objects.count() == 0

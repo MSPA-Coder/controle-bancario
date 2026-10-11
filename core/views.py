@@ -242,7 +242,7 @@ def permissions_view(request):
             messages.warning(
                 request,
                 "Acesso negado: você não tem permissão para alterar permissões "
-                "e acessos por titular (somente administrator).",
+                "e acessos por titular (somente administradores).",
             )
             return redirect(f"/permissions/?user_id={selected_user.id}")
 

@@ -52,7 +52,7 @@ def _build_menu_items() -> list[MenuItem]:
                     required_permission="transactions.view",
                 ),
                 MenuItem(
-                    "Saldo Aplicações",
+                    "Saldo aplicações",
                     "/banking/balance/",
                     "\U0001F4B0",
                     "/banking/balance/",
@@ -96,7 +96,7 @@ def _build_menu_items() -> list[MenuItem]:
                             active_patterns=(r"^/banking/import/\d+/fatura/",),
                         ),
                         MenuItem(
-                            "Situação das Contas",
+                            "Situação das contas",
                             "/banking/status/",
                             "\U0001F6A6",
                             "/banking/status/",
@@ -112,14 +112,14 @@ def _build_menu_items() -> list[MenuItem]:
                     required_permission="banking.reclassify",
                 ),
                 MenuItem(
-                    "Fechamento Mensal",
+                    "Fechamento mensal",
                     "/settings/monthly-close/",
                     "\U0001F512",
                     "/settings/monthly-close/",
                     required_permission="settings.monthly_close.manage",
                 ),
                 MenuItem(
-                    "Parcelas e Recorrências",
+                    "Parcelas e recorrências",
                     "/operations/",
                     "\U0001F501",
                     "/operations/",

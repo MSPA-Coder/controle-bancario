@@ -29,7 +29,7 @@
                         <span class="amount amount-negative">Extrato {{ batch.conferencia.saldo_do_extrato|money:batch.account.currency }} · CB {{ batch.conferencia.saldo_no_cb|money:batch.account.currency }} em {{ batch.conferencia.data|udate }} · diferença {{ batch.conferencia.diferenca|money:batch.account.currency }}</span>
                         {% endif %}
                     {% else %}
-                    <span class="empty-state">O arquivo não informa saldo</span>
+                    <span class="empty-state">O arquivo não informa saldo.</span>
                     {% endif %}
                 </td>
                 <td>{{ batch.get_status_display }}

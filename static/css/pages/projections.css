@@ -4,6 +4,7 @@
     .projection-table th { background: var(--bg-header); color: var(--muted); font-weight:600; position:sticky; top:0; z-index:2; white-space:nowrap; }
     .projection-table .month-col { width:7rem; text-align:left; white-space:nowrap; }
     .projection-table .value-col { width:6.2rem; text-align:right; white-space:nowrap; }
+    .projection-table th.value-col { white-space:normal; line-height:1.15; }
     .projection-table .col-separator { border-left:2px solid var(--border); }
     .projection-table .col-separator-right { border-right:2px solid var(--border); }
     .projection-table .summary-row td { background: var(--bg-header); font-weight:700; border-top:2px solid var(--border); font-size:0.8rem; }

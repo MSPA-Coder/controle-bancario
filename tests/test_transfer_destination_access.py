@@ -56,7 +56,7 @@ def _request(origin, destination, category):
 def test_grant_is_required_to_create_and_revocation_blocks_both_legs(transfer_setup):
     user, origin, destination, category = transfer_setup
     req = _request(origin, destination, category)
-    with pytest.raises(ValueError, match="destino não autorizada"):
+    with pytest.raises(ValueError, match="permissão para usar a conta destino"):
         services.create_transaction_batch(req, user=user)
     assert CashFlowEntry.objects.count() == 0
 
@@ -64,9 +64,9 @@ def test_grant_is_required_to_create_and_revocation_blocks_both_legs(transfer_se
     entries = services.create_transaction_batch(req, user=user)
     assert len(entries) == 2
     save_transfer_destination_accesses(user, set())
-    with pytest.raises(ValueError, match="destino não autorizada"):
+    with pytest.raises(ValueError, match="permissão para usar a conta destino"):
         services.realize_transaction(entries[0], user=user)
-    with pytest.raises(ValueError, match="destino não autorizada"):
+    with pytest.raises(ValueError, match="permissão para usar a conta destino"):
         services.realize_transaction(entries[1], user=user)
     assert CashFlowEntry.objects.exclude(status="realizado").count() == 2
 
@@ -198,7 +198,7 @@ def test_conversion_to_transfer_is_refused_after_destination_access_is_revoked(t
         due_date=date(2026, 9, 10), status=STATUS_PROJECTED,
     )
 
-    with pytest.raises(ValueError, match='destino não autorizada'):
+    with pytest.raises(ValueError, match='permissão para usar a conta destino'):
         services.update_transaction_operation(entry, _request(origin, destination, category), user=user)
 
     entry.refresh_from_db()
@@ -229,7 +229,7 @@ def test_revoked_destination_only_blocks_the_affected_transfer_pair(transfer_set
     save_transfer_destination_accesses(user, {destination.id})
     assert services.delete_transaction_or_operation(pairs[0][0], OPERATION_SCOPE_SINGLE, user=user) == 2
     assert CashFlowEntry.objects.filter(account=later_destination).count() == 1
-    with pytest.raises(ValueError, match='destino não autorizada'):
+    with pytest.raises(ValueError, match='permissão para usar a conta destino'):
         services.delete_transaction_or_operation(pairs[1][0], OPERATION_SCOPE_ALL, user=user)
     assert CashFlowEntry.objects.filter(account=later_destination).count() == 1
 
@@ -245,7 +245,7 @@ def test_reconciliation_does_not_bypass_a_revoked_transfer_destination_grant(tra
         description='Transferência', amount=Decimal('-10.00'), line_hash='revoked-grant-reconcile',
     )
 
-    with pytest.raises(ValueError, match='destino não autorizada'):
+    with pytest.raises(ValueError, match='permissão para usar a conta destino'):
         reconcile_line_with_entry(user, line_id=line.id, entry_id=origin_entry.id)
 
     line.refresh_from_db()
@@ -267,7 +267,7 @@ def test_matching_realized_transfer_cannot_be_reconciled_after_grant_revocation(
         description='Transferência já realizada', amount=Decimal('-10.00'), line_hash='revoked-grant-realized',
     )
 
-    with pytest.raises(ValueError, match='destino não autorizada'):
+    with pytest.raises(ValueError, match='permissão para usar a conta destino'):
         reconcile_line_with_entry(user, line_id=line.id, entry_id=origin_entry.id)
 
     line.refresh_from_db()

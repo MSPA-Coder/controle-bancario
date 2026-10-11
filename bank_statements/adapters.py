@@ -813,7 +813,7 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
         dia = date(int(year), int(month), int(day))
         descricao = anterior
         if not descricao or descricao.startswith("ID ") or descricao.startswith(_AVENUE_CABECALHO):
-            raise ValueError(f"Não encontrei a descrição do lançamento de {dia:%d/%m/%Y} no extrato Avenue.")
+            raise ValueError(f"Não encontrei a descrição da linha de {dia:%d/%m/%Y} no extrato Avenue.")
         valor = _avenue_valor(valor_raw)
         valor = -valor if sinal == "-" else valor
         if valor == 0:

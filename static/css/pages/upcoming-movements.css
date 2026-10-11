@@ -16,6 +16,7 @@
     .report-table th, .report-table td { padding:0.38rem 0.35rem; text-align:left; border-bottom:1px solid var(--border); vertical-align:top; }
     .report-table th { background:var(--bg-header); color:var(--muted); font-weight:600; position:sticky; top:0; z-index:2; white-space:nowrap; }
     .report-table .value-col { text-align:right; white-space:nowrap; width:7.8rem; }
+    .report-table th.value-col { white-space:normal; line-height:1.15; }
     .report-table .date-col { width:5.8rem; white-space:nowrap; }
     .report-table .account-col { width:11rem; }
     .report-table .status-col { width:9rem; }

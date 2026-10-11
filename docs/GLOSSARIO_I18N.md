@@ -43,3 +43,13 @@ de um texto em português muda o `msgid` e exige reabrir a tradução.
 - Botões com verbo no imperativo ("Save", "Cancel"); mensagens no passado ("User deleted.").
 - Recusa: "Access denied: you do not have permission to <action>."
 - Moeda e símbolo seguem a conta, não o idioma.
+
+## Decisões de aplicação (F1)
+
+- Título de página: `Área • Tela`, com a área sendo o **grupo de topo do menu** (Movimentação, Relatórios,
+  Cadastros, Configurações, Segurança). "Importação" é subgrupo de Movimentação, não área.
+- Nomes de tela do menu em sentence case ("Saldo aplicações", "Situação das contas", "Fechamento mensal").
+- "Próximos movimentos" e "Movimento líquido" ficam: são nome de tela e de indicador, e "movimento" ali
+  inclui transferências, não só lançamentos.
+- `×` também vale para "cruzamento" em títulos de matriz ("Usuário × titular").
+- Plural: o `(s)` existente permanece até a etapa de marcação para tradução, que o troca por `ngettext`.

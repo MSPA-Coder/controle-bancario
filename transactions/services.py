@@ -1129,7 +1129,7 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
     except FinancialAccount.DoesNotExist as exc:
         raise ValueError("Conta inválida.") from exc
     if not can_access_account(user, account.id, "create"):
-        raise ValueError("Acesso negado: você não tem permissão para usar a conta de origem.")
+        raise ValueError("Acesso negado: você não tem permissão para usar esta conta.")
 
     locked_accounts = _lock_accounts(
         [account.id, counterparty_account.id if counterparty_account is not None else None]

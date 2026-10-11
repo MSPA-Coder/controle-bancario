@@ -197,7 +197,7 @@
                     <td>{{ line.statement_date|udate }}</td>
                     <td>{{ line.description }}</td>
                     <td class="amount {{ line.amount|amount_class }}">{{ line.amount|money_signed:line.account.currency }}</td>
-                    <td>{% if line.matched_entry %}#{{ line.matched_entry.id }} - {{ line.matched_entry.description|default:"-" }}{% else %}Lançamento não encontrado{% endif %}</td>
+                    <td>{% if line.matched_entry %}#{{ line.matched_entry.id }} - {{ line.matched_entry.description|default:"-" }}{% else %}Lançamento não encontrado.{% endif %}</td>
                     <td class="actions">
                         <form method="post" action="{% url 'bank_statements:undo_reconciliation' %}"
                               hx-post="{% url 'bank_statements:undo_reconciliation' %}"

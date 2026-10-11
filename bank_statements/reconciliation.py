@@ -302,7 +302,7 @@ def _locked_entry_for_update(entry_id) -> CashFlowEntry:
     try:
         snapshot = CashFlowEntry.objects.get(id=entry_id)
     except CashFlowEntry.DoesNotExist as exc:
-        raise ValueError("Movimento não encontrado.") from exc
+        raise ValueError("Lançamento não encontrado.") from exc
 
     entry_ids = {snapshot.id}
     if snapshot.source_entry_id:
@@ -321,7 +321,7 @@ def _locked_entry_for_update(entry_id) -> CashFlowEntry:
     for entry in locked_entries:
         if entry.id == snapshot.id:
             return entry
-    raise ValueError("Movimento não encontrado.")
+    raise ValueError("Lançamento não encontrado.")
 
 
 def rendimentos_agrupados(lines) -> list[dict]:
@@ -438,13 +438,13 @@ def reconcile_line_with_entry(
     """
     line = _get_line_in_scope(user, line_id, "update", for_update=True)
     if not entry_id:
-        raise ValueError("Selecione a linha do extrato e o movimento a conciliar.")
+        raise ValueError("Selecione a linha do extrato e o lançamento a conciliar.")
     try:
         entry_scope = CashFlowEntry.objects.select_related("account").get(id=entry_id)
     except CashFlowEntry.DoesNotExist as exc:
-        raise ValueError("Movimento não encontrado.") from exc
+        raise ValueError("Lançamento não encontrado.") from exc
     if not can_access_account(user, entry_scope.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar este movimento.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar este lançamento.")
     entry = _locked_entry_for_update(entry_id)
     # A autorização é revalidada depois dos locks: a leitura feita antes da
     # operação não pode ser a única barreira para uma mudança concorrente de
@@ -452,7 +452,7 @@ def reconcile_line_with_entry(
     if not can_access_account(user, line.account_id, "update"):
         raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
     if not can_access_account(user, entry.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar este movimento.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar este lançamento.")
     # Uma transferência já realizada com a mesma data/valor não chama
     # `realize_transaction` abaixo. Revalide aqui para que esse atalho de
     # conciliação não contorne uma concessão de destino posteriormente
@@ -465,20 +465,20 @@ def reconcile_line_with_entry(
     if BankStatementLine.objects.filter(
         matched_entry_id=entry.id, status=LINE_STATUS_RECONCILED
     ).exclude(id=line.id).exists():
-        raise ValueError("Movimento já está conciliado com outra linha de extrato.")
+        raise ValueError("Lançamento já está conciliado com outra linha de extrato.")
     if line.account_id != entry.account_id:
-        raise ValueError("A linha de extrato e o movimento pertencem a contas diferentes.")
+        raise ValueError("A linha de extrato e o lançamento pertencem a contas diferentes.")
 
     expected_type = ENTRY_TYPE_INCOME if line.amount > 0 else ENTRY_TYPE_EXPENSE
     if entry.entry_type != expected_type:
-        raise ValueError("Tipo do movimento incompatível com o sinal da linha de extrato.")
+        raise ValueError("Tipo do lançamento incompatível com o sinal da linha de extrato.")
 
     line_value = abs(line.amount)
     realizado_pelo_valor = entry.status == STATUS_REALIZED and entry.realized_amount == line_value
     if entry.entry_amount != line_value and not realizado_pelo_valor:
         variavel = aceitar_valor_diferente and entry.is_recurring and entry.status != STATUS_REALIZED
         if not variavel:
-            raise ValueError("Valor do movimento incompatível com a linha de extrato.")
+            raise ValueError("Valor do lançamento incompatível com a linha de extrato.")
 
     already_realized_matching = False
     if entry.status == STATUS_REALIZED:
@@ -596,7 +596,7 @@ def undo_reconciliation(user, *, line_id) -> BankStatementLine:
     if not can_access_account(user, line.account_id, "update"):
         raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
     if not can_access_account(user, entry.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar este movimento.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar este lançamento.")
     if entry.status == STATUS_REALIZED:
         unrealize_transaction(entry, user=user)
 
@@ -760,9 +760,9 @@ def bulk_reconcile_lines(user, *, line_ids: Iterable, audit_context=None) -> tup
             line = _get_line_in_scope(user, line_id, "update")
             candidates = desempatar_pelo_dia(line, list(candidate_entries_for_line(line)))
             if not candidates:
-                raise ValueError("Nenhum movimento candidato para conciliar.")
+                raise ValueError("Nenhum lançamento candidato para conciliar.")
             if len(candidates) > 1:
-                raise ValueError("Mais de um movimento candidato — concilie manualmente.")
+                raise ValueError("Mais de um lançamento candidato — concilie manualmente.")
             reconcile_line_with_entry(
                 user,
                 line_id=line_id,
