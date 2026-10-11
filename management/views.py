@@ -72,7 +72,7 @@ def create_tag_view(request):
     if request.method == "POST":
         try:
             services.create_tag(request.POST.get("tag_name", ""))
-            messages.success(request, "Tag criada com sucesso.")
+            messages.success(request, "Tag criada.")
         except ValueError as exc:
             messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -85,7 +85,7 @@ def create_project_view(request):
     if request.method == "POST":
         try:
             services.create_project(request.POST.get("project_name", ""), request.POST.get("description", ""))
-            messages.success(request, "Projeto/centro de custo criado com sucesso.")
+            messages.success(request, "Projeto/centro de custo criado.")
         except ValueError as exc:
             messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -97,7 +97,7 @@ def create_project_view(request):
 def retire_tag_view(request):
     try:
         tag, action = services.retire_tag(request.POST.get("tag_id"))
-        messages.success(request, f"Tag '{tag.tag_name}' {'arquivada por possuir histórico' if action == 'archived' else 'excluída'}.")
+        messages.success(request, f"Tag “{tag.tag_name}” {'arquivada por possuir histórico' if action == 'archived' else 'excluída'}.")
     except ValueError as exc:
         messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -109,7 +109,7 @@ def retire_tag_view(request):
 def retire_project_view(request):
     try:
         project, action = services.retire_project(request.POST.get("project_id"))
-        messages.success(request, f"Projeto '{project.project_name}' {'arquivado por possuir histórico' if action == 'archived' else 'excluído'}.")
+        messages.success(request, f"Projeto “{project.project_name}” {'arquivado por possuir histórico' if action == 'archived' else 'excluído'}.")
     except ValueError as exc:
         messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -122,7 +122,7 @@ def retire_budget_view(request):
     try:
         budget, action = services.retire_budget(request.user, request.POST.get("budget_id"))
         label = f"{budget.category.category_name} - {budget.month:02d}/{budget.year}"
-        messages.success(request, f"Orçamento '{label}' {'arquivado por possuir realizado' if action == 'archived' else 'excluído'}.")
+        messages.success(request, f"Orçamento “{label}” {'arquivado por possuir realizado' if action == 'archived' else 'excluído'}.")
     except ValueError as exc:
         messages.error(request, str(exc))
     return _redirect_to_panel(request)

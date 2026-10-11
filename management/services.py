@@ -141,7 +141,7 @@ def _resolve_owned_entry(user, entry_id) -> CashFlowEntry:
     if entry is None:
         raise ValueError("Lançamento não encontrado.")
     if not can_access_entry(user, entry):
-        raise ValueError("Acesso negado: você não pode vincular este lançamento.")
+        raise ValueError("Acesso negado: você não tem permissão para vincular este lançamento.")
     return entry
 
 
@@ -198,7 +198,7 @@ def save_budget(user, *, owner_id, category_id, year, month, planned_amount) -> 
         raise ValueError("Ano inválido.")
 
     if owner_id_int not in set(accessible_owner_ids(user, "update")):
-        raise ValueError("Acesso negado: você não pode gerenciar orçamento deste titular.")
+        raise ValueError("Acesso negado: você não tem permissão para gerenciar orçamento deste titular.")
 
     if not AccountOwner.objects.filter(id=owner_id_int).exists():
         raise ValueError("Titular não encontrado.")
