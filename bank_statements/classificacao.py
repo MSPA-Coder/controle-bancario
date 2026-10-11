@@ -29,6 +29,8 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass
 
+from django.utils.translation import gettext_lazy
+
 from core.domain.finance import CATEGORY_KIND_MANAGERIAL, CATEGORY_KIND_MOVEMENT
 from transactions.models import CashFlowCategory, CashFlowEntry
 
@@ -46,12 +48,12 @@ ORIGEM_BANCO = "banco"
 ORIGEM_PADRAO = "padrao"
 
 ROTULOS_DA_ORIGEM = {
-    ORIGEM_REGRA: "regra",
-    ORIGEM_HISTORICO: "histórico",
-    ORIGEM_BANCO_APRENDIDA: "categoria do banco (aprendida)",
-    ORIGEM_PREFIXO: "prefixo do extrato",
-    ORIGEM_BANCO: "categoria do banco",
-    ORIGEM_PADRAO: "padrão",
+    ORIGEM_REGRA: gettext_lazy("regra"),
+    ORIGEM_HISTORICO: gettext_lazy("histórico"),
+    ORIGEM_BANCO_APRENDIDA: gettext_lazy("categoria do banco (aprendida)"),
+    ORIGEM_PREFIXO: gettext_lazy("prefixo do extrato"),
+    ORIGEM_BANCO: gettext_lazy("categoria do banco"),
+    ORIGEM_PADRAO: gettext_lazy("padrão"),
 }
 
 # Rótulos que o PDF coloca antes da descrição ("Rendimentos - Taxa de ...").
@@ -89,7 +91,7 @@ class Sugestao:
 
     @property
     def rotulo(self) -> str:
-        return ROTULOS_DA_ORIGEM.get(self.origem, self.origem)
+        return str(ROTULOS_DA_ORIGEM.get(self.origem, self.origem))
 
 
 def _ascii_maiusculo(texto: str) -> str:

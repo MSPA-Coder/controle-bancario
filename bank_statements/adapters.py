@@ -23,6 +23,9 @@ from typing import Protocol, runtime_checkable
 
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
+from django.utils.translation import gettext, ngettext
+
+from core import regional
 
 
 @dataclass(frozen=True)
@@ -75,9 +78,12 @@ def read_statement_upload(file: UploadedFile, *, label: str) -> bytes:
     file.seek(0)
     raw = file.read(max_size + 1)
     if not raw:
-        raise ValueError(f"Arquivo {label} vazio.")
+        raise ValueError(gettext("Arquivo %(label)s vazio.") % {"label": label})
     if len(raw) > max_size:
-        raise ValueError(f"Arquivo {label} excede o limite de {_human_size(max_size)}.")
+        raise ValueError(
+            gettext("Arquivo %(label)s excede o limite de %(limite)s.")
+            % {"label": label, "limite": _human_size(max_size)}
+        )
     return raw
 
 
@@ -85,7 +91,7 @@ def _to_decimal(value: str) -> Decimal:
     try:
         return Decimal(value)
     except InvalidOperation as exc:
-        raise ValueError(f"Valor numérico inválido: {value!r}.") from exc
+        raise ValueError(gettext("Valor numérico inválido: %(valor)r.") % {"valor": value}) from exc
 
 
 # --- CSV genérico ---
@@ -123,13 +129,13 @@ def _parse_date(raw: str) -> date:
             return datetime.strptime(raw, fmt).date()
         except ValueError:
             continue
-    raise ValueError(f"Data inválida no extrato: {raw or '(vazia)'}.")
+    raise ValueError(gettext("Data inválida no extrato: %(valor)s.") % {"valor": raw or gettext("(vazia)")})
 
 
 def _parse_amount(raw: str) -> Decimal:
     value = (raw or "").strip().replace("R$", "").replace(" ", "")
     if not value:
-        raise ValueError("Valor vazio no extrato.")
+        raise ValueError(gettext("Valor vazio no extrato."))
     if "," in value and "." in value:
         value = value.replace(".", "").replace(",", ".")
     elif "," in value:
@@ -191,13 +197,20 @@ class CsvStatementAdapter:
             dialect = csv.excel
         reader = csv.DictReader(io.StringIO(text), dialect=dialect)
         if not reader.fieldnames:
-            raise ValueError("CSV sem cabeçalho.")
+            raise ValueError(gettext("CSV sem cabeçalho."))
 
         parsed: list[ParsedStatementLine] = []
         max_rows = max_statement_rows()
         for index, row in enumerate(reader, 1):
             if index > max_rows:
-                raise ValueError(f"CSV excede o limite de {max_rows} linha(s).")
+                raise ValueError(
+                    ngettext(
+                        "CSV excede o limite de %(n)s linha.",
+                        "CSV excede o limite de %(n)s linhas.",
+                        max_rows,
+                    )
+                    % {"n": max_rows}
+                )
             if not any((cell or "").strip() for cell in row.values()):
                 continue
             statement_date = _parse_date(_first(row, DATE_KEYS))
@@ -214,7 +227,7 @@ class CsvStatementAdapter:
                 )
             )
         if not parsed:
-            raise ValueError("Nenhuma linha válida encontrada no CSV.")
+            raise ValueError(gettext("Nenhuma linha válida encontrada no CSV."))
         return numerar_repeticoes(parsed, account_id)
 
 
@@ -338,7 +351,14 @@ class OfxStatementAdapter:
             return []
         max_rows = max_statement_rows()
         if len(raw_txs) > max_rows:
-            raise ValueError(f"OFX excede o limite de {max_rows} transação(ões).")
+            raise ValueError(
+                ngettext(
+                    "OFX excede o limite de %(n)s transação.",
+                    "OFX excede o limite de %(n)s transações.",
+                    max_rows,
+                )
+                % {"n": max_rows}
+            )
 
         lines: list[ParsedStatementLine] = []
         for tags in raw_txs:
@@ -366,7 +386,7 @@ class OfxStatementAdapter:
             )
 
         if not lines:
-            raise ValueError("Arquivo OFX não contém transações válidas.")
+            raise ValueError(gettext("Arquivo OFX não contém transações válidas."))
 
         return numerar_repeticoes(lines, account_id)
 
@@ -394,14 +414,14 @@ def extract_pdf_text(raw: bytes) -> str:
         import pdfplumber
     except ImportError as exc:
         raise ValueError(
-            "Suporte a extrato em PDF indisponível no momento (dependência não instalada)."
+            gettext("Suporte a extrato em PDF indisponível no momento (dependência não instalada).")
         ) from exc
 
     try:
         with pdfplumber.open(io.BytesIO(raw)) as pdf:
             return "\n".join(page.extract_text() or "" for page in pdf.pages)
     except Exception as exc:
-        raise ValueError("Não foi possível ler o PDF do extrato.") from exc
+        raise ValueError(gettext("Não foi possível ler o PDF do extrato.")) from exc
 
 
 _RE_CONTA_LABEL = re.compile(r"Conta:\s*([\d.\-/]+)")
@@ -500,7 +520,7 @@ def _parse_genial_lines(text: str, account_id: int) -> list[ParsedStatementLine]
             if day:
                 month = _MONTHS_PT.get(mon.lower()[:3])
                 if month is None:
-                    raise ValueError(f"Mês inválido no extrato Genial: {mon!r}.")
+                    raise ValueError(gettext("Mês inválido no extrato Genial: %(mes)r.") % {"mes": mon})
                 current_date = date(int(year), month, int(day))
             flush()
             current = {
@@ -516,10 +536,17 @@ def _parse_genial_lines(text: str, account_id: int) -> list[ParsedStatementLine]
     flush()
 
     if not parsed:
-        raise ValueError("Nenhum lançamento encontrado no extrato Genial (PDF).")
+        raise ValueError(gettext("Nenhum lançamento encontrado no extrato Genial (PDF)."))
     max_rows = max_statement_rows()
     if len(parsed) > max_rows:
-        raise ValueError(f"Extrato Genial excede o limite de {max_rows} linha(s).")
+        raise ValueError(
+            ngettext(
+                "Extrato Genial excede o limite de %(n)s linha.",
+                "Extrato Genial excede o limite de %(n)s linhas.",
+                max_rows,
+            )
+            % {"n": max_rows}
+        )
     return numerar_repeticoes(parsed, account_id)
 
 
@@ -576,7 +603,7 @@ def _parse_mercadopago_lines(text: str, account_id: int) -> list[ParsedStatement
     saldo_inicial_match = _RE_MP_SALDO_INICIAL.search(text)
     saldo_final_match = _RE_MP_SALDO_FINAL.search(text)
     if not saldo_inicial_match or not saldo_final_match:
-        raise ValueError("Não encontrei o saldo inicial/final no extrato Mercado Pago.")
+        raise ValueError(gettext("Não encontrei o saldo inicial/final no extrato Mercado Pago."))
 
     saldo_anterior = _parse_mp_decimal(saldo_inicial_match.group(1))
     saldo_final_esperado = _parse_mp_decimal(saldo_final_match.group(1))
@@ -619,15 +646,21 @@ def _parse_mercadopago_lines(text: str, account_id: int) -> list[ParsedStatement
         amount = saldo_atual - saldo_anterior
         if abs(abs(amount) - valor) > Decimal("0.01"):
             raise ValueError(
-                f"Inconsistência no extrato Mercado Pago em {statement_date:%d/%m/%Y}: "
-                f"variação de saldo ({amount}) não bate com o valor lido ({valor_raw})."
+                gettext(
+                    "Inconsistência no extrato Mercado Pago em %(data)s: "
+                    "variação de saldo (%(variacao)s) não bate com o valor lido (%(valor)s)."
+                )
+                % {"data": regional.formatar_data(statement_date), "variacao": amount, "valor": valor_raw}
             )
         if amount == 0:
             raise ValueError("Valor zerado no extrato não é aceito.")
         partes = [*movimento["acima"], inline or "", *movimento["abaixo"]]
         description = " ".join(parte.strip() for parte in partes if parte and parte.strip())[:255]
         if not description:
-            raise ValueError(f"Lançamento sem descrição no extrato Mercado Pago em {statement_date:%d/%m/%Y}.")
+            raise ValueError(
+                gettext("Lançamento sem descrição no extrato Mercado Pago em %(data)s.")
+                % {"data": regional.formatar_data(statement_date)}
+            )
         parsed.append(
             ParsedStatementLine(
                 statement_date=statement_date,
@@ -639,15 +672,25 @@ def _parse_mercadopago_lines(text: str, account_id: int) -> list[ParsedStatement
         saldo_anterior = saldo_atual
 
     if not parsed:
-        raise ValueError("Nenhum lançamento encontrado no extrato Mercado Pago (PDF).")
+        raise ValueError(gettext("Nenhum lançamento encontrado no extrato Mercado Pago (PDF)."))
     if abs(saldo_anterior - saldo_final_esperado) > Decimal("0.01"):
         raise ValueError(
-            "Inconsistência no extrato Mercado Pago: soma dos lançamentos não fecha "
-            f"com o saldo final informado ({saldo_final_esperado})."
+            gettext(
+                "Inconsistência no extrato Mercado Pago: soma dos lançamentos não fecha "
+                "com o saldo final informado (%(saldo)s)."
+            )
+            % {"saldo": saldo_final_esperado}
         )
     max_rows = max_statement_rows()
     if len(parsed) > max_rows:
-        raise ValueError(f"Extrato Mercado Pago excede o limite de {max_rows} linha(s).")
+        raise ValueError(
+            ngettext(
+                "Extrato Mercado Pago excede o limite de %(n)s linha.",
+                "Extrato Mercado Pago excede o limite de %(n)s linhas.",
+                max_rows,
+            )
+            % {"n": max_rows}
+        )
     return numerar_repeticoes(parsed, account_id)
 
 
@@ -688,7 +731,7 @@ class _LeituraItau:
 def _itau_ler(text: str) -> _LeituraItau:
     periodo = _RE_ITAU_PERIODO.search(text)
     if periodo is None:
-        raise ValueError("Não encontrei o período de visualização no extrato Itaú.")
+        raise ValueError(gettext("Não encontrei o período de visualização no extrato Itaú."))
     fim = date(int(periodo.group(3)), int(periodo.group(2)), int(periodo.group(1)))
     lancamentos: list[tuple[date, str, Decimal]] = []
     saldos: dict[date, Decimal] = {}
@@ -704,14 +747,17 @@ def _itau_ler(text: str) -> _LeituraItau:
                 saldos[dia] = valor
             continue
         if dia > fim:
-            raise ValueError(f"Lançamento de {dia:%d/%m/%Y} fora do período do extrato Itaú.")
+            raise ValueError(
+                gettext("Lançamento de %(data)s fora do período do extrato Itaú.")
+                % {"data": regional.formatar_data(dia)}
+            )
         lancamentos.append((dia, descricao.strip(), valor))
     return _LeituraItau(lancamentos=lancamentos, saldos=saldos)
 
 
 def _itau_conferir_saldos(leitura: _LeituraItau) -> None:
     if not leitura.saldos:
-        raise ValueError("O extrato Itaú não trouxe nenhuma linha de saldo; o layout pode ter mudado.")
+        raise ValueError(gettext("O extrato Itaú não trouxe nenhuma linha de saldo; o layout pode ter mudado."))
     por_dia: dict[date, Decimal] = {}
     for dia, _descricao, valor in leitura.lancamentos:
         por_dia[dia] = por_dia.get(dia, Decimal("0")) + valor
@@ -722,7 +768,8 @@ def _itau_conferir_saldos(leitura: _LeituraItau) -> None:
             # anteriores a ele não têm como ser conferidos e são recusados.
             if dia not in leitura.saldos:
                 raise ValueError(
-                    f"Lançamento de {dia:%d/%m/%Y} antes do primeiro saldo do extrato Itaú."
+                    gettext("Lançamento de %(data)s antes do primeiro saldo do extrato Itaú.")
+                    % {"data": regional.formatar_data(dia)}
                 )
             corrente = leitura.saldos[dia]
             continue
@@ -730,8 +777,11 @@ def _itau_conferir_saldos(leitura: _LeituraItau) -> None:
         if dia in leitura.saldos:
             if abs(corrente - leitura.saldos[dia]) > Decimal("0.01"):
                 raise ValueError(
-                    f"Inconsistência no extrato Itaú em {dia:%d/%m/%Y}: os lançamentos do dia "
-                    f"não fecham com o saldo do dia ({leitura.saldos[dia]})."
+                    gettext(
+                        "Inconsistência no extrato Itaú em %(data)s: os lançamentos do dia "
+                        "não fecham com o saldo do dia (%(saldo)s)."
+                    )
+                    % {"data": regional.formatar_data(dia), "saldo": leitura.saldos[dia]}
                 )
             corrente = leitura.saldos[dia]
 
@@ -740,11 +790,18 @@ def _parse_itau_lines(text: str, account_id: int) -> list[ParsedStatementLine]:
     """Interpreta o texto extraído (via pdfplumber) do extrato de conta do Itaú."""
     leitura = _itau_ler(text)
     if not leitura.lancamentos:
-        raise ValueError("Nenhum lançamento encontrado no extrato Itaú (PDF).")
+        raise ValueError(gettext("Nenhum lançamento encontrado no extrato Itaú (PDF)."))
     _itau_conferir_saldos(leitura)
     max_rows = max_statement_rows()
     if len(leitura.lancamentos) > max_rows:
-        raise ValueError(f"Extrato Itaú excede o limite de {max_rows} linha(s).")
+        raise ValueError(
+            ngettext(
+                "Extrato Itaú excede o limite de %(n)s linha.",
+                "Extrato Itaú excede o limite de %(n)s linhas.",
+                max_rows,
+            )
+            % {"n": max_rows}
+        )
     parsed = []
     # Do mais antigo para o mais recente; dentro do dia, na ordem do arquivo.
     for dia, descricao, valor in sorted(leitura.lancamentos, key=lambda item: item[0]):
@@ -797,7 +854,7 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
     """Interpreta o texto extraído (via pdfplumber) do extrato da conta brasileira da Avenue."""
     inicial, final = _RE_AVENUE_SALDO_INICIAL.search(text), _RE_AVENUE_SALDO_FINAL.search(text)
     if inicial is None or final is None:
-        raise ValueError("Não encontrei o saldo inicial/final no extrato Avenue.")
+        raise ValueError(gettext("Não encontrei o saldo inicial/final no extrato Avenue."))
     saldo = _avenue_valor(inicial.group(1))
     parsed: list[ParsedStatementLine] = []
     anterior = ""
@@ -813,7 +870,10 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
         dia = date(int(year), int(month), int(day))
         descricao = anterior
         if not descricao or descricao.startswith("ID ") or descricao.startswith(_AVENUE_CABECALHO):
-            raise ValueError(f"Não encontrei a descrição da linha de {dia:%d/%m/%Y} no extrato Avenue.")
+            raise ValueError(
+                gettext("Não encontrei a descrição da linha de %(data)s no extrato Avenue.")
+                % {"data": regional.formatar_data(dia)}
+            )
         valor = _avenue_valor(valor_raw)
         valor = -valor if sinal == "-" else valor
         if valor == 0:
@@ -821,8 +881,11 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
         saldo += valor
         if abs(saldo - _avenue_valor(saldo_raw)) > Decimal("0.01"):
             raise ValueError(
-                f"Inconsistência no extrato Avenue em {dia:%d/%m/%Y}: o saldo depois do lançamento "
-                f"não bate ({saldo_raw}). O layout pode ter mudado."
+                gettext(
+                    "Inconsistência no extrato Avenue em %(data)s: o saldo depois do lançamento "
+                    "não bate (%(saldo)s). O layout pode ter mudado."
+                )
+                % {"data": regional.formatar_data(dia), "saldo": saldo_raw}
             )
         descricao = descricao[:255]
         parsed.append(
@@ -833,14 +896,24 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
         )
         anterior = ""
     if not parsed:
-        raise ValueError("Nenhum lançamento encontrado no extrato Avenue (PDF).")
+        raise ValueError(gettext("Nenhum lançamento encontrado no extrato Avenue (PDF)."))
     if abs(saldo - _avenue_valor(final.group(1))) > Decimal("0.01"):
         raise ValueError(
-            f"Inconsistência no extrato Avenue: os lançamentos não fecham com o saldo final ({final.group(1)})."
+            gettext(
+                "Inconsistência no extrato Avenue: os lançamentos não fecham com o saldo final (%(saldo)s)."
+            )
+            % {"saldo": final.group(1)}
         )
     max_rows = max_statement_rows()
     if len(parsed) > max_rows:
-        raise ValueError(f"Extrato Avenue excede o limite de {max_rows} linha(s).")
+        raise ValueError(
+            ngettext(
+                "Extrato Avenue excede o limite de %(n)s linha.",
+                "Extrato Avenue excede o limite de %(n)s linhas.",
+                max_rows,
+            )
+            % {"n": max_rows}
+        )
     return numerar_repeticoes(parsed, account_id)
 
 
@@ -996,7 +1069,8 @@ def _xp_linhas_da_pagina(pagina, colunas_anteriores=None):
         valores = _RE_XP_VALOR.findall(" ".join(p["text"] for p in direita))
         if len(valores) < 2:
             raise ValueError(
-                f"Não consegui ler o valor e o saldo da linha de {data['text']} no extrato XP."
+                gettext("Não consegui ler o valor e o saldo da linha de %(data)s no extrato XP.")
+                % {"data": data["text"]}
             )
         (s1a, s1b, v1), (s2a, s2b, v2) = valores[0], valores[1]
         linhas.append(
@@ -1024,9 +1098,14 @@ def _xp_conferir_cadeia(linhas: list[_LinhaXp]) -> None:
     for mais_nova, mais_velha in zip(linhas, linhas[1:], strict=False):
         if abs((mais_nova.saldo - mais_nova.valor) - mais_velha.saldo) > Decimal("0.01"):
             raise ValueError(
-                "Inconsistência no extrato XP: o saldo depois da linha de "
-                f"{mais_velha.data:%d/%m/%Y} não bate com o valor da linha seguinte "
-                f"({mais_nova.data:%d/%m/%Y}). O layout pode ter mudado."
+                gettext(
+                    "Inconsistência no extrato XP: o saldo depois da linha de %(data_velha)s "
+                    "não bate com o valor da linha seguinte (%(data_nova)s). O layout pode ter mudado."
+                )
+                % {
+                    "data_velha": regional.formatar_data(mais_velha.data),
+                    "data_nova": regional.formatar_data(mais_nova.data),
+                }
             )
 
 
@@ -1035,21 +1114,28 @@ def _xp_abrir(raw: bytes):
         import pdfplumber
     except ImportError as exc:
         raise ValueError(
-            "Suporte a extrato em PDF indisponível no momento (dependência não instalada)."
+            gettext("Suporte a extrato em PDF indisponível no momento (dependência não instalada).")
         ) from exc
     try:
         return pdfplumber.open(io.BytesIO(raw))
     except Exception as exc:
-        raise ValueError("Não foi possível ler o PDF do extrato.") from exc
+        raise ValueError(gettext("Não foi possível ler o PDF do extrato.")) from exc
 
 
 def _parse_xp_linhas(linhas: list[_LinhaXp], account_id: int) -> list[ParsedStatementLine]:
     if not linhas:
-        raise ValueError("Nenhum lançamento encontrado no extrato XP (PDF).")
+        raise ValueError(gettext("Nenhum lançamento encontrado no extrato XP (PDF)."))
     _xp_conferir_cadeia(linhas)
     max_rows = max_statement_rows()
     if len(linhas) > max_rows:
-        raise ValueError(f"Extrato XP excede o limite de {max_rows} linha(s).")
+        raise ValueError(
+            ngettext(
+                "Extrato XP excede o limite de %(n)s linha.",
+                "Extrato XP excede o limite de %(n)s linhas.",
+                max_rows,
+            )
+            % {"n": max_rows}
+        )
     parsed = []
     for linha in linhas:
         if linha.valor == 0:
@@ -1141,14 +1227,16 @@ def get_statement_adapter(file: UploadedFile | None, *, institution=None) -> Sta
     if filename.endswith(".pdf") or "pdf" in mimetype:
         if institution is None or not getattr(institution, "homologada", False):
             raise ValueError(
-                "Importação em PDF só é permitida para corretoras homologadas. "
-                "Verifique o cadastro da instituição da conta."
+                gettext(
+                    "Importação em PDF só é permitida para corretoras homologadas. "
+                    "Verifique o cadastro da instituição da conta."
+                )
             )
         adapter_cls = _PDF_ADAPTERS.get(_normalize_institution_key(getattr(institution, "institution_name", "")))
         if adapter_cls is None:
             raise ValueError(
-                f"Não há suporte a importação em PDF para a corretora "
-                f"“{getattr(institution, 'institution_name', '')}”."
+                gettext("Não há suporte a importação em PDF para a corretora “%(corretora)s”.")
+                % {"corretora": getattr(institution, "institution_name", "")}
             )
         return adapter_cls()
     if any(filename.endswith(ext) for ext in _OFX_EXTENSIONS) or any(m in mimetype for m in _OFX_MIMETYPES):
@@ -1156,8 +1244,10 @@ def get_statement_adapter(file: UploadedFile | None, *, institution=None) -> Sta
     if filename.endswith(".csv") or "csv" in mimetype or not filename:
         return CsvStatementAdapter()
     raise ValueError(
-        "Formato de extrato não suportado. Use CSV (.csv), OFX/OFC (.ofx, .ofc, .qfx) "
-        "ou PDF de corretora homologada."
+        gettext(
+            "Formato de extrato não suportado. Use CSV (.csv), OFX/OFC (.ofx, .ofc, .qfx) "
+            "ou PDF de corretora homologada."
+        )
     )
 
 
