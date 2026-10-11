@@ -11,7 +11,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import translation
 from django.utils.http import urlencode
-from django.utils.translation import gettext
+from django.utils.translation import gettext, ngettext
 from django.views.decorators.http import require_POST
 
 from accounts.models import AccountOwner, AppUser
@@ -121,7 +121,7 @@ def permissions_view(request):
 
     if request.method == 'POST' and request.POST.get('table') == 'users':
         if not can_manage_users:
-            messages.warning(request, "Acesso negado: você não tem permissão para gerenciar usuários.")
+            messages.warning(request, gettext("Acesso negado: você não tem permissão para gerenciar usuários."))
             return redirect(f"/permissions/?user_id={selected_user.id}" if selected_user else "/permissions/")
 
         action = request.POST.get('action')
@@ -131,7 +131,7 @@ def permissions_view(request):
 
         if action == 'delete':
             if target_user is None:
-                messages.warning(request, "Usuário não encontrado para exclusão.")
+                messages.warning(request, gettext("Usuário não encontrado para exclusão."))
             else:
                 block_message = user_mutation_block_message('delete', request.user, target_user=target_user)
                 if block_message:
@@ -141,10 +141,10 @@ def permissions_view(request):
                     delete_managed_user(target_user)
                     if selected_user and selected_user.id == target_user.id:
                         selected_user = None
-                    messages.success(request, "Usuário excluído.")
+                    messages.success(request, gettext("Usuário excluído."))
         elif action == 'edit':
             if target_user is None:
-                messages.warning(request, "Usuário não encontrado para edição.")
+                messages.warning(request, gettext("Usuário não encontrado para edição."))
             else:
                 block_message = user_mutation_block_message('edit', request.user, target_user=target_user, requested_user_type=requested_user_type)
                 if block_message:
@@ -162,13 +162,13 @@ def permissions_view(request):
                         )
                         new_values = _user_audit_snapshot(target_user)
                         log_audit_event("app_user", target_user.id, "update", old_values=old_values, new_values=new_values, user=request.user)
-                        messages.success(request, "Usuário atualizado.")
+                        messages.success(request, gettext("Usuário atualizado."))
                         selected_user = target_user
                     except ValueError as exc:
                         messages.error(request, str(exc))
         elif action == 'reset_password':
             if target_user is None:
-                messages.warning(request, "Usuário não encontrado para redefinição de senha.")
+                messages.warning(request, gettext("Usuário não encontrado para redefinição de senha."))
             else:
                 block_message = user_mutation_block_message(
                     'edit', request.user, target_user=target_user,
@@ -214,7 +214,7 @@ def permissions_view(request):
                         password_confirm=request.POST.get('password_confirm', ''),
                     )
                     log_audit_event("app_user", new_user.id, "create", new_values=_user_audit_snapshot(new_user), user=request.user)
-                    messages.success(request, "Usuário cadastrado.")
+                    messages.success(request, gettext("Usuário cadastrado."))
                     selected_user = new_user
                 except ValueError as exc:
                     messages.error(request, str(exc))
@@ -243,8 +243,10 @@ def permissions_view(request):
         if request.user.user_type != USER_TYPE_ADMINISTRATOR:
             messages.warning(
                 request,
-                "Acesso negado: você não tem permissão para alterar permissões "
-                "e acessos por titular (somente administradores).",
+                gettext(
+                    "Acesso negado: você não tem permissão para alterar permissões "
+                    "e acessos por titular (somente administradores)."
+                ),
             )
             return redirect(f"/permissions/?user_id={selected_user.id}")
 
@@ -258,7 +260,7 @@ def permissions_view(request):
                 }
                 if selected_user.id == request.user.id and 'permissions.manage' not in allowed_keys:
                     allowed_keys.add('permissions.manage')
-                    messages.warning(request, "Proteção aplicada: você não pode remover o próprio acesso a permissions.manage.")
+                    messages.warning(request, gettext("Proteção aplicada: você não pode remover o próprio acesso a permissions.manage."))
                 save_function_permissions(selected_user, allowed_keys)
                 log_audit_event(
                     "app_user_permissions", selected_user.id, "update",
@@ -266,7 +268,7 @@ def permissions_view(request):
                     new_values={"permission_keys": sorted(allowed_permission_keys(selected_user))},
                     user=request.user,
                 )
-            messages.success(request, "Permissões funcionais atualizadas.")
+            messages.success(request, gettext("Permissões funcionais atualizadas."))
         elif action == 'save_owner_access':
             with transaction.atomic():
                 old_access = [
@@ -291,7 +293,7 @@ def permissions_view(request):
                     old_values={"access": old_access}, new_values={"access": new_access},
                     user=request.user,
                 )
-            messages.success(request, "Acessos por titular atualizados.")
+            messages.success(request, gettext("Acessos por titular atualizados."))
         elif action == 'save_transfer_destinations':
             # A matriz e sua trilha de auditoria formam um único ato
             # administrativo. Sem isso, uma falha ao auditar deixaria um
@@ -309,7 +311,7 @@ def permissions_view(request):
                     new_values={"account_ids": sorted(transfer_destination_access_ids(selected_user))},
                     user=request.user,
                 )
-            messages.success(request, "Destinos de transferência atualizados.")
+            messages.success(request, gettext("Destinos de transferência atualizados."))
         elif action == 'assign_operation_responsible':
             try:
                 raw_operation_id = request.POST.get('operation_id', '')
@@ -349,8 +351,10 @@ def permissions_view(request):
                 if not valid_responsible:
                     messages.warning(
                         request,
-                        "Atribuição recusada: a recorrência exige usuário ativo, permissão de inclusão, "
-                        "acesso à origem e concessão para todos os destinos.",
+                        gettext(
+                            "Atribuição recusada: a recorrência exige usuário ativo, permissão de inclusão, "
+                            "acesso à origem e concessão para todos os destinos."
+                        ),
                     )
                 else:
                     old_user_id = operation.responsible_user_id
@@ -361,12 +365,12 @@ def permissions_view(request):
                         old_values={"responsible_user_id": old_user_id},
                         new_values={"responsible_user_id": selected_user.id}, user=request.user,
                     )
-                    messages.success(request, "Responsável da recorrência atribuído.")
+                    messages.success(request, gettext("Responsável da recorrência atribuído."))
         elif action == 'apply_profile':
             profile_key = request.POST.get('profile_key', '')
             allowed_keys = profile_permission_keys(profile_key)
             if allowed_keys is None:
-                messages.warning(request, "Perfil rápido inválido.")
+                messages.warning(request, gettext("Perfil rápido inválido."))
             else:
                 old_keys = sorted(allowed_permission_keys(selected_user))
                 if selected_user.id == request.user.id:
@@ -379,7 +383,7 @@ def permissions_view(request):
                     user=request.user,
                 )
                 profile_label = PROFILE_DEFINITIONS[profile_key]["label"]
-                messages.success(request, f"Perfil rápido aplicado: {profile_label}.")
+                messages.success(request, gettext("Perfil rápido aplicado: %(perfil)s.") % {"perfil": profile_label})
         return redirect(f"/permissions/?user_id={selected_user.id}")
 
     return _render_permissions(request, users, selected_user, can_manage_users)
@@ -449,7 +453,7 @@ def settings_profile_view(request):
 def settings_update_theme_view(request):
     if request.method == 'POST':
         new_theme = update_user_ui_theme(request.user, request.POST.get('theme', ''))
-        messages.success(request, f"Tema alterado para: {UI_THEME_LABELS.get(new_theme, 'Light')}.")
+        messages.success(request, gettext("Tema alterado para: %(tema)s.") % {"tema": UI_THEME_LABELS.get(new_theme, 'Light')})
     return redirect('core:settings_profile')
 
 
@@ -473,7 +477,7 @@ def settings_update_table_scroll_view(request):
     if request.method == 'POST':
         try:
             rows = update_user_table_scroll_rows(request.user, request.POST.get('table_scroll_rows'))
-            messages.success(request, f"Scroll de tabelas ajustado para mais de {rows} registro(s).")
+            messages.success(request, ngettext("Scroll de tabelas ajustado para mais de %(n)s registro.", "Scroll de tabelas ajustado para mais de %(n)s registros.", rows) % {"n": rows})
         except ValueError as exc:
             messages.error(request, str(exc))
     return redirect('core:settings_profile')
@@ -613,7 +617,7 @@ def settings_close_month_view(request):
         month = int(request.POST.get('month'))
         account = FinancialAccount.objects.get(id=account_id)
         if not can_access_account(request.user, account.id, "update"):
-            raise ValueError("Acesso negado: você não tem permissão para fechar este mês.")
+            raise ValueError(gettext("Acesso negado: você não tem permissão para fechar este mês."))
         # O saldo é calculado dentro de `close_month`, depois do lock da conta.
         closed = close_month(
             account,
@@ -623,7 +627,7 @@ def settings_close_month_view(request):
             request.user,
             audit_context=audit_request_context(request),
         )
-        messages.success(request, f"Mês {closed.month:02d}/{closed.year} fechado para a conta #{closed.account_id}.")
+        messages.success(request, gettext("Mês %(mes)02d/%(ano)s fechado para a conta #%(conta)s.") % {"mes": closed.month, "ano": closed.year, "conta": closed.account_id})
     except (ValueError, TypeError, FinancialAccount.DoesNotExist) as exc:
         log_audit_event(
             "account_month_close",
@@ -633,7 +637,7 @@ def settings_close_month_view(request):
             result="failure",
             summary="Fechamento mensal recusado pela validação do servidor.",
         )
-        messages.error(request, str(exc) or "Dados inválidos para fechamento mensal.")
+        messages.error(request, str(exc) or gettext("Dados inválidos para fechamento mensal."))
     return _monthly_close_redirect(request)
 
 
@@ -650,7 +654,7 @@ def settings_reopen_month_view(request):
         month = int(request.POST.get('month'))
         account = FinancialAccount.objects.get(id=account_id)
         if not can_access_account(request.user, account.id, "update"):
-            raise ValueError("Acesso negado: você não tem permissão para reabrir este mês.")
+            raise ValueError(gettext("Acesso negado: você não tem permissão para reabrir este mês."))
         reopened = reopen_month(
             account,
             year,
@@ -659,7 +663,7 @@ def settings_reopen_month_view(request):
             request.user,
             audit_context=audit_request_context(request),
         )
-        messages.success(request, f"Mês {reopened.month:02d}/{reopened.year} reaberto para a conta #{reopened.account_id}.")
+        messages.success(request, gettext("Mês %(mes)02d/%(ano)s reaberto para a conta #%(conta)s.") % {"mes": reopened.month, "ano": reopened.year, "conta": reopened.account_id})
     except (ValueError, TypeError, FinancialAccount.DoesNotExist) as exc:
         log_audit_event(
             "account_month_close",
@@ -669,7 +673,7 @@ def settings_reopen_month_view(request):
             result="failure",
             summary="Reabertura mensal recusada pela validação do servidor.",
         )
-        messages.error(request, str(exc) or "Fechamento mensal inválido.")
+        messages.error(request, str(exc) or gettext("Fechamento mensal inválido."))
     return _monthly_close_redirect(request)
 
 
@@ -702,12 +706,12 @@ def settings_health_check_view(request):
     if request.method == 'POST':
         result = run_database_health_check()
         if result.ok:
-            messages.success(request, f"Health check concluído. {result.summary}")
+            messages.success(request, gettext("Health check concluído. %(resumo)s") % {"resumo": result.summary})
         else:
-            messages.warning(request, f"Health check encontrou inconsistência(s). {result.summary}")
+            messages.warning(request, gettext("Health check encontrou inconsistência(s). %(resumo)s") % {"resumo": result.summary})
             for label, count in result.orphan_checks:
                 if count:
-                    messages.warning(request, f"{label}: {count} registro(s) órfão(s).")
+                    messages.warning(request, ngettext("%(rotulo)s: %(n)s registro órfão.", "%(rotulo)s: %(n)s registros órfãos.", count) % {"rotulo": label, "n": count})
     return redirect('core:settings_database')
 
 
@@ -717,7 +721,7 @@ def settings_health_check_view(request):
 def settings_optimize_view(request):
     if request.method == 'POST':
         summary = optimize_database()
-        messages.success(request, f"Otimização concluída. {summary}")
+        messages.success(request, gettext("Otimização concluída. %(resumo)s") % {"resumo": summary})
     return redirect('core:settings_database')
 
 
@@ -769,9 +773,12 @@ def settings_update_password_policy_view(request):
             )
             messages.success(
                 request,
-                f"Política de senha atualizada: {settings.min_length} caractere(s), "
-                f"{settings.min_uppercase} maiúscula(s), {settings.min_numbers} número(s), "
-                f"{settings.min_special} especial(is).",
+                gettext("Política de senha atualizada: %(caracteres)s, %(maiusculas)s, %(numeros)s, %(especiais)s.") % {
+                    "caracteres": ngettext("%(n)s caractere", "%(n)s caracteres", settings.min_length) % {"n": settings.min_length},
+                    "maiusculas": ngettext("%(n)s maiúscula", "%(n)s maiúsculas", settings.min_uppercase) % {"n": settings.min_uppercase},
+                    "numeros": ngettext("%(n)s número", "%(n)s números", settings.min_numbers) % {"n": settings.min_numbers},
+                    "especiais": ngettext("%(n)s especial", "%(n)s especiais", settings.min_special) % {"n": settings.min_special},
+                },
             )
         except ValueError as exc:
             messages.error(request, str(exc))
@@ -790,8 +797,10 @@ def settings_update_login_lockout_view(request):
             )
             messages.success(
                 request,
-                f"Bloqueio de login atualizado: {settings.max_failures} tentativa(s), "
-                f"{settings.lock_minutes} minuto(s).",
+                gettext("Bloqueio de login atualizado: %(tentativas)s, %(minutos)s.") % {
+                    "tentativas": ngettext("%(n)s tentativa", "%(n)s tentativas", settings.max_failures) % {"n": settings.max_failures},
+                    "minutos": ngettext("%(n)s minuto", "%(n)s minutos", settings.lock_minutes) % {"n": settings.lock_minutes},
+                },
             )
         except ValueError as exc:
             messages.error(request, str(exc))
@@ -815,14 +824,21 @@ def settings_update_recurring_projection_view(request):
             atualizar_faturas_projetadas()
             aviso = ""
             if recolhido.removed_count:
-                aviso = (
-                    f" {recolhido.removed_count} ocorrência(s) recorrente(s) depois de "
-                    f"{regional.formatar_data(recolhido.horizon_end)} removida(s)."
-                )
+                aviso = " " + ngettext(
+                    "%(n)s ocorrência recorrente depois de %(data)s removida.",
+                    "%(n)s ocorrências recorrentes depois de %(data)s removidas.",
+                    recolhido.removed_count,
+                ) % {
+                    "n": recolhido.removed_count,
+                    "data": regional.formatar_data(recolhido.horizon_end),
+                }
             messages.success(
                 request,
-                f"Projeção de recorrências ajustada para {settings.horizon_months} mês(es), "
-                f"execução no dia {settings.run_day}.{aviso}",
+                gettext("Projeção de recorrências ajustada para %(meses)s, execução no dia %(dia)s.%(aviso)s") % {
+                    "meses": ngettext("%(n)s mês", "%(n)s meses", settings.horizon_months) % {"n": settings.horizon_months},
+                    "dia": settings.run_day,
+                    "aviso": aviso,
+                },
             )
         except ValueError as exc:
             messages.error(request, str(exc))
@@ -841,7 +857,10 @@ def settings_run_recurring_projection_view(request):
         result = ensure_recurring_projection_horizon(update_last_run=True)
         messages.success(
             request,
-            f"Projeção de recorrências executada. {result.generated_count} lançamento(s) "
-            f"gerado(s) até {regional.formatar_data(result.horizon_end)}.",
+            ngettext(
+                "Projeção de recorrências executada. %(n)s lançamento gerado até %(data)s.",
+                "Projeção de recorrências executada. %(n)s lançamentos gerados até %(data)s.",
+                result.generated_count,
+            ) % {"n": result.generated_count, "data": regional.formatar_data(result.horizon_end)},
         )
     return redirect('core:settings_home')

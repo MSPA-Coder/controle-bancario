@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.db import connection
+from django.utils.translation import gettext, ngettext
 
 from core import regional
 from core.domain.settings import (
@@ -55,7 +56,7 @@ def parse_system_start_date(value: object) -> date | None:
     try:
         return date.fromisoformat(str(value))
     except ValueError as exc:
-        raise ValueError("Data inicial do sistema inválida.") from exc
+        raise ValueError(gettext("Data inicial do sistema inválida.")) from exc
 
 
 def system_start_date() -> date | None:
@@ -304,11 +305,11 @@ def _parse_bounded_int(value, *, default: int, minimum: int, maximum: int) -> in
     try:
         parsed = int(value)
     except (TypeError, ValueError) as exc:
-        raise ValueError("Valor deve ser um número inteiro.") from exc
+        raise ValueError(gettext("Valor deve ser um número inteiro.")) from exc
     if parsed < minimum:
-        raise ValueError(f"Valor deve ser pelo menos {minimum}.")
+        raise ValueError(gettext("Valor deve ser pelo menos %(minimo)s.") % {"minimo": minimum})
     if parsed > maximum:
-        raise ValueError(f"Valor deve ser no máximo {maximum}.")
+        raise ValueError(gettext("Valor deve ser no máximo %(maximo)s.") % {"maximo": maximum})
     return parsed
 
 
@@ -432,7 +433,7 @@ def update_recurring_projection_settings(*, horizon_months, run_day) -> Recurrin
 
 def format_last_projection_run(setting_value: str | None) -> str:
     if not setting_value:
-        return "Nenhuma execução registrada"
+        return gettext("Nenhuma execução registrada")
     try:
         return regional.formatar_data_hora(datetime.fromisoformat(setting_value), segundos=True)
     except ValueError:
@@ -478,11 +479,20 @@ def run_database_health_check() -> DatabaseHealthResult:
 
     total_orphans = sum(count for _label, count in orphan_checks)
     ok = total_orphans == 0
-    summary = (
-        f"{sum(table_counts.values())} registro(s) em {len(table_counts)} tabela(s) verificada(s), 0 inconsistência(s)."
-        if ok
-        else f"{total_orphans} inconsistência(s) encontrada(s) — veja os detalhes."
-    )
+    if ok:
+        registros = sum(table_counts.values())
+        tabelas = len(table_counts)
+        summary = gettext("%(registros)s em %(tabelas)s, %(inconsistencias)s.") % {
+            "registros": ngettext("%(n)s registro", "%(n)s registros", registros) % {"n": registros},
+            "tabelas": ngettext("%(n)s tabela verificada", "%(n)s tabelas verificadas", tabelas) % {"n": tabelas},
+            "inconsistencias": ngettext("%(n)s inconsistência", "%(n)s inconsistências", total_orphans) % {"n": total_orphans},
+        }
+    else:
+        summary = ngettext(
+            "%(n)s inconsistência encontrada — veja os detalhes.",
+            "%(n)s inconsistências encontradas — veja os detalhes.",
+            total_orphans,
+        ) % {"n": total_orphans}
     return DatabaseHealthResult(ok=ok, summary=summary, table_counts=table_counts, orphan_checks=orphan_checks)
 
 
@@ -499,7 +509,11 @@ def optimize_database() -> str:
                 cursor.execute(f"VACUUM ANALYZE {table}")  # noqa: S608 - nomes fixos, não vêm de entrada do usuário
         finally:
             connection.set_autocommit(previous_autocommit)
-    summary = f"VACUUM ANALYZE executado em {len(_HEALTH_CHECK_TABLES)} tabela(s)."
+    summary = ngettext(
+        "VACUUM ANALYZE executado em %(n)s tabela.",
+        "VACUUM ANALYZE executado em %(n)s tabelas.",
+        len(_HEALTH_CHECK_TABLES),
+    ) % {"n": len(_HEALTH_CHECK_TABLES)}
     upsert_app_setting(
         APP_SETTING_LAST_OPTIMIZE_INFO,
         f"{datetime.now().isoformat(timespec='seconds')}|{summary}",
@@ -509,7 +523,7 @@ def optimize_database() -> str:
 
 def format_last_optimize_info(setting_value: str | None) -> str:
     if not setting_value:
-        return "Nenhuma otimização registrada"
+        return gettext("Nenhuma otimização registrada")
     timestamp, _, summary = setting_value.partition("|")
     try:
         formatted = regional.formatar_data_hora(datetime.fromisoformat(timestamp), segundos=True)
