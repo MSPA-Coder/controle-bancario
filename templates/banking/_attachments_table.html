@@ -1,12 +1,13 @@
+{% load i18n %}
 <div class="table-scroll">
 <table class="tx-table">
     <thead>
         <tr>
-            <th>Lançamento</th>
-            <th>Arquivo</th>
-            <th>Conta</th>
-            <th>Tamanho</th>
-            <th>Ações</th>
+            <th>{% trans "Lançamento" %}</th>
+            <th>{% trans "Arquivo" %}</th>
+            <th>{% trans "Conta" %}</th>
+            <th>{% trans "Tamanho" %}</th>
+            <th>{% trans "Ações" %}</th>
         </tr>
     </thead>
     <tbody>
@@ -18,19 +19,19 @@
             <td>{{ entry.account.owner.name }} / {{ entry.account.institution.institution_name }} / {{ entry.account.account_name }}</td>
             <td>{{ attachment.file_size|filesizeformat }}</td>
             <td>
-                <a class="btn btn-ghost btn-sm" href="{% url 'bank_statements:attachment_download' attachment.id %}">Baixar</a>
+                <a class="btn btn-ghost btn-sm" href="{% url 'bank_statements:attachment_download' attachment.id %}">{% trans "Baixar" %}</a>
                 <form method="post" action="{% url 'bank_statements:delete_attachment' attachment.id %}" class="inline-form"
                       hx-post="{% url 'bank_statements:delete_attachment' attachment.id %}" hx-target="#attachment-results" hx-swap="innerHTML">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger btn-sm"
-                            data-sa-confirmar="Excluir este comprovante do armazenamento?"
-                            data-sa-titulo="Excluir comprovante" data-sa-severidade="danger" data-sa-ok="Excluir">Excluir</button>
+                            data-sa-confirmar="{% trans 'Excluir este comprovante do armazenamento?' %}"
+                            data-sa-titulo="{% trans 'Excluir comprovante' %}" data-sa-severidade="danger" data-sa-ok="{% trans 'Excluir' %}">{% trans "Excluir" %}</button>
                 </form>
             </td>
         </tr>
         {% endwith %}
         {% empty %}
-        <tr><td colspan="5">Nenhum comprovante anexado.</td></tr>
+        <tr><td colspan="5">{% trans "Nenhum comprovante anexado." %}</td></tr>
         {% endfor %}
     </tbody>
 </table>

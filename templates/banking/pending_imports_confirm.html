@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n static %}
 {% load icons contas %}
 
-{% block title %}Movimentação • Confirmar importação{% endblock %}
+{% block title %}{% trans "Movimentação • Confirmar importação" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -11,8 +11,8 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>🏦 Confirmar importação</h1>
-        <p>Nada foi gravado ainda. Confira a conta sugerida para cada arquivo (ou escolha outra) antes de importar.</p>
+        <h1>🏦 {% trans "Confirmar importação" %}</h1>
+        <p>{% trans "Nada foi gravado ainda. Confira a conta sugerida para cada arquivo (ou escolha outra) antes de importar." %}</p>
     </div>
 </div>
 {% endblock %}
@@ -22,21 +22,21 @@
     <form method="post" action="{% url 'bank_statements:process_imports' %}">
         {% csrf_token %}
         <div class="u-d-flex u-items-center u-gap-05 u-mb-075">
-            <h3 class="u-mb-0">{{ uploads|length }} arquivo(s) enviado(s)</h3>
+            <h3 class="u-mb-0">{% blocktrans trimmed count counter=uploads|length %}{{ counter }} arquivo enviado{% plural %}{{ counter }} arquivos enviados{% endblocktrans %}</h3>
             <button type="submit" class="btn-sm btn-primary"
-                    data-sa-confirmar="Importar os arquivos com a conta indicada em cada linha? Arquivos sem conta escolhida são descartados, sem gravar nada."
-                    data-sa-titulo="Confirmar importação"
+                    data-sa-confirmar="{% trans 'Importar os arquivos com a conta indicada em cada linha? Arquivos sem conta escolhida são descartados, sem gravar nada.' %}"
+                    data-sa-titulo="{% trans 'Confirmar importação' %}"
                     data-sa-severidade="warning"
-                    data-sa-ok="Confirmar">
-                {% icon 'check' %}<span>Confirmar importações</span>
+                    data-sa-ok="{% trans 'Confirmar' %}">
+                {% icon 'check' %}<span>{% trans "Confirmar importações" %}</span>
             </button>
         </div>
         <table class="tx-table">
             <thead>
                 <tr>
-                    <th>Arquivo</th>
-                    <th>Detectado</th>
-                    <th>Conta</th>
+                    <th>{% trans "Arquivo" %}</th>
+                    <th>{% trans "Detectado" %}</th>
+                    <th>{% trans "Conta" %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,15 +49,15 @@
                         {% elif upload.detected_label %}
                         {{ upload.detected_label }}
                         {% else %}
-                        <small class="text-muted">Não identificado</small>
+                        <small class="text-muted">{% trans "Não identificado" %}</small>
                         {% endif %}
                     </td>
                     <td>
                         {% if upload.detection_error %}
-                        <small class="text-muted">Será descartado</small>
+                        <small class="text-muted">{% trans "Será descartado" %}</small>
                         {% else %}
-                        <select name="account_{{ upload.id }}" aria-label="Conta para {{ upload.original_filename }}">
-                            <option value="">Não importar</option>
+                        <select name="account_{{ upload.id }}" aria-label="{% blocktrans with arquivo=upload.original_filename %}Conta para {{ arquivo }}{% endblocktrans %}">
+                            <option value="">{% trans "Não importar" %}</option>
                             {% for titular, contas_do_titular in import_accounts|por_titular %}
                             <optgroup label="{{ titular }}">
                                 {% for account in contas_do_titular %}
@@ -73,6 +73,6 @@
             </tbody>
         </table>
     </form>
-    <p><a href="{% url 'bank_statements:imports_view' %}">Voltar para a importação</a></p>
+    <p><a href="{% url 'bank_statements:imports_view' %}">{% trans "Voltar para a importação" %}</a></p>
 </div>
 {% endblock %}
