@@ -2,7 +2,7 @@
 {% load static %}
 {% load icons %}
 
-{% block title %}Banking • Importar extratos e faturas{% endblock %}
+{% block title %}Importação • Importar extratos e faturas{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -40,10 +40,10 @@
             <button type="submit" class="btn btn-primary">
                 {% icon 'upload' %}<span>Enviar</span>
             </button>
-            <span class="htmx-indicator">{% icon 'loading' %}<span>Enviando...</span></span>
+            <span class="htmx-indicator">{% icon 'loading' %}<span>Enviando…</span></span>
         </div>
     </form>
-    <p class="help-text">Selecione quantos arquivos quiser de uma vez - a conta de cada um é sugerida pelo conteúdo quando possível, mas a próxima tela sempre pede confirmação antes de gravar qualquer linha.</p>
+    <p class="help-text">Selecione quantos arquivos quiser de uma vez — a conta de cada um é sugerida pelo conteúdo quando possível, mas a próxima tela sempre pede confirmação antes de gravar qualquer linha.</p>
 </div>
 
 <div id="import-results">
