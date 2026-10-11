@@ -176,7 +176,7 @@
                 data: {
                     labels: d.health.labels,
                     datasets: [{
-                        label: 'cobertura',
+                        label: 'Cobertura',
                         data: coverageValues.map(function (value) { return value === null ? null : [1, Number(value)]; }),
                         backgroundColor: coverageValues.map(function (value) {
                             return value === null ? colorNeutral : Number(value) >= 1 ? 'rgba(22, 163, 74, 0.55)' : 'rgba(220, 38, 38, 0.62)';
@@ -209,7 +209,7 @@
                 data: {
                     labels: d.health.labels,
                     datasets: [{
-                        label: 'geração mensal',
+                        label: 'Geração mensal',
                         data: generationValues,
                         borderColor: 'rgba(100, 116, 139, 0.65)',
                         backgroundColor: generationValues.map(function (value) { return Number(value) >= 0 ? colorPositive : colorNegative; }),
@@ -220,7 +220,7 @@
                         pointRadius: 4,
                         fill: false
                     }, {
-                        label: 'média 3m',
+                        label: 'Média 3m',
                         data: d.health.moving_average || [],
                         borderColor: colorPrimary,
                         backgroundColor: colorPrimary,
@@ -292,7 +292,7 @@
         if (dailyCanvas && d.dailyDates.length > 0) {
             guardar(new Chart(dailyCanvas, {
                 type: 'line',
-                data: { labels: d.dailyDates, datasets: [{ label: 'Saldo Diário', data: d.dailyBal, borderColor: '#2563eb', fill: true, tension: 0.4 }] },
+                data: { labels: d.dailyDates, datasets: [{ label: 'Saldo diário', data: d.dailyBal, borderColor: '#2563eb', fill: true, tension: 0.4 }] },
                 options: { responsive: true, plugins: { legend: { display: false } } }
             }));
         }
