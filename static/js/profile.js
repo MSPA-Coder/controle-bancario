@@ -16,8 +16,8 @@
                 return;
             }
             window.sharedauth.confirmar({
-                mensagem: "Salvar este tema como sua preferência?",
-                titulo: "Confirmar tema",
+                mensagem: t("Salvar este tema como sua preferência?"),
+                titulo: t("Confirmar tema"),
                 severidade: "info"
             }).then(function (ok) {
                 if (!ok) {

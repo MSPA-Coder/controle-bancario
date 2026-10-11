@@ -22,6 +22,53 @@ FONTES: tuple[str, ...] = (
     # Diálogo de confirmação (rótulos padrão que o SharedAuth traria em português).
     gettext_noop("Confirmar"),
     gettext_noop("Cancelar"),
+    # static/js/core/application.js: validação nativa, modo discreto e menu lateral.
+    gettext_noop("Selecione uma opção."),
+    gettext_noop("Selecione um arquivo."),
+    gettext_noop("Informe uma data."),
+    gettext_noop("Preencha este campo."),
+    gettext_noop("Informe um valor válido."),
+    gettext_noop("Informe um valor igual ou maior que o mínimo permitido."),
+    gettext_noop("Informe um valor igual ou menor que o máximo permitido."),
+    gettext_noop("Informe um valor válido para este campo."),
+    gettext_noop("Informe um valor no formato solicitado."),
+    gettext_noop("Corrija este campo antes de continuar."),
+    gettext_noop("Ativar modo discreto"),
+    gettext_noop("Desativar modo discreto"),
+    gettext_noop("Valor oculto"),
+    gettext_noop("Expandir menu"),
+    gettext_noop("Recolher menu"),
+    # static/js/core/regional.js: campos de data, mês e valor (os de validação
+    # acima já são usados aqui e não se repetem).
+    gettext_noop("Informe uma data válida (%(formato)s)."),
+    gettext_noop("Informe um mês válido (%(formato)s)."),
+    gettext_noop("Informe um valor numérico válido."),
+    gettext_noop("Informe uma data a partir de %(data)s."),
+    gettext_noop("Informe um mês a partir de %(data)s."),
+    gettext_noop("Informe uma data até %(data)s."),
+    gettext_noop("Informe um mês até %(data)s."),
+    gettext_noop("dd"),
+    gettext_noop("mm"),
+    gettext_noop("aaaa"),
+    gettext_noop("Abrir calendário"),
+    gettext_noop("Escolher mês"),
+    # static/js/dashboard.js: rótulos e tooltips dos gráficos do Painel.
+    gettext_noop("Cobertura"),
+    gettext_noop("Cobertura: %(valor)sx"),
+    gettext_noop("Geração mensal"),
+    gettext_noop("Média 3m"),
+    gettext_noop("Saldo diário"),
+    gettext_noop("Receitas"),
+    gettext_noop("Despesas"),
+    gettext_noop("Geração"),
+    gettext_noop("Saldo"),
+    gettext_noop("Valores"),
+    # static/js/transactions.js: diálogo ao editar com escopo "este e os próximos".
+    gettext_noop("Este registro e os próximos serão recriados. Deseja continuar?"),
+    gettext_noop("Confirmar alteração"),
+    # static/js/profile.js: diálogo ao trocar o tema.
+    gettext_noop("Salvar este tema como sua preferência?"),
+    gettext_noop("Confirmar tema"),
 )
 
 

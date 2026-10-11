@@ -37,25 +37,30 @@
     var POS = { d: ORDER.indexOf('d'), m: ORDER.indexOf('m'), y: ORDER.indexOf('y') };
     var DATE_GROUPS = ORDER === 'ymd' ? [4, 2, 2] : [2, 2, 4];
     var MONTH_GROUPS = ORDER === 'ymd' ? [4, 2] : [2, 4];
-    var WORD = { d: 'dd', m: 'mm', y: 'aaaa' };
+    /* Dia, mês e ano no formato mostrado (placeholder e mensagem): texto traduzível. */
+    function palavra(letra) {
+        if (letra === 'd') return t('dd');
+        if (letra === 'm') return t('mm');
+        return t('aaaa');
+    }
 
     function dateShape() {
-        return ORDER.split('').map(function (l) { return WORD[l]; }).join(SEP);
+        return ORDER.split('').map(palavra).join(SEP);
     }
 
     function monthShape() {
-        return (ORDER === 'ymd' ? [WORD.y, WORD.m] : [WORD.m, WORD.y]).join(SEP);
+        return (ORDER === 'ymd' ? [palavra('y'), palavra('m')] : [palavra('m'), palavra('y')]).join(SEP);
     }
 
     var MSG = {
-        date: 'Informe uma data válida (' + dateShape() + ').',
-        month: 'Informe um mês válido (' + monthShape() + ').',
-        number: 'Informe um valor numérico válido.',
-        required: 'Preencha este campo.',
-        requiredDate: 'Informe uma data.',
-        min: 'Informe um valor igual ou maior que o mínimo permitido.',
-        max: 'Informe um valor igual ou menor que o máximo permitido.',
-        step: 'Informe um valor válido para este campo.'
+        date: t('Informe uma data válida (%(formato)s).', { formato: dateShape() }),
+        month: t('Informe um mês válido (%(formato)s).', { formato: monthShape() }),
+        number: t('Informe um valor numérico válido.'),
+        required: t('Preencha este campo.'),
+        requiredDate: t('Informe uma data.'),
+        min: t('Informe um valor igual ou maior que o mínimo permitido.'),
+        max: t('Informe um valor igual ou menor que o máximo permitido.'),
+        step: t('Informe um valor válido para este campo.')
     };
 
     function pad(n, size) {
@@ -301,10 +306,14 @@
                 return '';
             }
             if (min && canon < min.slice(0, canon.length)) {
-                return 'Informe ' + (kind === 'date' ? 'uma data' : 'um mês') + ' a partir de ' + toText(min) + '.';
+                return kind === 'date'
+                    ? t('Informe uma data a partir de %(data)s.', { data: toText(min) })
+                    : t('Informe um mês a partir de %(data)s.', { data: toText(min) });
             }
             if (max && canon > max.slice(0, canon.length)) {
-                return 'Informe ' + (kind === 'date' ? 'uma data' : 'um mês') + ' até ' + toText(max) + '.';
+                return kind === 'date'
+                    ? t('Informe uma data até %(data)s.', { data: toText(max) })
+                    : t('Informe um mês até %(data)s.', { data: toText(max) });
             }
             return '';
         }
@@ -369,7 +378,7 @@
             var button = document.createElement('button');
             button.type = 'button';
             button.className = 'regional-picker-button';
-            button.setAttribute('aria-label', kind === 'date' ? 'Abrir calendário' : 'Escolher mês');
+            button.setAttribute('aria-label', kind === 'date' ? t('Abrir calendário') : t('Escolher mês'));
             button.innerHTML = CALENDAR_ICON;
             button.addEventListener('click', function () {
                 valueDescriptor.set.call(proxy, carrier());

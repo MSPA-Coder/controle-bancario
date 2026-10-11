@@ -176,7 +176,7 @@
                 data: {
                     labels: d.health.labels,
                     datasets: [{
-                        label: 'Cobertura',
+                        label: t('Cobertura'),
                         data: coverageValues.map(function (value) { return value === null ? null : [1, Number(value)]; }),
                         backgroundColor: coverageValues.map(function (value) {
                             return value === null ? colorNeutral : Number(value) >= 1 ? 'rgba(22, 163, 74, 0.55)' : 'rgba(220, 38, 38, 0.62)';
@@ -190,7 +190,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (ctx) { return 'Cobertura: ' + formatNumber(ctx.raw ? ctx.raw[1] : 0, 2) + 'x'; } } } },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (ctx) { return t('Cobertura: %(valor)sx', { valor: formatNumber(ctx.raw ? ctx.raw[1] : 0, 2) }); } } } },
                     scales: {
                         x: { grid: { display: false }, ticks: { color: colorMuted } },
                         y: { min: yMin, max: yMax, ticks: { color: colorMuted, callback: function (value) { return value === 1 ? '1,0' : ''; } }, grid: { color: function (ctx) { return ctx.tick.value === 1 ? colorMuted : 'transparent'; }, borderDash: [5, 5] } }
@@ -209,7 +209,7 @@
                 data: {
                     labels: d.health.labels,
                     datasets: [{
-                        label: 'Geração mensal',
+                        label: t('Geração mensal'),
                         data: generationValues,
                         borderColor: 'rgba(100, 116, 139, 0.65)',
                         backgroundColor: generationValues.map(function (value) { return Number(value) >= 0 ? colorPositive : colorNegative; }),
@@ -220,7 +220,7 @@
                         pointRadius: 4,
                         fill: false
                     }, {
-                        label: 'Média 3m',
+                        label: t('Média 3m'),
                         data: d.health.moving_average || [],
                         borderColor: colorPrimary,
                         backgroundColor: colorPrimary,
@@ -292,7 +292,7 @@
         if (dailyCanvas && d.dailyDates.length > 0) {
             guardar(new Chart(dailyCanvas, {
                 type: 'line',
-                data: { labels: d.dailyDates, datasets: [{ label: 'Saldo diário', data: d.dailyBal, borderColor: '#2563eb', fill: true, tension: 0.4 }] },
+                data: { labels: d.dailyDates, datasets: [{ label: t('Saldo diário'), data: d.dailyBal, borderColor: '#2563eb', fill: true, tension: 0.4 }] },
                 options: { responsive: true, plugins: { legend: { display: false } } }
             }));
         }
@@ -304,13 +304,13 @@
             guardar(new Chart(projCanvas, {
                 type: 'line',
                 data: { labels: d.projMonths, datasets: [
-                    { label: 'Receitas', data: d.projRec, borderColor: '#10b981', fill: true, tension: 0.3 },
-                    { label: 'Despesas', data: d.projDesp, borderColor: '#ef4444', fill: true, tension: 0.3 },
-                    { label: 'Geração', data: geracao, borderColor: '#8b5cf6', borderDash: [5, 5], fill: false, tension: 0.3 },
-                    { label: 'Saldo', data: d.projSaldo, borderColor: '#2563eb', fill: false, tension: 0.3, yAxisID: 'y1' }
+                    { label: t('Receitas'), data: d.projRec, borderColor: '#10b981', fill: true, tension: 0.3 },
+                    { label: t('Despesas'), data: d.projDesp, borderColor: '#ef4444', fill: true, tension: 0.3 },
+                    { label: t('Geração'), data: geracao, borderColor: '#8b5cf6', borderDash: [5, 5], fill: false, tension: 0.3 },
+                    { label: t('Saldo'), data: d.projSaldo, borderColor: '#2563eb', fill: false, tension: 0.3, yAxisID: 'y1' }
                 ] },
                 options: { responsive: true, scales: {
-                    y: { beginAtZero: false, position: 'left', title: { display: true, text: 'Valores' } },
+                    y: { beginAtZero: false, position: 'left', title: { display: true, text: t('Valores') } },
                     y1: { beginAtZero: false, position: 'right', grid: { drawOnChartArea: false } },
                     x: { grid: { display: false } }
                 } }
@@ -323,8 +323,8 @@
             guardar(new Chart(evoCanvas, {
                 type: 'bar',
                 data: { labels: d.chartLabels, datasets: [
-                    { label: 'Receitas', data: d.chartIncome, backgroundColor: '#10b981', borderRadius: 4 },
-                    { label: 'Despesas', data: d.chartExpense, backgroundColor: '#ef4444', borderRadius: 4 }
+                    { label: t('Receitas'), data: d.chartIncome, backgroundColor: '#10b981', borderRadius: 4 },
+                    { label: t('Despesas'), data: d.chartExpense, backgroundColor: '#ef4444', borderRadius: 4 }
                 ] },
                 options: {
                     responsive: true,
