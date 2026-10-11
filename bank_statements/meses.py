@@ -12,6 +12,8 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 from datetime import date
 
+from django.utils.translation import gettext
+
 from accounts.services import has_function_permission
 from core.domain.finance import VIEW_REALIZED
 from reports.services import decimal_balance_before
@@ -44,9 +46,11 @@ def meses_reabertos(user, meses: Iterable[tuple[int, int, int]], *, autorizar: b
     saldos = {}
     if fechados:
         if not autorizar:
-            raise ValueError("Há meses fechados entre os lançamentos: autorize a reabertura e o novo fechamento.")
+            raise ValueError(
+                gettext("Há meses fechados entre os lançamentos: autorize a reabertura e o novo fechamento.")
+            )
         if not has_function_permission(user, "settings.monthly_close.manage"):
-            raise ValueError("Reabrir mês fechado exige a permissão de fechamento mensal.")
+            raise ValueError(gettext("Reabrir mês fechado exige a permissão de fechamento mensal."))
         for (conta_id, ano, mes), conta in fechados.items():
             fechamento = AccountMonthClose.objects.get(account=conta, year=ano, month=mes, active=True)
             saldos[(conta_id, ano, mes)] = (conta, fechamento.closing_balance)
@@ -57,7 +61,10 @@ def meses_reabertos(user, meses: Iterable[tuple[int, int, int]], *, autorizar: b
         novo = decimal_balance_before([conta_id], fim, VIEW_REALIZED)
         if novo != anterior:
             raise ValueError(
-                f"O saldo de fechamento de {mes:02d}/{ano} ({conta}) mudaria de {anterior} para {novo}; "
-                "nada foi gravado."
+                gettext(
+                    "O saldo de fechamento de %(mes)02d/%(ano)s (%(conta)s) mudaria de %(anterior)s para %(novo)s; "
+                    "nada foi gravado."
+                )
+                % {"mes": mes, "ano": ano, "conta": conta, "anterior": anterior, "novo": novo}
             )
         close_month(conta, ano, mes, novo, user, audit_context=audit_context)

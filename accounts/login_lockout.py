@@ -15,6 +15,7 @@ import time
 
 from django.db import transaction as db_transaction
 from django.utils import timezone
+from django.utils.translation import gettext, ngettext
 
 from .models import LoginLockout
 
@@ -22,7 +23,14 @@ from .models import LoginLockout
 class LoginThrottledError(Exception):
     def __init__(self, wait_seconds: int):
         self.wait_seconds = wait_seconds
-        super().__init__(f"Muitas tentativas de login. Aguarde {wait_seconds} segundo(s) antes de tentar novamente.")
+        super().__init__(
+            ngettext(
+                "Muitas tentativas de login. Aguarde %(n)s segundo antes de tentar novamente.",
+                "Muitas tentativas de login. Aguarde %(n)s segundos antes de tentar novamente.",
+                wait_seconds,
+            )
+            % {"n": wait_seconds}
+        )
 
 
 def _normalize_username(username: str | None) -> str:
@@ -89,7 +97,13 @@ def clear_login_failures(username: str | None, remote_addr: str | None) -> None:
 
 
 def failed_login_message(attempts_remaining: int, wait_seconds: int | None) -> str:
-    message = f"Usuário ou senha inválidos. Tentativas restantes até o bloqueio: {attempts_remaining}."
+    message = gettext(
+        "Usuário ou senha inválidos. Tentativas restantes até o bloqueio: %(restantes)s."
+    ) % {"restantes": attempts_remaining}
     if wait_seconds is not None:
-        message += f" Muitas tentativas de login. Aguarde {wait_seconds} segundo(s) antes de tentar novamente."
+        message += " " + ngettext(
+            "Muitas tentativas de login. Aguarde %(n)s segundo antes de tentar novamente.",
+            "Muitas tentativas de login. Aguarde %(n)s segundos antes de tentar novamente.",
+            wait_seconds,
+        ) % {"n": wait_seconds}
     return message
