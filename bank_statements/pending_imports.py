@@ -24,6 +24,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile, UploadedFile
 from django.db import transaction as db_transaction
+from django.utils.translation import gettext, gettext_lazy
 
 from banking.models import FinancialAccount, FinancialInstitution
 
@@ -46,7 +47,7 @@ _MAX_FILENAME_LENGTH = 255
 _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 _MAX_SAFE_STEM_LENGTH = 180
 _RE_NON_DIGIT = re.compile(r"\D+")
-_FATURA_LABELS = {FORMATO_C6: "Fatura C6", FORMATO_XP: "Fatura XP"}
+_FATURA_LABELS = {FORMATO_C6: gettext_lazy("Fatura C6"), FORMATO_XP: gettext_lazy("Fatura XP")}
 
 
 def pending_storage_dir() -> Path:
@@ -146,9 +147,9 @@ def detect_account(
                 if institution is not None:
                     break
         conta = extract_conta_label(text)
-        label = institution.institution_name if institution else "PDF não reconhecido"
+        label = institution.institution_name if institution else gettext("PDF não reconhecido")
         if conta:
-            label = f"{label} · conta {conta}"
+            label = gettext("%(label)s · conta %(conta)s") % {"label": label, "conta": conta}
         if institution is not None:
             erro = _erro_de_leitura(file_like, institution)
             if erro:
@@ -170,7 +171,7 @@ def detect_account(
         except UnicodeDecodeError:
             content = raw.decode("latin-1")
         hint = extract_ofx_account_hint(content)
-        label = f"OFX · conta {hint}" if hint else "OFX"
+        label = gettext("OFX · conta %(conta)s") % {"conta": hint} if hint else "OFX"
         erro = _erro_de_leitura(file_like)
         if erro:
             return None, label, erro
@@ -180,7 +181,7 @@ def detect_account(
 
     if lowered_name.endswith(".csv") or "csv" in lowered_type:
         formato = formato_da_fatura(raw)
-        label = _FATURA_LABELS.get(formato, "CSV de extrato")
+        label = _FATURA_LABELS.get(formato, gettext("CSV de extrato"))
         return None, label, ""
 
     return None, "", ""
