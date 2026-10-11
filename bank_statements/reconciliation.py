@@ -286,7 +286,7 @@ def _get_line_in_scope(
     except BankStatementLine.DoesNotExist as exc:
         raise ValueError("Linha de extrato não encontrada.") from exc
     if not can_access_account(user, line.account_id, action):
-        raise ValueError("Acesso negado para esta linha de extrato.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
     return line
 
 
@@ -444,15 +444,15 @@ def reconcile_line_with_entry(
     except CashFlowEntry.DoesNotExist as exc:
         raise ValueError("Movimento não encontrado.") from exc
     if not can_access_account(user, entry_scope.account_id, "update"):
-        raise ValueError("Acesso negado para este movimento.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar este movimento.")
     entry = _locked_entry_for_update(entry_id)
     # A autorização é revalidada depois dos locks: a leitura feita antes da
     # operação não pode ser a única barreira para uma mudança concorrente de
     # permissões ou de concessão de destino de transferência.
     if not can_access_account(user, line.account_id, "update"):
-        raise ValueError("Acesso negado para esta linha de extrato.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
     if not can_access_account(user, entry.account_id, "update"):
-        raise ValueError("Acesso negado para este movimento.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar este movimento.")
     # Uma transferência já realizada com a mesma data/valor não chama
     # `realize_transaction` abaixo. Revalide aqui para que esse atalho de
     # conciliação não contorne uma concessão de destino posteriormente
@@ -594,9 +594,9 @@ def undo_reconciliation(user, *, line_id) -> BankStatementLine:
 
     entry = _locked_entry_for_update(line.matched_entry_id)
     if not can_access_account(user, line.account_id, "update"):
-        raise ValueError("Acesso negado para esta linha de extrato.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
     if not can_access_account(user, entry.account_id, "update"):
-        raise ValueError("Acesso negado para este movimento.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar este movimento.")
     if entry.status == STATUS_REALIZED:
         unrealize_transaction(entry, user=user)
 
@@ -631,10 +631,10 @@ def undo_statement_import(user, *, batch_id) -> tuple[int, int]:
     except BankStatementImport.DoesNotExist as exc:
         raise ValueError("Lote de importação não encontrado.") from exc
     if not can_access_account(user, batch.account_id, "update"):
-        raise ValueError("Acesso negado para este lote de importação.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar este lote de importação.")
     if batch.account.is_credit_card:
         raise ValueError(
-            "Fatura de cartão de crédito não pode ser desfeita por aqui -- "
+            "Fatura de cartão de crédito não pode ser desfeita por aqui — "
             "use a tela de Fatura para reverter linha a linha."
         )
 
@@ -671,7 +671,7 @@ def create_entry_from_line(user, *, line_id, category_id, audit_context=None) ->
 def _create_entry_from_locked_line(user, *, line, category_id, audit_context=None) -> BankStatementLine:
     """Implementa a criação com a linha já travada pela transação chamadora."""
     if not can_access_account(user, line.account_id, "update"):
-        raise ValueError("Acesso negado para esta linha de extrato.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
     if line.status != LINE_STATUS_NEW or line.matched_entry_id is not None:
         raise ValueError("Linha de extrato já conciliada ou ignorada.")
     if not category_id:
@@ -716,7 +716,7 @@ def ignore_statement_line(user, *, line_id) -> BankStatementLine:
     with db_transaction.atomic():
         line = _get_line_in_scope(user, line_id, "update", for_update=True)
         if not can_access_account(user, line.account_id, "update"):
-            raise ValueError("Acesso negado para esta linha de extrato.")
+            raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
         if line.status != LINE_STATUS_NEW or line.matched_entry_id is not None:
             raise ValueError("Apenas linhas novas e não conciliadas podem ser ignoradas.")
         line.status = LINE_STATUS_IGNORED
@@ -737,7 +737,7 @@ def bulk_create_entries_from_lines(user, *, line_ids: Iterable, audit_context=No
             line = _get_line_in_scope(user, line_id, "update")
             suggested = suggested_category_for_line(line)
             if suggested is None:
-                raise ValueError("Nenhuma categoria disponível para sugerir (nem 'Outros').")
+                raise ValueError("Nenhuma categoria disponível para sugerir (nem “Outros”).")
             create_entry_from_line(user, line_id=line_id, category_id=suggested.id, audit_context=audit_context)
             created += 1
         except ValueError as exc:
@@ -762,7 +762,7 @@ def bulk_reconcile_lines(user, *, line_ids: Iterable, audit_context=None) -> tup
             if not candidates:
                 raise ValueError("Nenhum movimento candidato para conciliar.")
             if len(candidates) > 1:
-                raise ValueError("Mais de um movimento candidato - concilie manualmente.")
+                raise ValueError("Mais de um movimento candidato — concilie manualmente.")
             reconcile_line_with_entry(
                 user,
                 line_id=line_id,
