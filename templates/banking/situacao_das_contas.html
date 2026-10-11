@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Movimentação • Situação das contas{% endblock %}
+{% block title %}{% trans "Movimentação • Situação das contas" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -11,8 +11,8 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>🚦 Situação das contas</h1>
-        <p>Para cada conta e mês: se o extrato (ou a fatura) foi importado e se as linhas já foram conciliadas.</p>
+        <h1>🚦 {% trans "Situação das contas" %}</h1>
+        <p>{% trans "Para cada conta e mês: se o extrato (ou a fatura) foi importado e se as linhas já foram conciliadas." %}</p>
     </div>
 </div>
 {% endblock %}
@@ -21,31 +21,31 @@
 {% with resumo=matriz.resumo %}
 <div class="chart-card u-mb-1">
     <div class="situacao-resumo-topo">
-        <h3>Resumo de {{ resumo.mes|date:"F/Y" }}</h3>
-        <nav class="situacao-periodo" aria-label="Período da matriz">
+        <h3>{% trans "Resumo de" %} {{ resumo.mes|date:"F/Y" }}</h3>
+        <nav class="situacao-periodo" aria-label="{% trans 'Período da matriz' %}">
             {% for opcao in opcoes_de_meses %}
             <a href="?meses={{ opcao }}&amp;ref={{ resumo.mes|date:'Y-m' }}" class="btn btn-sm {% if opcao == quantos %}btn-primary{% else %}btn-ghost{% endif %}"
-               {% if opcao == quantos %}aria-current="true"{% endif %}>{{ opcao }} meses</a>
+               {% if opcao == quantos %}aria-current="true"{% endif %}>{% blocktrans trimmed count n=opcao %}{{ n }} mês{% plural %}{{ n }} meses{% endblocktrans %}</a>
             {% endfor %}
         </nav>
     </div>
     {% if resumo.aplicaveis %}
     <div class="situacao-cartoes">
-        <div class="situacao-cartao situacao-cartao-ok"><strong>{{ resumo.em_dia }}</strong><span>de {{ resumo.aplicaveis }} conta{{ resumo.aplicaveis|pluralize }} em dia</span></div>
-        <div class="situacao-cartao situacao-cartao-pendente"><strong>{{ resumo.pendentes }}</strong><span>com pendências</span></div>
-        <div class="situacao-cartao situacao-cartao-falta"><strong>{{ resumo.sem_importacao }}</strong><span>sem importação</span></div>
+        <div class="situacao-cartao situacao-cartao-ok"><strong>{{ resumo.em_dia }}</strong><span>{% blocktrans trimmed count n=resumo.aplicaveis %}de {{ n }} conta em dia{% plural %}de {{ n }} contas em dia{% endblocktrans %}</span></div>
+        <div class="situacao-cartao situacao-cartao-pendente"><strong>{{ resumo.pendentes }}</strong><span>{% trans "com pendências" %}</span></div>
+        <div class="situacao-cartao situacao-cartao-falta"><strong>{{ resumo.sem_importacao }}</strong><span>{% trans "sem importação" %}</span></div>
     </div>
     <p class="situacao-progresso">
-        <progress max="{{ resumo.aplicaveis }}" value="{{ resumo.em_dia }}" aria-label="Contas em dia">{{ resumo.percentual }}%</progress>
-        <span>{{ resumo.percentual }}% importado e conciliado</span>
+        <progress max="{{ resumo.aplicaveis }}" value="{{ resumo.em_dia }}" aria-label="{% trans 'Contas em dia' %}">{{ resumo.percentual }}%</progress>
+        <span>{{ resumo.percentual }}% {% trans "importado e conciliado" %}</span>
     </p>
     {% else %}
-    <p class="empty-state">Nenhuma conta a que este mês se aplique.</p>
+    <p class="empty-state">{% trans "Nenhuma conta a que este mês se aplique." %}</p>
     {% endif %}
-    <p class="help-text">Escolha o mês do resumo clicando no título da coluna. O mês corrente está em andamento: os extratos costumam sair depois que ele acaba.</p>
+    <p class="help-text">{% trans "Escolha o mês do resumo clicando no título da coluna. O mês corrente está em andamento: os extratos costumam sair depois que ele acaba." %}</p>
 </div>
 
-<ul class="situacao-legenda" aria-label="Legenda">
+<ul class="situacao-legenda" aria-label="{% trans 'Legenda' %}">
     {% for estado, icone, rotulo in legenda %}
     <li class="situacao-celula situacao-{{ estado }}"><span aria-hidden="true">{{ icone }}</span> {{ rotulo }}</li>
     {% endfor %}
@@ -55,11 +55,11 @@
     <table class="tx-table situacao-matriz">
         <thead>
             <tr>
-                <th scope="col" class="situacao-conta">Conta</th>
+                <th scope="col" class="situacao-conta">{% trans "Conta" %}</th>
                 {% for mes in matriz.meses %}
                 <th scope="col" class="{% if mes == resumo.mes %}situacao-referencia{% endif %}">
-                    <a href="?meses={{ quantos }}&amp;ref={{ mes|date:'Y-m' }}" title="Resumir {{ mes|date:'F \d\e Y' }}">{{ mes|date:"M/y" }}</a>
-                    {% if mes.year == matriz.hoje.year and mes.month == matriz.hoje.month %}<small>em andamento</small>{% endif %}
+                    <a href="?meses={{ quantos }}&amp;ref={{ mes|date:'Y-m' }}" title="{% trans 'Resumir' %} {{ mes|date:'F \d\e Y' }}">{{ mes|date:"M/y" }}</a>
+                    {% if mes.year == matriz.hoje.year and mes.month == matriz.hoje.month %}<small>{% trans "em andamento" %}</small>{% endif %}
                 </th>
                 {% endfor %}
             </tr>
@@ -71,7 +71,7 @@
             {% for linha in grupo.list %}
             {% with conta=linha.conta %}
             <tr>
-                <th scope="row" class="situacao-conta">{{ conta.account_name }}<small>{{ conta.institution.institution_name }}{% if conta.is_credit_card %} · cartão{% endif %}</small></th>
+                <th scope="row" class="situacao-conta">{{ conta.account_name }}<small>{{ conta.institution.institution_name }}{% if conta.is_credit_card %} · {% trans "cartão" %}{% endif %}</small></th>
                 {% for c in linha.celulas %}
                 <td class="{% if c.mes == resumo.mes %}situacao-referencia{% endif %}">
                     {% if c.url %}<a class="situacao-celula situacao-{{ c.estado }}" href="{{ c.url }}" title="{{ c.descricao }}" aria-label="{{ conta.account_name }}, {{ c.mes|date:'F Y' }}: {{ c.descricao }}">
@@ -85,7 +85,7 @@
             {% endwith %}
             {% endfor %}
         {% empty %}
-            <tr><td colspan="{{ quantos|add:1 }}" class="empty-state">Nenhuma conta ao seu alcance.</td></tr>
+            <tr><td colspan="{{ quantos|add:1 }}" class="empty-state">{% trans "Nenhuma conta ao seu alcance." %}</td></tr>
         {% endfor %}
         </tbody>
     </table>
