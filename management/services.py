@@ -21,6 +21,7 @@ from decimal import Decimal
 from django.db import IntegrityError
 from django.db.models import DecimalField, Sum, Value
 from django.db.models.functions import Coalesce
+from django.utils.translation import gettext
 
 from accounts.models import AccountOwner
 from accounts.services import accessible_owner_ids
@@ -53,15 +54,15 @@ def list_tags(*, active_only: bool = False):
 def create_tag(tag_name: str) -> ManagementTag:
     clean_name = (tag_name or "").strip()
     if not clean_name:
-        raise ValueError("Nome da tag é obrigatório.")
+        raise ValueError(gettext("Nome da tag é obrigatório."))
     if len(clean_name) > 80:
-        raise ValueError("Nome da tag não pode exceder 80 caracteres.")
+        raise ValueError(gettext("Nome da tag não pode exceder 80 caracteres."))
     if ManagementTag.objects.filter(tag_name__iexact=clean_name).exists():
-        raise ValueError("Já existe uma tag com esse nome.")
+        raise ValueError(gettext("Já existe uma tag com esse nome."))
     try:
         return ManagementTag.objects.create(tag_name=clean_name)
     except IntegrityError as exc:
-        raise ValueError("Já existe uma tag com esse nome.") from exc
+        raise ValueError(gettext("Já existe uma tag com esse nome.")) from exc
 
 
 def retire_tag(tag_id) -> tuple[ManagementTag, str]:
@@ -88,18 +89,18 @@ def list_projects(*, active_only: bool = False):
 def create_project(project_name: str, description: str = "") -> ManagementProject:
     clean_name = (project_name or "").strip()
     if not clean_name:
-        raise ValueError("Nome do projeto é obrigatório.")
+        raise ValueError(gettext("Nome do projeto é obrigatório."))
     if len(clean_name) > 120:
-        raise ValueError("Nome do projeto não pode exceder 120 caracteres.")
+        raise ValueError(gettext("Nome do projeto não pode exceder 120 caracteres."))
     clean_description = (description or "").strip()
     if len(clean_description) > 255:
-        raise ValueError("Descrição não pode exceder 255 caracteres.")
+        raise ValueError(gettext("Descrição não pode exceder 255 caracteres."))
     if ManagementProject.objects.filter(project_name__iexact=clean_name).exists():
-        raise ValueError("Já existe um projeto com esse nome.")
+        raise ValueError(gettext("Já existe um projeto com esse nome."))
     try:
         return ManagementProject.objects.create(project_name=clean_name, description=clean_description)
     except IntegrityError as exc:
-        raise ValueError("Já existe um projeto com esse nome.") from exc
+        raise ValueError(gettext("Já existe um projeto com esse nome.")) from exc
 
 
 def retire_project(project_id) -> tuple[ManagementProject, str]:
@@ -136,12 +137,12 @@ def _resolve_owned_entry(user, entry_id) -> CashFlowEntry:
     try:
         entry_id_int = int(entry_id)
     except (TypeError, ValueError):
-        raise ValueError("Informe o ID do lançamento.") from None
+        raise ValueError(gettext("Informe o ID do lançamento.")) from None
     entry = CashFlowEntry.objects.filter(id=entry_id_int).select_related("account").first()
     if entry is None:
-        raise ValueError("Lançamento não encontrado.")
+        raise ValueError(gettext("Lançamento não encontrado."))
     if not can_access_entry(user, entry):
-        raise ValueError("Acesso negado: você não tem permissão para vincular este lançamento.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para vincular este lançamento."))
     return entry
 
 
@@ -151,9 +152,9 @@ def _resolve_tag(tag_id) -> ManagementTag:
     except (TypeError, ValueError):
         tag = None
     if tag is None:
-        raise ValueError("Tag não encontrada.")
+        raise ValueError(gettext("Tag não encontrada."))
     if not tag.active:
-        raise ValueError("Tag arquivada não pode receber novos vínculos.")
+        raise ValueError(gettext("Tag arquivada não pode receber novos vínculos."))
     return tag
 
 
@@ -163,9 +164,9 @@ def _resolve_project(project_id) -> ManagementProject:
     except (TypeError, ValueError):
         project = None
     if project is None:
-        raise ValueError("Projeto não encontrado.")
+        raise ValueError(gettext("Projeto não encontrado."))
     if not project.active:
-        raise ValueError("Projeto arquivado não pode receber novos vínculos.")
+        raise ValueError(gettext("Projeto arquivado não pode receber novos vínculos."))
     return project
 
 
@@ -182,35 +183,35 @@ def save_budget(user, *, owner_id, category_id, year, month, planned_amount) -> 
     try:
         owner_id_int = int(owner_id)
     except (TypeError, ValueError):
-        raise ValueError("Titular é obrigatório.") from None
+        raise ValueError(gettext("Titular é obrigatório.")) from None
     try:
         category_id_int = int(category_id)
     except (TypeError, ValueError):
-        raise ValueError("Categoria é obrigatória.") from None
+        raise ValueError(gettext("Categoria é obrigatória.")) from None
     try:
         year_int = int(year)
         month_int = int(month)
     except (TypeError, ValueError):
-        raise ValueError("Mês do orçamento é obrigatório.") from None
+        raise ValueError(gettext("Mês do orçamento é obrigatório.")) from None
     if not 1 <= month_int <= 12:
-        raise ValueError("Mês inválido.")
+        raise ValueError(gettext("Mês inválido."))
     if not 2000 <= year_int <= 2100:
-        raise ValueError("Ano inválido.")
+        raise ValueError(gettext("Ano inválido."))
 
     if owner_id_int not in set(accessible_owner_ids(user, "update")):
-        raise ValueError("Acesso negado: você não tem permissão para gerenciar orçamento deste titular.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para gerenciar orçamento deste titular."))
 
     if not AccountOwner.objects.filter(id=owner_id_int).exists():
-        raise ValueError("Titular não encontrado.")
+        raise ValueError(gettext("Titular não encontrado."))
     if not CashFlowCategory.objects.filter(id=category_id_int).exists():
-        raise ValueError("Categoria não encontrada.")
+        raise ValueError(gettext("Categoria não encontrada."))
 
     try:
         amount = Decimal(str(planned_amount).strip().replace(",", "."))
     except Exception as exc:  # noqa: BLE001 - entrada de formulário livre
-        raise ValueError("Valor orçado inválido.") from exc
+        raise ValueError(gettext("Valor orçado inválido.")) from exc
     if amount < 0:
-        raise ValueError("Valor orçado não pode ser negativo.")
+        raise ValueError(gettext("Valor orçado não pode ser negativo."))
 
     budget, _created = MonthlyBudget.objects.update_or_create(
         owner_id=owner_id_int,
@@ -235,7 +236,7 @@ def retire_budget(user, budget_id) -> tuple[MonthlyBudget, str]:
     propósito: distinguir os dois casos diria a quem tenta quais ids existem
     sob titulares alheios.
     """
-    nao_encontrado = "Orçamento não encontrado."
+    nao_encontrado = gettext("Orçamento não encontrado.")
     try:
         budget = MonthlyBudget.objects.select_related("owner", "category").get(id=int(budget_id))
     except (MonthlyBudget.DoesNotExist, TypeError, ValueError):

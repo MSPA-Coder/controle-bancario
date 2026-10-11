@@ -6,6 +6,7 @@ from datetime import date
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext
 from django.views.decorators.http import require_POST
 
 from core.htmx import quer_fragmento, recusa_moedas_misturadas
@@ -72,7 +73,7 @@ def create_tag_view(request):
     if request.method == "POST":
         try:
             services.create_tag(request.POST.get("tag_name", ""))
-            messages.success(request, "Tag criada.")
+            messages.success(request, gettext("Tag criada."))
         except ValueError as exc:
             messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -85,7 +86,7 @@ def create_project_view(request):
     if request.method == "POST":
         try:
             services.create_project(request.POST.get("project_name", ""), request.POST.get("description", ""))
-            messages.success(request, "Projeto/centro de custo criado.")
+            messages.success(request, gettext("Projeto/centro de custo criado."))
         except ValueError as exc:
             messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -97,7 +98,11 @@ def create_project_view(request):
 def retire_tag_view(request):
     try:
         tag, action = services.retire_tag(request.POST.get("tag_id"))
-        messages.success(request, f"Tag “{tag.tag_name}” {'arquivada por possuir histórico' if action == 'archived' else 'excluída'}.")
+        if action == "archived":
+            mensagem = gettext("Tag “%(nome)s” arquivada por possuir histórico.") % {"nome": tag.tag_name}
+        else:
+            mensagem = gettext("Tag “%(nome)s” excluída.") % {"nome": tag.tag_name}
+        messages.success(request, mensagem)
     except ValueError as exc:
         messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -109,7 +114,11 @@ def retire_tag_view(request):
 def retire_project_view(request):
     try:
         project, action = services.retire_project(request.POST.get("project_id"))
-        messages.success(request, f"Projeto “{project.project_name}” {'arquivado por possuir histórico' if action == 'archived' else 'excluído'}.")
+        if action == "archived":
+            mensagem = gettext("Projeto “%(nome)s” arquivado por possuir histórico.") % {"nome": project.project_name}
+        else:
+            mensagem = gettext("Projeto “%(nome)s” excluído.") % {"nome": project.project_name}
+        messages.success(request, mensagem)
     except ValueError as exc:
         messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -122,7 +131,11 @@ def retire_budget_view(request):
     try:
         budget, action = services.retire_budget(request.user, request.POST.get("budget_id"))
         label = f"{budget.category.category_name} - {budget.month:02d}/{budget.year}"
-        messages.success(request, f"Orçamento “{label}” {'arquivado por possuir realizado' if action == 'archived' else 'excluído'}.")
+        if action == "archived":
+            mensagem = gettext("Orçamento “%(rotulo)s” arquivado por possuir realizado.") % {"rotulo": label}
+        else:
+            mensagem = gettext("Orçamento “%(rotulo)s” excluído.") % {"rotulo": label}
+        messages.success(request, mensagem)
     except ValueError as exc:
         messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -136,7 +149,7 @@ def save_budget_view(request):
         try:
             budget_month = reports_services.parse_month_input(request.POST.get("budget_month"))
             if budget_month is None:
-                raise ValueError("Mês do orçamento é obrigatório.")
+                raise ValueError(gettext("Mês do orçamento é obrigatório."))
             budget = services.save_budget(
                 request.user,
                 owner_id=request.POST.get("owner_id"),
@@ -147,7 +160,11 @@ def save_budget_view(request):
             )
             messages.success(
                 request,
-                f"Orçamento salvo: {budget.category.category_name} - {budget.month:02d}/{budget.year}.",
+                gettext("Orçamento salvo: %(categoria)s - %(mes)02d/%(ano)s.") % {
+                    "categoria": budget.category.category_name,
+                    "mes": budget.month,
+                    "ano": budget.year,
+                },
             )
         except ValueError as exc:
             messages.error(request, str(exc))
@@ -161,7 +178,7 @@ def assign_tag_view(request):
     if request.method == "POST":
         try:
             services.assign_tag_to_entry(request.user, request.POST.get("entry_id"), request.POST.get("tag_id"))
-            messages.success(request, "Tag vinculada ao lançamento.")
+            messages.success(request, gettext("Tag vinculada ao lançamento."))
         except ValueError as exc:
             messages.error(request, str(exc))
     return _redirect_to_panel(request)
@@ -176,7 +193,7 @@ def assign_project_view(request):
             services.assign_project_to_entry(
                 request.user, request.POST.get("entry_id"), request.POST.get("project_id")
             )
-            messages.success(request, "Projeto vinculado ao lançamento.")
+            messages.success(request, gettext("Projeto vinculado ao lançamento."))
         except ValueError as exc:
             messages.error(request, str(exc))
     return _redirect_to_panel(request)
