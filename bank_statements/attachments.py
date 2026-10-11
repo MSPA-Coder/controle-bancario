@@ -20,6 +20,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction as db_transaction
+from django.utils.translation import gettext
 
 from banking.services import accessible_account_ids, can_access_account
 from transactions.models import CashFlowEntry
@@ -59,22 +60,22 @@ def _sanitize_filename(raw_name: str | None) -> str:
 
 def _validate_attachment_signature(extension: str, header: bytes) -> None:
     if extension == ".pdf" and not header.startswith(b"%PDF"):
-        raise ValueError("Arquivo PDF inválido.")
+        raise ValueError(gettext("Arquivo PDF inválido."))
     if extension == ".png" and not header.startswith(b"\x89PNG\r\n\x1a\n"):
-        raise ValueError("Arquivo PNG inválido.")
+        raise ValueError(gettext("Arquivo PNG inválido."))
     if extension in {".jpg", ".jpeg"} and not header.startswith(b"\xff\xd8\xff"):
-        raise ValueError("Arquivo JPEG inválido.")
+        raise ValueError(gettext("Arquivo JPEG inválido."))
     if extension == ".webp" and not (header.startswith(b"RIFF") and header[8:12] == b"WEBP"):
-        raise ValueError("Arquivo WEBP inválido.")
+        raise ValueError(gettext("Arquivo WEBP inválido."))
     if extension in {".csv", ".txt"} and b"\x00" in header:
-        raise ValueError("Arquivo texto inválido.")
+        raise ValueError(gettext("Arquivo texto inválido."))
 
 
 def _attachment_path(attachment: EntryAttachment) -> Path:
     path = (Path(settings.MEDIA_ROOT) / attachment.stored_path).resolve()
     root = attachment_storage_dir().resolve()
     if root not in path.parents:
-        raise ValueError("Arquivo de anexo não encontrado.")
+        raise ValueError(gettext("Arquivo de anexo não encontrado."))
     return path
 
 
@@ -84,7 +85,7 @@ def _attachment_removal_path(attachment: EntryAttachment) -> Path:
     root = attachment_storage_dir().resolve()
     resolved = candidate.resolve()
     if root not in resolved.parents or candidate == root or candidate.is_symlink():
-        raise ValueError("Arquivo de anexo fora do armazenamento permitido.")
+        raise ValueError(gettext("Arquivo de anexo fora do armazenamento permitido."))
     return candidate
 
 
@@ -94,18 +95,18 @@ def _unlink_attachment_file(path: Path) -> None:
     candidate = Path(path)
     resolved = candidate.resolve()
     if root not in resolved.parents or candidate == root:
-        raise ValueError("Arquivo de anexo fora do armazenamento permitido.")
+        raise ValueError(gettext("Arquivo de anexo fora do armazenamento permitido."))
     # Não siga um symlink durante uma remoção: mesmo que o destino atual esteja
     # dentro da árvore, a entrada física pode ser trocada entre as verificações.
     if candidate.is_symlink():
-        raise ValueError("Arquivo de anexo inválido.")
+        raise ValueError(gettext("Arquivo de anexo inválido."))
     candidate.unlink(missing_ok=True)
 
 
 def attachment_download_path(attachment: EntryAttachment) -> Path:
     path = _attachment_path(attachment)
     if not path.is_file():
-        raise ValueError("Arquivo de anexo não encontrado.")
+        raise ValueError(gettext("Arquivo de anexo não encontrado."))
     return path
 
 
@@ -115,18 +116,20 @@ def can_access_entry(user, entry: CashFlowEntry | None, action: str = "update") 
 
 def save_entry_attachment(user, entry_id, uploaded_file: UploadedFile | None) -> EntryAttachment:
     if not entry_id or uploaded_file is None:
-        raise ValueError("Informe o lançamento e o arquivo do anexo.")
+        raise ValueError(gettext("Informe o lançamento e o arquivo do anexo."))
     try:
         entry = CashFlowEntry.objects.get(id=entry_id)
     except (CashFlowEntry.DoesNotExist, ValueError, TypeError):
-        raise ValueError("Lançamento não encontrado.") from None
+        raise ValueError(gettext("Lançamento não encontrado.")) from None
     if not can_access_entry(user, entry, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para gerenciar comprovante deste lançamento.")
+        raise ValueError(gettext(
+            "Acesso negado: você não tem permissão para gerenciar comprovante deste lançamento."
+        ))
 
     safe_original = _sanitize_filename(uploaded_file.name)
     extension = Path(safe_original).suffix.lower()
     if extension not in ALLOWED_ATTACHMENT_EXTENSIONS:
-        raise ValueError("Tipo de arquivo não permitido para anexo.")
+        raise ValueError(gettext("Tipo de arquivo não permitido para anexo."))
     stem = Path(safe_original).stem or "anexo"
     original = f"{stem[:_MAX_SAFE_STEM_LENGTH - len(extension)]}{extension}"
     stored = f"{entry.id}_{uuid4().hex}_{original}"
@@ -142,10 +145,10 @@ def save_entry_attachment(user, entry_id, uploaded_file: UploadedFile | None) ->
                     header = chunk[:16]
                 size += len(chunk)
                 if size > max_size:
-                    raise ValueError("Arquivo excede o limite permitido para anexos.")
+                    raise ValueError(gettext("Arquivo excede o limite permitido para anexos."))
                 destination.write(chunk)
         if size == 0:
-            raise ValueError("Arquivo vazio.")
+            raise ValueError(gettext("Arquivo vazio."))
         _validate_attachment_signature(extension, header)
     except Exception:
         with suppress(OSError, ValueError):
@@ -178,13 +181,13 @@ def delete_entry_attachment(user, *, attachment_id) -> None:
     metadado ainda possa permanecer, e um rollback não cria um novo órfão.
     """
     if not attachment_id:
-        raise ValueError("Anexo inválido.")
+        raise ValueError(gettext("Anexo inválido."))
     try:
         attachment = EntryAttachment.objects.select_related("entry").get(id=attachment_id)
     except (EntryAttachment.DoesNotExist, ValueError, TypeError):
-        raise ValueError("Anexo não encontrado.") from None
+        raise ValueError(gettext("Anexo não encontrado.")) from None
     if not can_access_entry(user, attachment.entry, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para gerenciar este comprovante.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para gerenciar este comprovante."))
 
     path = _attachment_removal_path(attachment)
     attachment.delete()
