@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static navegacao %}
-{% load icons %}
+{% load icons i18n %}
 
-{% block title %}Cadastros • Categorias{% endblock %}
+{% block title %}{% trans "Cadastros • Categorias" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/categories.css' %}">
@@ -11,26 +11,26 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Cadastros • Categorias</h1>
+        <h1>{% trans "Cadastros • Categorias" %}</h1>
     </div>
-    {% include "tables/_cadastro_acoes.html" with confirmar="Cadastrar esta categoria?" %}
+    {% trans "Cadastrar esta categoria?" as t_confirmar %}{% include "tables/_cadastro_acoes.html" with confirmar=t_confirmar %}
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="chart-card">
     <div id="cadastro-novo" class="cadastro-novo" hidden>
-    <div class="section-header"><h4>Nova categoria</h4></div>
+    <div class="section-header"><h4>{% trans "Nova categoria" %}</h4></div>
     <form method="post" data-cadastro-htmx="#categoriesTableBody" id="cadastro-form" action="{% url 'transactions:create_category' %}" class="add-form">
         {% csrf_token %}
-        <input type="text" name="category_name" aria-label="Nome da categoria" placeholder="Nome da categoria…" maxlength="100" required data-ui="flex-1">
-        <select name="kind" aria-label="Tipo da categoria" required data-ui="w-260">
+        <input type="text" name="category_name" aria-label="{% trans 'Nome da categoria' %}" placeholder="{% trans 'Nome da categoria…' %}" maxlength="100" required data-ui="flex-1">
+        <select name="kind" aria-label="{% trans 'Tipo da categoria' %}" required data-ui="w-260">
             {% for value, label in category_kind_options %}
             <option value="{{ value }}">{{ label }}</option>
             {% endfor %}
         </select>
-        <select name="group_id" aria-label="Grupo da categoria" data-ui="w-260">
-            <option value="">Sem grupo</option>
+        <select name="group_id" aria-label="{% trans 'Grupo da categoria' %}" data-ui="w-260">
+            <option value="">{% trans "Sem grupo" %}</option>
             {% for group in category_groups %}
             <option value="{{ group.id }}">{{ group.group_name }}</option>
             {% endfor %}
@@ -42,16 +42,16 @@
         <table>
             <thead>
                 <tr>
-                    <th>Grupo / Nome</th>
+                    <th>{% trans "Grupo / Nome" %}</th>
                     <th>
-                        <select data-table-filter name="filter_type" aria-label="Filtrar por tipo" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#categoriesTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
-                            <option value="">Todos os tipos</option>
-                            <option value="gerencial" {% if current_filter_type == 'gerencial' %}selected{% endif %}>Gerencial</option>
-                            <option value="movimentacao" {% if current_filter_type == 'movimentacao' %}selected{% endif %}>Movimentação</option>
-                            <option value="transferencia" {% if current_filter_type == 'transferencia' %}selected{% endif %}>Transferência</option>
+                        <select data-table-filter name="filter_type" aria-label="{% trans 'Filtrar por tipo' %}" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#categoriesTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
+                            <option value="">{% trans "Todos os tipos" %}</option>
+                            <option value="gerencial" {% if current_filter_type == 'gerencial' %}selected{% endif %}>{% trans "Gerencial" %}</option>
+                            <option value="movimentacao" {% if current_filter_type == 'movimentacao' %}selected{% endif %}>{% trans "Movimentação" %}</option>
+                            <option value="transferencia" {% if current_filter_type == 'transferencia' %}selected{% endif %}>{% trans "Transferência" %}</option>
                         </select>
                     </th>
-                    <th data-ui="w-100">Ações</th>
+                    <th data-ui="w-100">{% trans "Ações" %}</th>
                 </tr>
             </thead>
             {% include "tables/_categories_table.html" %}

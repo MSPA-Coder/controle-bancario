@@ -1,5 +1,5 @@
-{% load icons %}
-<nav id="appSidebar" class="app-sidebar-nav" aria-label="Navegação principal">
+{% load icons i18n %}
+<nav id="appSidebar" class="app-sidebar-nav" aria-label="{% trans 'Navegação principal' %}">
     <div class="sidebar-brand">
         <div class="sidebar-brand-mark">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -13,8 +13,8 @@
                     <button type="button" class="sidebar-privacy-toggle sidebar-filter-toggle"
                             data-global-filters-toggle aria-controls="global-filters-menu"
                             aria-expanded="false"
-                            aria-label="Abrir filtros globais{% if global_account_groups_active %} (filtro de contas ativo){% endif %}"
-                            title="Filtros">
+                            aria-label="{% trans 'Abrir filtros globais' %}{% if global_account_groups_active %} {% trans '(filtro de contas ativo)' %}{% endif %}"
+                            title="{% trans 'Filtros' %}">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
                         {% if global_account_groups_active %}<span class="sidebar-filter-dot" aria-hidden="true"></span>{% endif %}
                     </button>
@@ -29,7 +29,7 @@
                             {% endfor %}
                             {# As duas marcadas viajam como `ALL`: ver core/currency_filter.py. #}
                             <fieldset class="sidebar-global-groups" data-global-choice="currency">
-                                <legend>Moeda</legend>
+                                <legend>{% trans "Moeda" %}</legend>
                                 {% for option in global_currency_options %}
                                 <label class="sidebar-global-group">
                                     <input type="checkbox" value="{{ option.code }}" data-global-choice-box {% if option.selected %}checked{% endif %}>
@@ -41,7 +41,7 @@
                             </fieldset>
                             {# Cada conta cai em um grupo só: ver core/account_group_filter.py. #}
                             <fieldset class="sidebar-global-groups" data-global-choice="grupos">
-                                <legend>Contas</legend>
+                                <legend>{% trans "Contas" %}</legend>
                                 {% for group in global_account_group_options %}
                                 <label class="sidebar-global-group">
                                     <input type="checkbox" value="{{ group.code }}" data-global-choice-box {% if group.selected %}checked{% endif %}>
@@ -53,18 +53,18 @@
                                        data-global-choice-value data-default-value="{{ global_account_groups_default_param }}"
                                        {% if not global_account_groups_active %}disabled{% endif %}>
                             </fieldset>
-                            <button type="submit" class="btn btn-primary btn-sm" data-global-filters-submit>Aplicar</button>
+                            <button type="submit" class="btn btn-primary btn-sm" data-global-filters-submit>{% trans "Aplicar" %}</button>
                         </form>
                         <button type="button" class="sidebar-privacy-menu-toggle" data-privacy-toggle
-                                aria-pressed="false" aria-label="Ativar modo discreto" title="Ativar modo discreto">
+                                aria-pressed="false" aria-label="{% trans 'Ativar modo discreto' %}" title="{% trans 'Ativar modo discreto' %}">
                             <span data-privacy-icon-visible aria-hidden="true">{% icon 'eye' %}</span>
                             <span data-privacy-icon-hidden hidden aria-hidden="true">{% icon 'eye-off' %}</span>
-                            <span>Modo discreto</span>
+                            <span>{% trans "Modo discreto" %}</span>
                         </button>
                     </div>
                 </div>
             </div>
-            <div class="sidebar-brand-subtitle">Fluxo de caixa</div>
+            <div class="sidebar-brand-subtitle">{% trans "Fluxo de caixa" %}</div>
         </div>
     </div>
 
@@ -77,9 +77,9 @@
     {# Padrao recolhido (data-sidebar no <html>); expandir vale pela sessao do navegador (theme-init.js). #}
     <button type="button" class="sidebar-collapse-toggle" data-sidebar-collapse
             aria-controls="appSidebar" aria-expanded="false"
-            aria-label="Expandir menu" title="Expandir menu">
+            aria-label="{% trans 'Expandir menu' %}" title="{% trans 'Expandir menu' %}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
-        <span class="sidebar-collapse-label">Recolher menu</span>
+        <span class="sidebar-collapse-label">{% trans "Recolher menu" %}</span>
     </button>
 
     {% if current_active_user %}
@@ -97,7 +97,7 @@
                     class="btn btn-primary btn-sm sidebar-user-action-btn"
                     hx-post="{% url 'logout' %}"
                     hx-include="closest form"
-                >Sair</button>
+                >{% trans "Sair" %}</button>
             </form>
         </span>
     </div>

@@ -1,4 +1,4 @@
-{% load icons %}
+{% load icons i18n %}
 {# Depois de uma escrita (`tabelaAtualizar`), o corpo da tabela se recarrega com o filtro VIVO da tela. #}
 <tbody id="institutionsTableBody" hx-trigger="tabelaAtualizar from:body" hx-get="{{ request.path }}" hx-include="[data-table-filter]" hx-target="this" hx-swap="outerHTML">
 {% for institution in institutions %}
@@ -7,20 +7,20 @@
         <td>{{ institution.institution_name }}</td>
         <td>
             {% if institution.homologada %}
-            <span class="badge badge-success">Sim</span>
+            <span class="badge badge-success">{% trans "Sim" %}</span>
             {% else %}
-            <span class="badge">Não</span>
+            <span class="badge">{% trans "Não" %}</span>
             {% endif %}
         </td>
         <td class="actions">
-            <button type="button" class="btn btn-sm btn-icon btn-action-edit" title="Editar" data-toggle-edit="edit-institution-{{ institution.id }}">{% icon 'edit' %}</button>
+            <button type="button" class="btn btn-sm btn-icon btn-action-edit" title="{% trans 'Editar' %}" data-toggle-edit="edit-institution-{{ institution.id }}">{% icon 'edit' %}</button>
             <form method="post" data-cadastro-htmx="#institutionsTableBody" action="{% url 'banking:delete_institution' institution.id %}" data-ui="inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-icon btn-action-delete" title="Excluir"
-                    data-sa-confirmar="Excluir a instituição {{ institution.institution_name }}? Esta ação não pode ser desfeita."
-                    data-sa-titulo="Excluir instituição"
+                <button type="submit" class="btn btn-sm btn-icon btn-action-delete" title="{% trans 'Excluir' %}"
+                    data-sa-confirmar="{% blocktrans trimmed with nome=institution.institution_name %}Excluir a instituição {{ nome }}? Esta ação não pode ser desfeita.{% endblocktrans %}"
+                    data-sa-titulo="{% trans 'Excluir instituição' %}"
                     data-sa-severidade="error"
-                    data-sa-ok="Excluir">{% icon 'delete' %}</button>
+                    data-sa-ok="{% trans 'Excluir' %}">{% icon 'delete' %}</button>
             </form>
         </td>
     </tr>
@@ -28,22 +28,22 @@
         <td colspan="4">
             <form method="post" data-cadastro-htmx="#institutionsTableBody" action="{% url 'banking:update_institution' institution.id %}" class="edit-form">
                 {% csrf_token %}
-                <select name="institution_type" aria-label="Tipo de instituição" required data-ui="w-140">
-                    <option value="Banco" {% if institution.institution_type == "Banco" %}selected{% endif %}>Banco</option>
-                    <option value="Corretora" {% if institution.institution_type == "Corretora" %}selected{% endif %}>Corretora</option>
+                <select name="institution_type" aria-label="{% trans 'Tipo de instituição' %}" required data-ui="w-140">
+                    <option value="Banco" {% if institution.institution_type == "Banco" %}selected{% endif %}>{% trans "Banco" %}</option>
+                    <option value="Corretora" {% if institution.institution_type == "Corretora" %}selected{% endif %}>{% trans "Corretora" %}</option>
                 </select>
-                <input type="text" name="institution_name" value="{{ institution.institution_name }}" aria-label="Nome da instituição" maxlength="100" required data-ui="flex-1">
+                <input type="text" name="institution_name" value="{{ institution.institution_name }}" aria-label="{% trans 'Nome da instituição' %}" maxlength="100" required data-ui="flex-1">
                 <button type="submit" class="btn btn-primary btn-sm"
-                        data-sa-confirmar="Salvar as alterações desta instituição?"
-                        data-sa-titulo="Confirmar alteração"
+                        data-sa-confirmar="{% trans 'Salvar as alterações desta instituição?' %}"
+                        data-sa-titulo="{% trans 'Confirmar alteração' %}"
                         data-sa-severidade="info"
-                        data-sa-ok="Salvar">{% icon 'save' %}<span>Salvar</span></button>
+                        data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
             </form>
         </td>
     </tr>
 {% empty %}
     <tr>
-        <td colspan="4" class="empty-state">Nenhuma instituição cadastrada.</td>
+        <td colspan="4" class="empty-state">{% trans "Nenhuma instituição cadastrada." %}</td>
     </tr>
 {% endfor %}
 </tbody>
