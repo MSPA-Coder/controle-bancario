@@ -54,7 +54,7 @@ def owners_view(request):
 def create_owner_view(request):
     try:
         create_owner(request.POST.get('name', ''))
-        messages.success(request, "Titular cadastrado com sucesso.")
+        messages.success(request, "Titular cadastrado.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, sucesso=False)
@@ -69,7 +69,7 @@ def update_owner_view(request, owner_id):
     owner = get_object_or_404(AccountOwner, id=owner_id)
     try:
         update_owner(request.user, owner, request.POST.get('name', ''))
-        messages.success(request, "Titular atualizado com sucesso.")
+        messages.success(request, "Titular atualizado.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, sucesso=False)
@@ -84,7 +84,7 @@ def delete_owner_view(request, owner_id):
     owner = get_object_or_404(AccountOwner, id=owner_id)
     try:
         delete_owner(request.user, owner)
-        messages.success(request, "Titular excluído com sucesso.")
+        messages.success(request, "Titular excluído.")
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, sucesso=False)
@@ -151,7 +151,7 @@ def change_password_view(request):
             messages.error(request, str(exc))
         else:
             update_session_auth_hash(request, request.user)
-            messages.success(request, "Senha alterada com sucesso.")
+            messages.success(request, "Senha alterada.")
             return redirect(next_url)
 
     return render(request, 'accounts/change_password.html', {

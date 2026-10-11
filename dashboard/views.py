@@ -196,7 +196,7 @@ def _saude(months: list[dict], selected_index: int) -> dict:
 		"expense": expense,
 		"generation": generation,
 		"summary": {
-			"average_coverage": f"{avg_coverage:.2f}x",
+			"average_coverage": f"{avg_coverage:.2f}×",
 			"average_coverage_class": "amount-positive" if avg_coverage >= 1 else "amount-negative",
 			"positive_months": positive_months,
 			"total_months": len(with_movement),
