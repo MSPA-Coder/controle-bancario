@@ -97,7 +97,7 @@
             {% if bloco.report.totals %}
             <tfoot>
                 <tr class="annual-total-row">
-                    <th scope="row">TOTAL</th>
+                    <th scope="row">Total</th>
                     {% for value in bloco.report.totals.owner_values %}<td class="annual-value-column annual-owner-column {{ value|amount_class }}" data-sensitive-value="true">{{ value|money_signed:bloco.report.currency }}</td>{% endfor %}
                     {% for month in bloco.report.totals.months %}<td class="annual-value-column{% if month.is_current %} is-current{% endif %} {{ month.value|amount_class }}" data-sensitive-value="true">{{ month.value|money_signed:bloco.report.currency }}</td>{% endfor %}
                 </tr>

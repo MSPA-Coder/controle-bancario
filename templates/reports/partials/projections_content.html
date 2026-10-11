@@ -14,13 +14,13 @@ não dizer qual é seria pior do que repetir a tabela.
                 <th class="month-col">Mês</th>
                 <th class="value-col col-separator">Receitas</th>
                 <th class="value-col">Despesas</th>
-                <th class="value-col">Geração de Caixa</th>
-                <th class="value-col col-separator">Créditos Int.</th>
-                <th class="value-col">Débitos Int.</th>
+                <th class="value-col">Geração de caixa</th>
+                <th class="value-col col-separator">Créditos internos</th>
+                <th class="value-col">Débitos internos</th>
                 {% if show_status_columns %}
                 <th class="value-col col-separator">Vencidos</th>
                 <th class="value-col">Realizado</th>
-                <th class="value-col">A Vencer</th>
+                <th class="value-col">A vencer</th>
                 {% endif %}
                 <th class="value-col col-separator col-separator-right">Saldo</th>
             </tr>
@@ -55,7 +55,7 @@ não dizer qual é seria pior do que repetir a tabela.
             {% endfor %}
             {% if bloco.period_totals %}
             <tr class="summary-row">
-                <td class="month-col">TOTAL PERÍODO</td>
+                <td class="month-col">Total do período</td>
                 <td class="value-col amount-positive col-separator">{{ bloco.period_totals.receita|money_signed:bloco.currency }}</td>
                 <td class="value-col amount-negative">{{ bloco.period_totals.despesa|neg|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ bloco.period_totals.geracao|amount_class }}">{{ bloco.period_totals.geracao|money_signed:bloco.currency }}</td>
