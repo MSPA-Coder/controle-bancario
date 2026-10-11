@@ -1,26 +1,26 @@
-{% load money_filters icons regional_filters %}
+{% load money_filters icons regional_filters i18n %}
 <div id="operations-results">
 <div class="chart-card">
     <div class="section-header">
-        <h4>{% if operation_id %}Operação selecionada{% else %}Operações com parcelas, recorrência ou contraparte{% endif %}</h4>
-        <span data-ui="muted-sm">{{ operations|length }} operação(ões) nesta página de {{ total_operations }}</span>
+        <h4>{% if operation_id %}{% trans "Operação selecionada" %}{% else %}{% trans "Operações com parcelas, recorrência ou contraparte" %}{% endif %}</h4>
+        <span data-ui="muted-sm">{% blocktrans trimmed with total=total_operations count counter=operations|length %}{{ counter }} operação nesta página de {{ total }}{% plural %}{{ counter }} operações nesta página de {{ total }}{% endblocktrans %}</span>
     </div>
 
     <div class="table-container">
         <table class="operation-table">
             <thead>
                 <tr>
-                    <th>Tipo</th>
-                    <th>Descrição</th>
-                    <th>Conta de origem</th>
-                    <th>Conta de destino</th>
-                    <th>Categoria</th>
-                    <th>Início</th>
-                    <th>Fim</th>
-                    <th>Quantidade</th>
-                    <th class="amount">Valor</th>
-                    <th>Status</th>
-                    <th data-ui="w-140">Ações</th>
+                    <th>{% trans "Tipo" %}</th>
+                    <th>{% trans "Descrição" %}</th>
+                    <th>{% trans "Conta de origem" %}</th>
+                    <th>{% trans "Conta de destino" %}</th>
+                    <th>{% trans "Categoria" %}</th>
+                    <th>{% trans "Início" %}</th>
+                    <th>{% trans "Fim" %}</th>
+                    <th>{% trans "Quantidade" %}</th>
+                    <th class="amount">{% trans "Valor" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th data-ui="w-140">{% trans "Ações" %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -43,30 +43,30 @@
                     <td>{{ op.status_summary }}</td>
                     <td class="actions">
                         {% if operation_id == op.operation_id and show_entries %}
-                        <a class="btn btn-sm btn-icon btn-action-view" title="Ocultar detalhes" href="?operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}&amp;page_size={{ page_size }}">{% icon 'eye' %}</a>
+                        <a class="btn btn-sm btn-icon btn-action-view" title="{% trans 'Ocultar detalhes' %}" href="?operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}&amp;page_size={{ page_size }}">{% icon 'eye' %}</a>
                         {% else %}
-                        <a class="btn btn-sm btn-icon btn-action-view" title="Ver operação" href="?operation_id={{ op.operation_id }}&amp;show_entries=1&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}&amp;page_size={{ page_size }}">{% icon 'eye' %}</a>
+                        <a class="btn btn-sm btn-icon btn-action-view" title="{% trans 'Ver operação' %}" href="?operation_id={{ op.operation_id }}&amp;show_entries=1&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}&amp;page_size={{ page_size }}">{% icon 'eye' %}</a>
                         {% endif %}
-                        <a class="btn btn-sm btn-icon btn-action-edit" title="Ver lançamentos" href="{% url 'transactions:transactions_view' %}?operation_id={{ op.operation_id }}">{% icon 'link' %}</a>
+                        <a class="btn btn-sm btn-icon btn-action-edit" title="{% trans 'Ver lançamentos' %}" href="{% url 'transactions:transactions_view' %}?operation_id={{ op.operation_id }}">{% icon 'link' %}</a>
                     </td>
                 </tr>
                 <tr id="op-{{ forloop.counter }}" class="details-row" {% if show_entries and operation_id == op.operation_id %}data-ui="table-row"{% endif %}>
                     <td colspan="11">
                         <div class="details-box">
-                            <div class="details-title">Lançamentos vinculados a esta operação</div>
+                            <div class="details-title">{% trans "Lançamentos vinculados a esta operação" %}</div>
                             <div class="table-container">
                                 <table class="nested-table">
                                     <thead>
                                         <tr>
-                                            <th>Vencimento</th>
-                                            <th>Tipo</th>
-                                            <th>Conta</th>
-                                            <th>Categoria</th>
-                                            <th>Descrição</th>
-                                            <th>Parcela</th>
-                                            <th class="amount">Valor</th>
-                                            <th>Status</th>
-                                            <th>Origem</th>
+                                            <th>{% trans "Vencimento" %}</th>
+                                            <th>{% trans "Tipo" %}</th>
+                                            <th>{% trans "Conta" %}</th>
+                                            <th>{% trans "Categoria" %}</th>
+                                            <th>{% trans "Descrição" %}</th>
+                                            <th>{% trans "Parcela" %}</th>
+                                            <th class="amount">{% trans "Valor" %}</th>
+                                            <th>{% trans "Status" %}</th>
+                                            <th>{% trans "Origem" %}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -84,7 +84,7 @@
                                             <td class="amount {{ entry.entry_amount|neg|amount_class }}">{{ entry.entry_amount|neg|money_signed:entry.account.currency }}</td>
                                             {% endif %}
                                             <td>{{ entry.get_status_display }}</td>
-                                            <td>{% if entry.source_entry_id %}Contraparte de #{{ entry.source_entry_id }}{% else %}Original{% endif %}</td>
+                                            <td>{% if entry.source_entry_id %}{% blocktrans trimmed with n=entry.source_entry_id %}Contraparte de #{{ n }}{% endblocktrans %}{% else %}{% trans "Original" %}{% endif %}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -94,7 +94,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="11" class="empty-state">Nenhuma operação encontrada.</td></tr>
+                <tr><td colspan="11" class="empty-state">{% trans "Nenhuma operação encontrada." %}</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -103,10 +103,10 @@
     {% if total_operations > page_size %}
     <div data-ui="operation-actions">
         {% if page > 1 %}
-        <a class="btn btn-ghost btn-sm" href="?page={{ page|add:"-1" }}&amp;page_size={{ page_size }}&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}">Página anterior</a>
+        <a class="btn btn-ghost btn-sm" href="?page={{ page|add:"-1" }}&amp;page_size={{ page_size }}&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}">{% trans "Página anterior" %}</a>
         {% endif %}
         {% if has_next_page %}
-        <a class="btn btn-ghost btn-sm" href="?page={{ page|add:"1" }}&amp;page_size={{ page_size }}&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}">Próxima página</a>
+        <a class="btn btn-ghost btn-sm" href="?page={{ page|add:"1" }}&amp;page_size={{ page_size }}&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}">{% trans "Próxima página" %}</a>
         {% endif %}
     </div>
     {% endif %}

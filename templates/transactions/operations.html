@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static icons sharedauth_tags navegacao %}
+{% load static icons sharedauth_tags navegacao i18n %}
 
-{% block title %}Movimentação • Parcelas e recorrências{% endblock %}
+{% block title %}{% trans "Movimentação • Parcelas e recorrências" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/operations.css' %}">
@@ -12,34 +12,34 @@
     <form method="get" class="top-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
         <input type="hidden" name="page_size" value="{{ page_size }}">
         <label class="top-filter-field compact">
-            Início a partir de
-            <input type="date" name="start" value="{{ start }}" aria-label="Início a partir de" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
+            {% trans "Início a partir de" %}
+            <input type="date" name="start" value="{{ start }}" aria-label="{% trans 'Início a partir de' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
         </label>
         <label class="top-filter-field compact">
-            Fim até
-            <input type="date" name="end" value="{{ end }}" aria-label="Fim até" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
+            {% trans "Fim até" %}
+            <input type="date" name="end" value="{{ end }}" aria-label="{% trans 'Fim até' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
         </label>
         <label class="top-filter-field">
-            Tipo da operação
-            <select name="operation_type" aria-label="Tipo da operação">
-                <option value="">Todos</option>
+            {% trans "Tipo da operação" %}
+            <select name="operation_type" aria-label="{% trans 'Tipo da operação' %}">
+                <option value="">{% trans "Todos" %}</option>
                 {% for value, label in operation_labels.items %}
                 <option value="{{ value }}" {% if operation_type == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="top-filter-field">
-            Status
-            <select name="status" aria-label="Status">
-                <option value="">Todos</option>
+            {% trans "Status" %}
+            <select name="status" aria-label="{% trans 'Status' %}">
+                <option value="">{% trans "Todos" %}</option>
                 {% for s in statuses %}
                 <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|capfirst }}</option>
                 {% endfor %}
             </select>
         </label>
         <div class="top-filter-actions">
-            <a href="{% url 'transactions:operations_view' %}" class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>Limpar</span></a>
-            <a href="{% url 'transactions:transactions_view' %}" class="btn btn-primary btn-sm">{% icon 'back' %}<span>Voltar</span></a>
+            <a href="{% url 'transactions:operations_view' %}" class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>{% trans "Limpar" %}</span></a>
+            <a href="{% url 'transactions:transactions_view' %}" class="btn btn-primary btn-sm">{% icon 'back' %}<span>{% trans "Voltar" %}</span></a>
         </div>
     </form>
 </div>
@@ -49,7 +49,7 @@
 {% if operation_id %}
 <div class="flash info sa-info">
     {% sharedauth_icon 'info' %}
-    <span data-ui="flex-1">Exibindo a operação relacionada ao lançamento selecionado. <a href="{% url 'transactions:operations_view' %}">Limpar seleção</a>.</span>
+    <span data-ui="flex-1">{% trans "Exibindo a operação relacionada ao lançamento selecionado." %} <a href="{% url 'transactions:operations_view' %}">{% trans "Limpar seleção" %}</a>.</span>
 </div>
 {% endif %}
 

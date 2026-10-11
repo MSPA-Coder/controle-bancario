@@ -1,59 +1,60 @@
+{% load i18n %}
 {% if currency_notice %}
-<p class="dashboard-currency-notice" role="status">O painel mostra uma moeda por vez: exibindo {{ currency_label }}. Para ver outra, escolha a moeda no filtro global.</p>
+<p class="dashboard-currency-notice" role="status">{% blocktrans trimmed with moeda=currency_label %}O painel mostra uma moeda por vez: exibindo {{ moeda }}. Para ver outra, escolha a moeda no filtro global.{% endblocktrans %}</p>
 {% endif %}
 <div class="charts-grid">
     <div class="chart-card">
         <div class="chart-header chart-header-inline">
-            <h4>Distribuição</h4>
+            <h4>{% trans "Distribuição" %}</h4>
             {% include 'components/filter_type.html' %}
         </div>
         {% if chart_cats_labels %}
         <canvas id="catChart" width="800" height="300"></canvas>
-        {% else %}<div class="no-data">Sem lançamentos no mês</div>{% endif %}
+        {% else %}<div class="no-data">{% trans "Sem lançamentos no mês" %}</div>{% endif %}
     </div>
 
     <div class="chart-card">
-        <div class="chart-header"><h4>📉 Evolução do saldo</h4></div>
-        {% if daily_dates %}<canvas id="dailyChart" width="800" height="300"></canvas>{% else %}<div class="no-data">Sem dados diários</div>{% endif %}
+        <div class="chart-header"><h4>📉 {% trans "Evolução do saldo" %}</h4></div>
+        {% if daily_dates %}<canvas id="dailyChart" width="800" height="300"></canvas>{% else %}<div class="no-data">{% trans "Sem dados diários" %}</div>{% endif %}
     </div>
 </div>
 
-<section class="health-card" aria-label="Saúde financeira: 6 meses antes e 6 depois do mês selecionado">
-    <h2 class="health-title">Saúde financeira — 6 meses antes e depois</h2>
+<section class="health-card" aria-label="{% trans 'Saúde financeira: 6 meses antes e 6 depois do mês selecionado' %}">
+    <h2 class="health-title">{% trans "Saúde financeira — 6 meses antes e depois" %}</h2>
     <div class="health-summary">
         <div class="health-metric">
-            <div class="health-metric-label">Cobertura média</div>
+            <div class="health-metric-label">{% trans "Cobertura média" %}</div>
             <div class="health-metric-value {{ financial_health.average_coverage_class }}">{{ financial_health.average_coverage }}</div>
-            <div class="health-metric-note">receita cobre a despesa</div>
+            <div class="health-metric-note">{% trans "receita cobre a despesa" %}</div>
         </div>
         <div class="health-metric">
-            <div class="health-metric-label">Meses positivos</div>
+            <div class="health-metric-label">{% trans "Meses positivos" %}</div>
             <div class="health-metric-value amount-positive">{{ financial_health.positive_months }} / {{ financial_health.total_months }}</div>
-            <div class="health-metric-note">fecharam com sobra</div>
+            <div class="health-metric-note">{% trans "fecharam com sobra" %}</div>
         </div>
         <div class="health-metric">
-            <div class="health-metric-label">Tendência (3 meses vs 3 anteriores)</div>
+            <div class="health-metric-label">{% trans "Tendência (3 meses vs 3 anteriores)" %}</div>
             <div class="health-trend-main {{ financial_health.trend_class }}">
                 <span class="health-metric-value">{{ financial_health.trend_symbol }} {{ financial_health.trend_percent }}</span>
-                <span class="health-trend-unit">geração</span>
+                <span class="health-trend-unit">{% trans "geração" %}</span>
             </div>
             <div class="health-metric-note {{ financial_health.trend_class }}">{{ financial_health.trend_caption }}</div>
         </div>
     </div>
-    <div class="health-section-title">Índice de cobertura mensal (receita ÷ despesa)</div>
+    <div class="health-section-title">{% trans "Índice de cobertura mensal (receita ÷ despesa)" %}</div>
     <div class="health-chart-row"><canvas id="coverageChart" width="800" height="180"></canvas></div>
-    <div class="health-section-title">Geração líquida mensal (receita − despesa) + média móvel de 3 meses</div>
+    <div class="health-section-title">{% trans "Geração líquida mensal (receita − despesa) + média móvel de 3 meses" %}</div>
     <div class="health-chart-row"><canvas id="generationChart" width="800" height="180"></canvas></div>
 </section>
 
 <div class="charts-grid dashboard-secondary-charts">
     <div class="chart-card">
-        <div class="chart-header"><h4>📈 Projeção — {{ selected_period }}</h4></div>
-        {% if chart_proj_months %}<canvas id="projChart" width="800" height="300"></canvas>{% else %}<div class="no-data">Sem dados</div>{% endif %}
+        <div class="chart-header"><h4>📈 {% blocktrans trimmed with periodo=selected_period %}Projeção — {{ periodo }}{% endblocktrans %}</h4></div>
+        {% if chart_proj_months %}<canvas id="projChart" width="800" height="300"></canvas>{% else %}<div class="no-data">{% trans "Sem dados" %}</div>{% endif %}
     </div>
 
     <div class="chart-card">
-        <div class="chart-header"><h4>📈 Evolução mensal — {{ view_mode_label }}</h4></div>
+        <div class="chart-header"><h4>📈 {% blocktrans trimmed with modo=view_mode_label %}Evolução mensal — {{ modo }}{% endblocktrans %}</h4></div>
         <canvas id="evolutionChart" width="800" height="300"></canvas>
     </div>
 </div>
