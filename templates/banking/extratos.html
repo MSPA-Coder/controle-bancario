@@ -2,7 +2,7 @@
 {% load static regional_filters %}
 {% load money_filters %}
 
-{% block title %}Banking • Extratos importados{% endblock %}
+{% block title %}Movimentação • Extratos importados{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -51,7 +51,7 @@
                         <span class="amount amount-negative">Extrato {{ extrato.conferencia.saldo_do_extrato|money:conta.currency }} · CB {{ extrato.conferencia.saldo_no_cb|money:conta.currency }} em {{ extrato.conferencia.data|udate }} · diferença {{ extrato.conferencia.diferenca|money:conta.currency }}</span>
                         {% endif %}
                     {% else %}
-                    <span class="empty-state">O arquivo não informa saldo</span>
+                    <span class="empty-state">O arquivo não informa saldo.</span>
                     {% endif %}
                 </td>
                 <td><a href="{% url 'bank_statements:extrato' extrato.lote.id %}">Ver extrato</a></td>
