@@ -1,6 +1,6 @@
 # Glossário de textos da interface (pt-BR e en)
 
-Rascunho para aprovação. Vale só para o que o usuário lê na tela. Valores gravados
+Aprovado em 11/10/2026. Vale só para o que o usuário lê na tela. Valores gravados
 (status, tipos, códigos) e dados digitados pelo usuário não mudam com o idioma.
 
 O português é a língua-fonte: o texto em português é o `msgid`. Mudar a redação
@@ -52,4 +52,23 @@ de um texto em português muda o `msgid` e exige reabrir a tradução.
 - "Próximos movimentos" e "Movimento líquido" ficam: são nome de tela e de indicador, e "movimento" ali
   inclui transferências, não só lançamentos.
 - `×` também vale para "cruzamento" em títulos de matriz ("Usuário × titular").
-- Plural: o `(s)` existente permanece até a etapa de marcação para tradução, que o troca por `ngettext`.
+- Plural: `ngettext`, feito na marcação para tradução; não sobra "(s)" onde há contagem.
+
+## Decisões de aplicação (inglês, F4)
+
+Termos que os tradutores resolveram de modos diferentes e foram fixados na revisão:
+
+| Português | Inglês |
+|---|---|
+| Movimentação (área do menu) | Activity |
+| valor monetário | Amount |
+| conta de movimento (da aplicação) | cash account |
+| Gerencial, Controle gerencial, Gestão | Management |
+| geração (de caixa) | cash generation |
+| Cadastros | Records |
+| realização | settlement |
+| fatura | card statement (extrato = statement) |
+| Recorte (filtro global) | filter |
+
+Mensagens de resultado ficam no passado ("Recurrence projection ran."), sem jargão
+("idempotente" vira "running it again does not duplicate entries").

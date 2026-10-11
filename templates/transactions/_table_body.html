@@ -18,7 +18,7 @@
                 <th class="filter-date">
                     <select data-table-filter name="filter_date" aria-label="{% trans 'Filtrar por data' %}" hx-get="{% url 'transactions:transactions_view' %}" hx-trigger="change" hx-include="#contextForm, [data-table-filter]" hx-target="#transactions-table-container" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
                         <option value="">{% trans "Todas" %}</option>
-                        {% for d in available_dates %}<option value="{{ d }}" {% if d == filter_date %}selected{% endif %}>{{ d|slice:"8:10" }}/{{ d|slice:"5:7" }}</option>{% endfor %}
+                        {% for d in available_dates %}<option value="{{ d }}" {% if d == filter_date %}selected{% endif %}>{{ d|udaymonth }}</option>{% endfor %}
                     </select>
                 </th>
                 <th class="filter-type">

@@ -229,10 +229,26 @@ ele ao exibir (`core/regional.py`).
   nada fixo por região.
 - `core/regional.py` guarda a região da requisição e formata datas; fora de
   requisição vale Brasil.
-- Templates: texto legível usa `|udate`, `|udatetime`, `|umonth` (de
+- Templates: texto legível usa `|udate`, `|udatetime`, `|umonth`, `|udaymonth` (de
   `regional_filters`) e `|money`; valores de `<input>` seguem ISO.
 - Texto de tela montado em Python usa `regional.formatar_data` e afins. Texto
   gravado (descrição de operação, trilha de auditoria) fica com data fixa.
+- **Texto da interface** é marcado no ponto em que nasce, com o português como
+  `msgid`: `{% trans %}`/`{% blocktrans %}` em template; `gettext`/`ngettext` dentro
+  de função (mensagem de `raise`, de `messages.*`, rótulo do menu); `gettext_lazy`
+  em constante de módulo, atributo de classe e `choices`; `gettext_noop` quando o
+  texto é chave de comparação e só é traduzido ao exibir (descrição de permissão,
+  `SEM_GRUPO`). Valor com variável usa marcador nomeado (`%(n)s`), nunca `f-string`
+  dentro de `gettext`; contagem usa `ngettext`, nunca "(s)".
+- **Não se traduz o que é dado:** valor gravado (status, tipo, `institution_type`),
+  nome digitado pelo usuário, resumo de auditoria, texto de exportação e de parser
+  de extrato. Rótulo de `choices` traduz, o valor gravado não: não gera migration.
+- Texto de JavaScript passa por `t('texto em português')` e é registrado em
+  `core/textos_js.py` (`FONTES`); o servidor o entrega já traduzido no JSON
+  `#i18n-js`. `tests/test_textos_js.py` reprova `t()` sem registro.
+- Nome de mês e `date:'...'` seguem o idioma ativo (`YEAR_MONTH_FORMAT`,
+  `dateformat.format`), não o do processo; `strftime` com nome de mês não serve.
+- O glossário que fixa os termos nos dois idiomas é [GLOSSARIO_I18N.md](GLOSSARIO_I18N.md).
 - `static/js/core/regional.js` troca `input[type=date|month]` e os decimais
   (`step` fracionário ou `data-regional-kind="decimal"`) por um campo de texto
   no formato escolhido; o original fica escondido, com o mesmo `name` e o valor

@@ -7,6 +7,8 @@ em ISO (`|date:'Y-m-d'`), porque é o que o servidor espera receber.
 
 from __future__ import annotations
 
+from datetime import date
+
 from django import template
 
 from core import regional
@@ -30,6 +32,17 @@ def udatetime(value) -> str:
 def udatetime_s(value) -> str:
     """Data e hora até o segundo no formato do usuário."""
     return regional.formatar_data_hora(value, segundos=True)
+
+
+@register.filter
+def udaymonth(value) -> str:
+    """Dia e mês sem o ano (11/10 no Brasil, 10/11 nos EUA). Aceita data ou texto ISO (2026-10-11)."""
+    if isinstance(value, str):
+        try:
+            value = date.fromisoformat(value)
+        except ValueError:
+            return value
+    return regional.formatar_dia_mes(value)
 
 
 @register.filter

@@ -90,6 +90,16 @@ def test_filtro_de_data_aceita_vazio():
     assert _renderizar("[{{ d|udate }}]", d=None) == "[]"
 
 
+def test_dia_e_mes_sem_ano_seguem_o_formato_e_aceitam_texto_iso(eua):
+    # O filtro de vencimento da tela de lançamentos recebe a data como texto ISO.
+    saida = _renderizar("{{ a|udaymonth }}|{{ b|udaymonth }}|{{ c|udaymonth }}", a=date(2026, 10, 11), b="2026-10-11", c="não é data")
+    assert saida == "10/11|10/11|não é data"
+
+
+def test_dia_e_mes_sem_ano_no_brasil():
+    assert _renderizar("{{ d|udaymonth }}", d="2026-10-11") == "11/10"
+
+
 def test_regiao_auto_acompanha_o_idioma():
     assert resolve_regional_format("auto", "pt-br") == REGIONAL_FORMAT_BR
     assert resolve_regional_format("auto", "en") == REGIONAL_FORMAT_US
