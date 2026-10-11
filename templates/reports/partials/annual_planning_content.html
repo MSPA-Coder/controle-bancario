@@ -1,29 +1,29 @@
-{% load money_filters navegacao contas %}
+{% load money_filters navegacao contas i18n %}
 {% load icons %}
 <section class="annual-planning-report" aria-labelledby="annual-planning-title">
     <div class="section-header annual-planning-heading">
         <div class="annual-planning-title-group">
-            <h2 id="annual-planning-title">Planejamento anual</h2>
-            <span class="annual-reference-label">Mês de referência · {{ blocos.0.report.reference_month_label }}</span>
+            <h2 id="annual-planning-title">{% trans "Planejamento anual" %}</h2>
+            <span class="annual-reference-label">{% trans "Mês de referência" %} · {{ blocos.0.report.reference_month_label }}</span>
             {% if blocos.0.report.subtitle %}<p class="text-muted">{{ blocos.0.report.subtitle }}</p>{% endif %}
         </div>
         <div class="annual-heading-actions">
-            <span class="annual-layout-badge">{% if layout == 'rolling' %}Janela móvel{% else %}Ano calendário{% endif %}</span>
+            <span class="annual-layout-badge">{% if layout == 'rolling' %}{% trans "Janela móvel" %}{% else %}{% trans "Ano calendário" %}{% endif %}</span>
             <details class="annual-filter-details"{% if filter_panel_open %} open{% endif %}>
-                <summary class="annual-filter-button" title="Abrir filtros" aria-label="Abrir filtros">{% icon 'filter' %}<span>Filtros</span></summary>
+                <summary class="annual-filter-button" title="{% trans 'Abrir filtros' %}" aria-label="{% trans 'Abrir filtros' %}">{% icon 'filter' %}<span>{% trans "Filtros" %}</span></summary>
                 <div class="top-filter-card annual-planning-filter-card">
                     <form method="get" class="top-filter-row annual-planning-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
                         <input type="hidden" name="filters_open" value="1">
-                        <label class="top-filter-field annual-reference-field">Mês de referência<input type="month" name="reference_month" value="{{ reference_month }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}></label>
-                        <label class="top-filter-field annual-layout-field">Layout<select name="layout" aria-label="Layout do planejamento"><option value="calendar"{% if layout == 'calendar' %} selected{% endif %}>Ano calendário</option><option value="rolling"{% if layout == 'rolling' %} selected{% endif %}>Janela móvel (13 meses)</option></select></label>
-                        <label class="top-filter-field annual-status-field">Status<select name="mode">{% for mode_value, mode_label in status_options %}<option value="{{ mode_value }}"{% if mode_value == view_mode %} selected{% endif %}>{{ mode_label }}</option>{% endfor %}</select></label>
-                        <label class="top-filter-field annual-multi-field">Titulares<select name="owner_ids" multiple size="3" aria-describedby="annual-filter-help">{% for owner in owners %}<option value="{{ owner.id }}"{% if owner.id in selected_owner_ids %} selected{% endif %}>{{ owner.name }}</option>{% endfor %}</select></label>
-                        <label class="top-filter-field annual-multi-field">Contas<select name="account_ids" multiple size="3" aria-describedby="annual-filter-help">{% for titular, contas in accounts|por_titular %}<optgroup label="{{ titular }}">{% for account in contas %}<option value="{{ account.id }}"{% if account.id in selected_account_ids %} selected{% endif %}>{{ account.institution.institution_name }} / {{ account.account_name }}</option>{% endfor %}</optgroup>{% endfor %}</select></label>
-                        <label class="annual-description-toggle"><input type="checkbox" name="show_descriptions" value="1"{% if show_descriptions %} checked{% endif %}><span>Mostrar descrições</span></label>
-                        <label class="annual-description-toggle"><input type="checkbox" name="agrupar" value="grupo"{% if by_group %} checked{% endif %}><span>Agrupar por grupo de categorias</span></label>
-                        <div class="top-filter-actions"><a href="{% url 'reports:annual_planning_view' %}?layout=calendar{% if default_reference_month %}&amp;reference_month={{ default_reference_month }}{% endif %}" class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>Limpar</span></a></div>
+                        <label class="top-filter-field annual-reference-field">{% trans "Mês de referência" %}<input type="month" name="reference_month" value="{{ reference_month }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}></label>
+                        <label class="top-filter-field annual-layout-field">{% trans "Layout" %}<select name="layout" aria-label="{% trans 'Layout do planejamento' %}"><option value="calendar"{% if layout == 'calendar' %} selected{% endif %}>{% trans "Ano calendário" %}</option><option value="rolling"{% if layout == 'rolling' %} selected{% endif %}>{% trans "Janela móvel (13 meses)" %}</option></select></label>
+                        <label class="top-filter-field annual-status-field">{% trans "Status" %}<select name="mode">{% for mode_value, mode_label in status_options %}<option value="{{ mode_value }}"{% if mode_value == view_mode %} selected{% endif %}>{{ mode_label }}</option>{% endfor %}</select></label>
+                        <label class="top-filter-field annual-multi-field">{% trans "Titulares" %}<select name="owner_ids" multiple size="3" aria-describedby="annual-filter-help">{% for owner in owners %}<option value="{{ owner.id }}"{% if owner.id in selected_owner_ids %} selected{% endif %}>{{ owner.name }}</option>{% endfor %}</select></label>
+                        <label class="top-filter-field annual-multi-field">{% trans "Contas" %}<select name="account_ids" multiple size="3" aria-describedby="annual-filter-help">{% for titular, contas in accounts|por_titular %}<optgroup label="{{ titular }}">{% for account in contas %}<option value="{{ account.id }}"{% if account.id in selected_account_ids %} selected{% endif %}>{{ account.institution.institution_name }} / {{ account.account_name }}</option>{% endfor %}</optgroup>{% endfor %}</select></label>
+                        <label class="annual-description-toggle"><input type="checkbox" name="show_descriptions" value="1"{% if show_descriptions %} checked{% endif %}><span>{% trans "Mostrar descrições" %}</span></label>
+                        <label class="annual-description-toggle"><input type="checkbox" name="agrupar" value="grupo"{% if by_group %} checked{% endif %}><span>{% trans "Agrupar por grupo de categorias" %}</span></label>
+                        <div class="top-filter-actions"><a href="{% url 'reports:annual_planning_view' %}?layout=calendar{% if default_reference_month %}&amp;reference_month={{ default_reference_month }}{% endif %}" class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>{% trans "Limpar" %}</span></a></div>
                     </form>
-                    <p id="annual-filter-help" class="annual-filter-help">Use Ctrl (Windows) ou ⌘ (macOS) para selecionar mais de um titular ou conta.</p>
+                    <p id="annual-filter-help" class="annual-filter-help">{% trans "Use Ctrl (Windows) ou ⌘ (macOS) para selecionar mais de um titular ou conta." %}</p>
                 </div>
             </details>
         </div>
@@ -38,10 +38,10 @@
     {% if blocos|length > 1 %}<h3 class="currency-block-title">{{ bloco.currency|currency_label }}</h3>{% endif %}
     <div class="annual-summary-wrap">
         <table class="annual-summary-table">
-            <caption class="sr-only">Totais do planejamento por titular e mês</caption>
+            <caption class="sr-only">{% trans "Totais do planejamento por titular e mês" %}</caption>
             <thead>
                 <tr>
-                    <th scope="col">Resumo</th>
+                    <th scope="col">{% trans "Resumo" %}</th>
                     {% for owner in bloco.report.owner_columns %}
                     <th class="annual-value-column annual-owner-column" scope="col">{{ owner.name }}</th>
                     {% endfor %}
@@ -68,7 +68,7 @@
 
     <div class="annual-planning-table-wrap table-scroll-wrap" data-annual-planning-table>
         <table class="annual-planning-table">
-            <caption class="sr-only">Planejamento por categoria, titulares e mês</caption>
+            <caption class="sr-only">{% trans "Planejamento por categoria, titulares e mês" %}</caption>
             <tbody>
                 {% for row in bloco.report.rows %}
                 <tr class="annual-row annual-row-{{ row.kind|default:'category' }} annual-level-{{ row.level|default:0 }}"{% if row.kind == 'category' %} aria-level="{{ row.level|add:'1' }}"{% endif %}>
@@ -91,13 +91,13 @@
                     {% endfor %}
                 </tr>
                 {% empty %}
-                <tr><td class="annual-empty" colspan="20">Nenhum dado encontrado para os filtros selecionados.</td></tr>
+                <tr><td class="annual-empty" colspan="20">{% trans "Nenhum dado encontrado para os filtros selecionados." %}</td></tr>
                 {% endfor %}
             </tbody>
             {% if bloco.report.totals %}
             <tfoot>
                 <tr class="annual-total-row">
-                    <th scope="row">Total</th>
+                    <th scope="row">{% trans "Total" %}</th>
                     {% for value in bloco.report.totals.owner_values %}<td class="annual-value-column annual-owner-column {{ value|amount_class }}" data-sensitive-value="true">{{ value|money_signed:bloco.report.currency }}</td>{% endfor %}
                     {% for month in bloco.report.totals.months %}<td class="annual-value-column{% if month.is_current %} is-current{% endif %} {{ month.value|amount_class }}" data-sensitive-value="true">{{ month.value|money_signed:bloco.report.currency }}</td>{% endfor %}
                 </tr>
