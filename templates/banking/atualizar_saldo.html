@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static contas regional_filters %}
+{% load static contas regional_filters i18n %}
 {% load money_filters %}
 
-{% block title %}Movimentação • Saldo aplicações{% endblock %}
+{% block title %}{% trans "Movimentação • Saldo aplicações" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -11,22 +11,22 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>💰 Saldo aplicações</h1>
-        <p>Informe o saldo real de uma conta numa data. A diferença para o saldo do CB vira um lançamento realizado,
-            com destino explícito (rendimento, IR/IOF, perda ou ajuste assumido), em vez de mexer no saldo inicial.</p>
+        <h1>💰 {% trans "Saldo aplicações" %}</h1>
+        <p>{% blocktrans trimmed %}Informe o saldo real de uma conta numa data. A diferença para o saldo do CB vira um lançamento realizado,
+            com destino explícito (rendimento, IR/IOF, perda ou ajuste assumido), em vez de mexer no saldo inicial.{% endblocktrans %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="chart-card u-mb-1">
-    <h3>1. Informe o saldo</h3>
+    <h3>{% trans "1. Informe o saldo" %}</h3>
     <form method="post" action="{% url 'bank_statements:atualizar_saldo' %}" class="top-filter-row">
         {% csrf_token %}
         <input type="hidden" name="acao" value="previa">
-        <label>Conta
+        <label>{% trans "Conta" %}
             <select name="conta" required>
-                <option value="">Selecione…</option>
+                <option value="">{% trans "Selecione…" %}</option>
                 {% for titular, contas_do_titular in contas|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for conta in contas_do_titular %}
@@ -36,25 +36,25 @@
                 {% endfor %}
             </select>
         </label>
-        <label>Data do saldo
+        <label>{% trans "Data do saldo" %}
             <input type="date" name="data" value="{{ data|date:'Y-m-d' }}" required>
         </label>
-        <label>Saldo real
+        <label>{% trans "Saldo real" %}
             <input type="text" name="saldo" inputmode="decimal" value="{{ escolhas.saldo }}" placeholder="0,00" required>
         </label>
-        <button type="submit" class="btn-sm btn-primary">Comparar</button>
+        <button type="submit" class="btn-sm btn-primary">{% trans "Comparar" %}</button>
     </form>
 </div>
 
 {% if previa %}
 <div class="chart-card u-mb-1">
-    <h3>2. Diferença</h3>
+    <h3>{% trans "2. Diferença" %}</h3>
     <p>
         {{ previa.conta.owner.name }} / {{ previa.conta.institution.institution_name }} / {{ previa.conta.account_name }}
-        em {{ previa.data|udate }}:
-        saldo informado <strong>{{ previa.saldo_informado|money:previa.conta.currency }}</strong>,
-        saldo no CB <strong>{{ previa.saldo_no_cb|money:previa.conta.currency }}</strong>,
-        diferença <strong class="amount {{ previa.diferenca|amount_class }}">{{ previa.diferenca|money_signed:previa.conta.currency }}</strong>.
+        {% blocktrans trimmed with data=previa.data|udate %}em {{ data }}:{% endblocktrans %}
+        {% trans "saldo informado" %} <strong>{{ previa.saldo_informado|money:previa.conta.currency }}</strong>,
+        {% trans "saldo no CB" %} <strong>{{ previa.saldo_no_cb|money:previa.conta.currency }}</strong>,
+        {% trans "diferença" %} <strong class="amount {{ previa.diferenca|amount_class }}">{{ previa.diferenca|money_signed:previa.conta.currency }}</strong>.
     </p>
     {% if previa.pendencia %}
     <p class="fatura-aviso">{{ previa.pendencia }}</p>
@@ -66,46 +66,46 @@
         <input type="hidden" name="data" value="{{ previa.data|date:'Y-m-d' }}">
         <input type="hidden" name="saldo" value="{{ previa.saldo_informado }}">
         <input type="hidden" name="diferenca" value="{{ previa.diferenca }}">
-        <label>Destino da diferença
+        <label>{% trans "Destino da diferença" %}
             <select name="destino" required>
                 {% for chave, rotulo in previa.destinos %}
                 <option value="{{ chave }}">{{ rotulo }}</option>
                 {% endfor %}
             </select>
         </label>
-        <label>Motivo (obrigatório para perda e ajuste assumido)
-            <input type="text" name="motivo" maxlength="120" placeholder="Ex.: rendimento de setembro do CDB">
+        <label>{% trans "Motivo (obrigatório para perda e ajuste assumido)" %}
+            <input type="text" name="motivo" maxlength="120" placeholder="{% trans 'Ex.: rendimento de setembro do CDB' %}">
         </label>
         <button type="submit" class="btn-sm btn-action-edit"
-                data-sa-confirmar="Lançar esta diferença como um lançamento realizado na data do saldo?"
-                data-sa-titulo="Lançar a diferença"
+                data-sa-confirmar="{% trans 'Lançar esta diferença como um lançamento realizado na data do saldo?' %}"
+                data-sa-titulo="{% trans 'Lançar a diferença' %}"
                 data-sa-severidade="warning"
-                data-sa-ok="Lançar">Lançar a diferença</button>
+                data-sa-ok="{% trans 'Lançar' %}">{% trans "Lançar a diferença" %}</button>
     </form>
     {% else %}
-    <p class="empty-state">O saldo informado já bate com o do CB.</p>
+    <p class="empty-state">{% trans "O saldo informado já bate com o do CB." %}</p>
     {% endif %}
 </div>
 {% endif %}
 
 <div class="table-container">
-    <h3 class="u-mb-075">Atualizações de saldo lançadas</h3>
-    <p class="u-mb-075">Rendimentos, IR/IOF, perdas e ajustes assumidos. Assunção ({{ assuncoes|length }}) é o que foi lançado como “{{ categoria_de_ajuste }}”: está marcada para revisar.</p>
+    <h3 class="u-mb-075">{% trans "Atualizações de saldo lançadas" %}</h3>
+    <p class="u-mb-075">{% blocktrans trimmed with total=assuncoes|length categoria=categoria_de_ajuste %}Rendimentos, IR/IOF, perdas e ajustes assumidos. Assunção ({{ total }}) é o que foi lançado como “{{ categoria }}”: está marcada para revisar.{% endblocktrans %}</p>
     <table class="tx-table">
         <thead>
-            <tr><th>Data</th><th>Conta</th><th>Destino</th><th>Descrição</th><th>Valor</th></tr>
+            <tr><th>{% trans "Data" %}</th><th>{% trans "Conta" %}</th><th>{% trans "Destino" %}</th><th>{% trans "Descrição" %}</th><th>{% trans "Valor" %}</th></tr>
         </thead>
         <tbody>
         {% for entrada in atualizacoes %}
             <tr>
                 <td>{{ entrada.due_date|udate }}</td>
                 <td>{{ entrada.account.owner.name }} / {{ entrada.account.institution.institution_name }} / {{ entrada.account.account_name }}</td>
-                <td>{% if entrada.category.category_name == categoria_de_ajuste %}<strong>⚠ Assunção</strong>{% else %}{{ entrada.category.category_name }}{% endif %}</td>
+                <td>{% if entrada.category.category_name == categoria_de_ajuste %}<strong>⚠ {% trans "Assunção" %}</strong>{% else %}{{ entrada.category.category_name }}{% endif %}</td>
                 <td>{{ entrada.description }}</td>
                 <td class="amount {% if entrada.entry_type == 'receita' %}amount-positive{% else %}amount-negative{% endif %}">{{ entrada.entry_amount|money:entrada.account.currency }}</td>
             </tr>
         {% empty %}
-            <tr><td colspan="5" class="empty-state">Nenhuma atualização de saldo lançada.</td></tr>
+            <tr><td colspan="5" class="empty-state">{% trans "Nenhuma atualização de saldo lançada." %}</td></tr>
         {% endfor %}
         </tbody>
     </table>

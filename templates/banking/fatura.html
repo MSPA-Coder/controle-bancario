@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% load static regional_filters %}
+{% load static regional_filters i18n %}
 {% load icons %}
 {% load money_filters %}
 
-{% block title %}Movimentação • Fatura do cartão{% endblock %}
+{% block title %}{% trans "Movimentação • Fatura do cartão" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -12,7 +12,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>💳 Fatura do cartão</h1>
+        <h1>💳 {% trans "Fatura do cartão" %}</h1>
         <p>{{ conta.owner.name }} / {{ conta.institution.institution_name }} / {{ conta.account_name }} · {{ lote.source_filename }}</p>
     </div>
 </div>
@@ -21,23 +21,18 @@
 {% block content %}
 <div class="chart-card u-mb-1">
     {% if tudo_no_saldo_inicial %}
-    <p class="fatura-aviso"><strong>Esta fatura é toda anterior ao saldo inicial do cartão
-        ({{ conta.initial_balance_date|udate }}).</strong> Nenhuma compra será lançada: só as parcelas
-        que vencem depois dessa data. Para importar o histórico, mude antes a data do saldo inicial do cartão
-        (Cadastros › Contas) para antes da primeira fatura.</p>
+    <p class="fatura-aviso"><strong>{% blocktrans trimmed with data=conta.initial_balance_date|udate %}Esta fatura é toda anterior ao saldo inicial do cartão ({{ data }}).{% endblocktrans %}</strong> {% blocktrans trimmed %}Nenhuma compra será lançada: só as parcelas que vencem depois dessa data. Para importar o histórico, mude antes a data do saldo inicial do cartão (Cadastros › Contas) para antes da primeira fatura.{% endblocktrans %}</p>
     {% endif %}
-    <h3>Resumo do arquivo</h3>
+    <h3>{% trans "Resumo do arquivo" %}</h3>
     <table class="tx-table">
         <tbody>
-            <tr><td>Compras</td><td class="amount amount-negative">{{ resumo.compras|money_signed:conta.currency }}</td></tr>
-            <tr><td>Estornos e créditos</td><td class="amount amount-positive">{{ resumo.creditos|money_signed:conta.currency }}</td></tr>
-            <tr><td><strong>Total da fatura</strong> (compras menos estornos)</td><td class="amount"><strong>{{ resumo.total_da_fatura|money:conta.currency }}</strong></td></tr>
-            <tr><td>Pagamentos da fatura anterior</td><td class="amount amount-positive">{{ resumo.pagamentos|money_signed:conta.currency }}</td></tr>
+            <tr><td>{% trans "Compras" %}</td><td class="amount amount-negative">{{ resumo.compras|money_signed:conta.currency }}</td></tr>
+            <tr><td>{% trans "Estornos e créditos" %}</td><td class="amount amount-positive">{{ resumo.creditos|money_signed:conta.currency }}</td></tr>
+            <tr><td><strong>{% trans "Total da fatura" %}</strong> {% trans "(compras menos estornos)" %}</td><td class="amount"><strong>{{ resumo.total_da_fatura|money:conta.currency }}</strong></td></tr>
+            <tr><td>{% trans "Pagamentos da fatura anterior" %}</td><td class="amount amount-positive">{{ resumo.pagamentos|money_signed:conta.currency }}</td></tr>
         </tbody>
     </table>
-    <p class="help-text">Confira o total com o da fatura do banco. Saldo inicial do cartão:
-        {{ conta.initial_balance|money_signed:conta.currency }} em {{ conta.initial_balance_date|udate }};
-        linhas com data anterior já estão nele e não são lançadas de novo.</p>
+    <p class="help-text">{% blocktrans trimmed with saldo=conta.initial_balance|money_signed:conta.currency data=conta.initial_balance_date|udate %}Confira o total com o da fatura do banco. Saldo inicial do cartão: {{ saldo }} em {{ data }}; linhas com data anterior já estão nele e não são lançadas de novo.{% endblocktrans %}</p>
 </div>
 
 <div class="table-container u-mb-1">
@@ -45,31 +40,31 @@
     <form method="post" action="{% url 'bank_statements:processar_fatura' lote.id %}">
         {% csrf_token %}
         <div class="u-d-flex u-items-center u-gap-05 u-mb-075">
-            <h3 class="u-mb-0">Prévia: {{ planos|length }} linha(s) a processar</h3>
+            <h3 class="u-mb-0">{% blocktrans trimmed count n=planos|length %}Prévia: {{ n }} linha a processar{% plural %}Prévia: {{ n }} linhas a processar{% endblocktrans %}</h3>
             <button type="submit" class="btn-sm btn-primary"
-                    data-sa-confirmar="Gravar a fatura como mostrada na prévia? Compras e estornos viram lançamentos realizados no cartão, e os pagamentos são conciliados com as transferências."
-                    data-sa-titulo="Processar fatura"
+                    data-sa-confirmar="{% trans 'Gravar a fatura como mostrada na prévia? Compras e estornos viram lançamentos realizados no cartão, e os pagamentos são conciliados com as transferências.' %}"
+                    data-sa-titulo="{% trans 'Processar fatura' %}"
                     data-sa-severidade="warning"
-                    data-sa-ok="Processar">
-                {% icon 'check' %}<span>Processar fatura</span>
+                    data-sa-ok="{% trans 'Processar' %}">
+                {% icon 'check' %}<span>{% trans "Processar fatura" %}</span>
             </button>
         </div>
         <table class="tx-table">
             <thead>
                 <tr>
-                    <th>Data</th>
-                    <th>Descrição</th>
-                    <th>Parcela</th>
-                    <th>Valor</th>
-                    <th>O que acontece</th>
-                    <th>Categoria</th>
+                    <th>{% trans "Data" %}</th>
+                    <th>{% trans "Descrição" %}</th>
+                    <th>{% trans "Parcela" %}</th>
+                    <th>{% trans "Valor" %}</th>
+                    <th>{% trans "O que acontece" %}</th>
+                    <th>{% trans "Categoria" %}</th>
                 </tr>
             </thead>
             <tbody>
             {% for plano in planos %}
                 <tr>
                     <td>{{ plano.linha.statement_date|udate }}
-                        {% if plano.linha.purchase_date and plano.linha.purchase_date != plano.linha.statement_date %}<br><small>compra em {{ plano.linha.purchase_date|udate }}</small>{% endif %}
+                        {% if plano.linha.purchase_date and plano.linha.purchase_date != plano.linha.statement_date %}<br><small>{% blocktrans trimmed with data=plano.linha.purchase_date|udate %}compra em {{ data }}{% endblocktrans %}</small>{% endif %}
                     </td>
                     <td>{{ plano.linha.description }}
                         {% if plano.linha.bank_category %}<br><small>{{ plano.linha.bank_category }}</small>{% endif %}
@@ -79,7 +74,7 @@
                     <td>{{ plano.rotulo }}</td>
                     <td>
                         {% if plano.cria_lancamento or plano.futuras_a_partir_de %}
-                        <select name="categoria_{{ plano.linha.id }}" aria-label="Categoria">
+                        <select name="categoria_{{ plano.linha.id }}" aria-label="{% trans 'Categoria' %}">
                             {% for categoria in categorias %}
                             <option value="{{ categoria.id }}" {% if plano.categoria and plano.categoria.id == categoria.id %}selected{% endif %}>{{ categoria.category_name }}</option>
                             {% endfor %}
@@ -94,13 +89,13 @@
         </table>
     </form>
     {% else %}
-    <p class="empty-state">Nenhuma linha pendente nesta fatura.</p>
+    <p class="empty-state">{% trans "Nenhuma linha pendente nesta fatura." %}</p>
     {% endif %}
     {% if processadas %}
-    <p class="help-text">{{ processadas }} linha(s) já processada(s) nesta importação.
-        <a href="{% url 'bank_statements:reconciliation_view' %}">Ver em Conciliação</a>.</p>
+    <p class="help-text">{% blocktrans trimmed count n=processadas %}{{ n }} linha já processada nesta importação.{% plural %}{{ n }} linhas já processadas nesta importação.{% endblocktrans %}
+        <a href="{% url 'bank_statements:reconciliation_view' %}">{% trans "Ver em Conciliação" %}</a>.</p>
     {% endif %}
-    <p><a href="{% url 'bank_statements:faturas' %}">Ver todas as faturas</a> · <a href="{% url 'bank_statements:imports_view' %}">Voltar para a importação</a></p>
+    <p><a href="{% url 'bank_statements:faturas' %}">{% trans "Ver todas as faturas" %}</a> · <a href="{% url 'bank_statements:imports_view' %}">{% trans "Voltar para a importação" %}</a></p>
 </div>
 
 {% if projetadas %}

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static regional_filters %}
+{% load static regional_filters i18n %}
 {% load money_filters %}
 
-{% block title %}Movimentação • Extrato da conta{% endblock %}
+{% block title %}{% trans "Movimentação • Extrato da conta" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -11,7 +11,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>📄 Extrato da conta</h1>
+        <h1>📄 {% trans "Extrato da conta" %}</h1>
         <p>{{ conta.owner.name }} / {{ conta.institution.institution_name }} / {{ conta.account_name }} · {{ lote.source_filename }}</p>
     </div>
 </div>
@@ -19,37 +19,36 @@
 
 {% block content %}
 <div class="chart-card u-mb-1">
-    <h3>Resumo do arquivo</h3>
+    <h3>{% trans "Resumo do arquivo" %}</h3>
     <table class="tx-table">
         <tbody>
-            <tr><td>Importado em</td><td>{{ lote.created_at|udatetime }}</td></tr>
-            <tr><td>Linhas</td><td>{{ importado.total }}: {{ importado.conciliadas }} conciliada{{ importado.conciliadas|pluralize }},
-                {{ importado.ignoradas }} ignorada{{ importado.ignoradas|pluralize }}, {{ importado.novas }} pendente{{ importado.novas|pluralize }}</td></tr>
-            <tr><td>Saldo do extrato × CB</td><td>
+            <tr><td>{% trans "Importado em" %}</td><td>{{ lote.created_at|udatetime }}</td></tr>
+            <tr><td>{% trans "Linhas" %}</td><td>{{ importado.total }}: {% blocktrans trimmed count n=importado.conciliadas %}{{ n }} conciliada{% plural %}{{ n }} conciliadas{% endblocktrans %}, {% blocktrans trimmed count n=importado.ignoradas %}{{ n }} ignorada{% plural %}{{ n }} ignoradas{% endblocktrans %}, {% blocktrans trimmed count n=importado.novas %}{{ n }} pendente{% plural %}{{ n }} pendentes{% endblocktrans %}</td></tr>
+            <tr><td>{% trans "Saldo do extrato × CB" %}</td><td>
                 {% if importado.conferencia %}
                     {% if importado.conferencia.bate %}
-                    <strong class="amount amount-positive">Bate em {{ importado.conferencia.data|udate }}: {{ importado.conferencia.saldo_do_extrato|money:conta.currency }}</strong>
+                    <strong class="amount amount-positive">{% blocktrans trimmed with data=importado.conferencia.data|udate saldo=importado.conferencia.saldo_do_extrato|money:conta.currency %}Bate em {{ data }}: {{ saldo }}{% endblocktrans %}</strong>
                     {% else %}
-                    <strong class="amount amount-negative">Extrato {{ importado.conferencia.saldo_do_extrato|money:conta.currency }} · CB {{ importado.conferencia.saldo_no_cb|money:conta.currency }} em {{ importado.conferencia.data|udate }} · diferença {{ importado.conferencia.diferenca|money:conta.currency }}</strong>
+                    <strong class="amount amount-negative">{% blocktrans trimmed with saldo=importado.conferencia.saldo_do_extrato|money:conta.currency cb=importado.conferencia.saldo_no_cb|money:conta.currency data=importado.conferencia.data|udate diferenca=importado.conferencia.diferenca|money:conta.currency %}Extrato {{ saldo }} · CB {{ cb }} em {{ data }} · diferença {{ diferenca }}{% endblocktrans %}</strong>
                     {% endif %}
                 {% else %}
-                <span class="empty-state">O arquivo não informa saldo.</span>
+                <span class="empty-state">{% trans "O arquivo não informa saldo." %}</span>
                 {% endif %}
             </td></tr>
         </tbody>
     </table>
     {% if importado.novas %}
-    <p class="help-text">{{ importado.novas }} linha(s) pendente(s): concilie em
-        <a href="{% url 'bank_statements:reconciliation_view' %}">Conciliação</a>.</p>
+    <p class="help-text">{% blocktrans trimmed count n=importado.novas %}{{ n }} linha pendente: concilie em{% plural %}{{ n }} linhas pendentes: concilie em{% endblocktrans %}
+        <a href="{% url 'bank_statements:reconciliation_view' %}">{% trans "Conciliação" %}</a>.</p>
     {% endif %}
 </div>
 
 <div class="table-container u-mb-1">
-    <h3 class="u-mb-075">Linhas do extrato</h3>
+    <h3 class="u-mb-075">{% trans "Linhas do extrato" %}</h3>
     {% if linhas %}
     <table class="tx-table">
         <thead>
-            <tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th></tr>
+            <tr><th>{% trans "Data" %}</th><th>{% trans "Descrição" %}</th><th>{% trans "Valor" %}</th><th>{% trans "Status" %}</th></tr>
         </thead>
         <tbody>
         {% for linha in linhas %}
@@ -63,11 +62,11 @@
         </tbody>
     </table>
     {% if importado.total > limite %}
-    <p class="help-text">Mostrando as primeiras {{ limite }} de {{ importado.total }} linhas.</p>
+    <p class="help-text">{% blocktrans trimmed with total=importado.total %}Mostrando as primeiras {{ limite }} de {{ total }} linhas.{% endblocktrans %}</p>
     {% endif %}
     {% else %}
-    <p class="empty-state">Este extrato não tem linhas.</p>
+    <p class="empty-state">{% trans "Este extrato não tem linhas." %}</p>
     {% endif %}
-    <p><a href="{% url 'bank_statements:extratos' %}">Ver todos os extratos</a> · <a href="{% url 'bank_statements:imports_view' %}">Voltar para a importação</a></p>
+    <p><a href="{% url 'bank_statements:extratos' %}">{% trans "Ver todos os extratos" %}</a> · <a href="{% url 'bank_statements:imports_view' %}">{% trans "Voltar para a importação" %}</a></p>
 </div>
 {% endblock %}
