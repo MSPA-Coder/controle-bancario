@@ -71,7 +71,7 @@
                 <th>Descrição</th>
                 <th>Valor</th>
                 <th>Sugestão</th>
-                <th>Conciliar com movimento</th>
+                <th>Conciliar com lançamento</th>
                 <th>Ou criar lançamento</th>
                 <th>Ações</th>
             </tr>
@@ -108,13 +108,13 @@
                                 {% endfor %}
                             </select>
                             <button type="submit" class="btn-sm btn-primary"
-                                    data-sa-confirmar="Conciliar esta linha do extrato e marcar o movimento como realizado?"
+                                    data-sa-confirmar="Conciliar esta linha do extrato e marcar o lançamento como realizado?"
                                     data-sa-titulo="Confirmar conciliação"
                                     data-sa-severidade="warning"
                                     data-sa-ok="Conciliar">Conciliar</button>
                         </form>
                         {% else %}
-                        <span class="empty-state">Sem candidato - use "Criar"</span>
+                        <span class="empty-state">Sem candidato — use “Criar”.</span>
                         {% endif %}
                     {% else %}
                     <span class="empty-state">Status: {{ line.get_status_display }}</span>
@@ -187,7 +187,7 @@
                     <th>Data</th>
                     <th>Descrição do extrato</th>
                     <th>Valor</th>
-                    <th>Movimento</th>
+                    <th>Lançamento</th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -197,7 +197,7 @@
                     <td>{{ line.statement_date|udate }}</td>
                     <td>{{ line.description }}</td>
                     <td class="amount {{ line.amount|amount_class }}">{{ line.amount|money_signed:line.account.currency }}</td>
-                    <td>{% if line.matched_entry %}#{{ line.matched_entry.id }} - {{ line.matched_entry.description|default:"-" }}{% else %}Movimento não encontrado{% endif %}</td>
+                    <td>{% if line.matched_entry %}#{{ line.matched_entry.id }} - {{ line.matched_entry.description|default:"-" }}{% else %}Lançamento não encontrado{% endif %}</td>
                     <td class="actions">
                         <form method="post" action="{% url 'bank_statements:undo_reconciliation' %}"
                               hx-post="{% url 'bank_statements:undo_reconciliation' %}"
