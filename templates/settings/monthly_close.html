@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load static navegacao %}
 {% load money_filters %}
-{% load icons contas %}
+{% load icons contas i18n %}
 
-{% block title %}Movimentação • Fechamento mensal{% endblock %}
+{% block title %}{% trans "Movimentação • Fechamento mensal" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/monthly-close.css' %}">
@@ -12,16 +12,16 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Fechamento mensal</h1>
-        <p>Bloqueia alterações em lançamentos de meses já consolidados.</p>
+        <h1>{% trans "Fechamento mensal" %}</h1>
+        <p>{% trans "Bloqueia alterações em lançamentos de meses já consolidados." %}</p>
     </div>
 </div>
 <div class="top-filter-card">
     <form method="get" class="top-filter-row monthly-close-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
         <label class="top-filter-field">
-            Conta
+            {% trans "Conta" %}
             <select name="filter_account_id">
-                <option value="">Todas as contas</option>
+                <option value="">{% trans "Todas as contas" %}</option>
                 {% for titular, contas in close_accounts|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for account in contas %}
@@ -32,33 +32,33 @@
             </select>
         </label>
         <label class="top-filter-field compact">
-            Ano
+            {% trans "Ano" %}
             <select name="filter_year">
-                <option value="">Todos os anos</option>
+                <option value="">{% trans "Todos os anos" %}</option>
                 {% for year in monthly_close_year_options %}
                 <option value="{{ year }}" {% if monthly_close_filters.year == year %}selected{% endif %}>{{ year }}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="top-filter-field compact">
-            Mês
+            {% trans "Mês" %}
             <select name="filter_month">
-                <option value="">Todos os meses</option>
+                <option value="">{% trans "Todos os meses" %}</option>
                 {% for month in monthly_close_month_options %}
                 <option value="{{ month }}" {% if monthly_close_filters.month == month %}selected{% endif %}>{{ month|stringformat:"02d" }}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="top-filter-field compact">
-            Status
+            {% trans "Status" %}
             <select name="filter_status">
-                <option value="">Todos</option>
-                <option value="active" {% if monthly_close_filters.status == "active" %}selected{% endif %}>Fechado</option>
-                <option value="reopened" {% if monthly_close_filters.status == "reopened" %}selected{% endif %}>Reaberto</option>
+                <option value="">{% trans "Todos" %}</option>
+                <option value="active" {% if monthly_close_filters.status == "active" %}selected{% endif %}>{% trans "Fechado" %}</option>
+                <option value="reopened" {% if monthly_close_filters.status == "reopened" %}selected{% endif %}>{% trans "Reaberto" %}</option>
             </select>
         </label>
         <div class="top-filter-actions">
-            <a href="{% url 'core:settings_monthly_close' %}" class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>Limpar</span></a>
+            <a href="{% url 'core:settings_monthly_close' %}" class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>{% trans "Limpar" %}</span></a>
         </div>
     </form>
 </div>
@@ -66,7 +66,7 @@
 
 {% block content %}
 <div class="section-card">
-    <h3>Fechamento mensal</h3>
+    <h3>{% trans "Fechamento mensal" %}</h3>
     <form method="post" {% nav_escrita %} action="{% url 'core:settings_close_month' %}{% if monthly_close_filter_query %}?{{ monthly_close_filter_query }}{% endif %}" class="btn-group monthly-close-form" data-ui="monthly-close-form">
         {% csrf_token %}
         <input type="hidden" name="filter_account_id" value="{{ monthly_close_filters.account_id|default:'' }}">
@@ -74,9 +74,9 @@
         <input type="hidden" name="filter_month" value="{{ monthly_close_filters.month|default:'' }}">
         <input type="hidden" name="filter_status" value="{{ monthly_close_filters.status }}">
         <div class="form-group" data-ui="field-260">
-            <label>Conta</label>
+            <label>{% trans "Conta" %}</label>
             <select name="account_id" class="form-control" required>
-                <option value="">Selecione…</option>
+                <option value="">{% trans "Selecione…" %}</option>
                 {% for titular, contas in monthly_close_form_accounts|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for account in contas %}
@@ -87,28 +87,28 @@
             </select>
         </div>
         <div class="form-group" data-ui="field-180">
-            <label>Mês</label>
-            <input type="number" name="month" class="form-control" min="1" max="12" value="{{ monthly_close_default_month }}" placeholder="Mês" required>
+            <label>{% trans "Mês" %}</label>
+            <input type="number" name="month" class="form-control" min="1" max="12" value="{{ monthly_close_default_month }}" placeholder="{% trans 'Mês' %}" required>
         </div>
         <div class="form-group" data-ui="field-180">
-            <label>Ano</label>
-            <input type="number" name="year" class="form-control" min="2000" max="2100" value="{{ monthly_close_default_year }}" placeholder="Ano" required>
+            <label>{% trans "Ano" %}</label>
+            <input type="number" name="year" class="form-control" min="2000" max="2100" value="{{ monthly_close_default_year }}" placeholder="{% trans 'Ano' %}" required>
         </div>
         <button type="submit" class="btn btn-primary"
-                data-sa-confirmar="Fechar este mês para a conta selecionada? As alterações no período ficarão bloqueadas até uma reabertura explícita."
-                data-sa-titulo="Confirmar fechamento mensal"
+                data-sa-confirmar="{% trans 'Fechar este mês para a conta selecionada? As alterações no período ficarão bloqueadas até uma reabertura explícita.' %}"
+                data-sa-titulo="{% trans 'Confirmar fechamento mensal' %}"
                 data-sa-severidade="warning"
-                data-sa-ok="Fechar mês">{% icon 'close-month' %}<span>Fechar mês</span></button>
+                data-sa-ok="{% trans 'Fechar mês' %}">{% icon 'close-month' %}<span>{% trans "Fechar mês" %}</span></button>
     </form>
 </div>
 
 <div class="section-card">
-    <h3>Fechamentos recentes</h3>
+    <h3>{% trans "Fechamentos recentes" %}</h3>
     {% if recent_month_closes %}
     <div class="table-inspection-scroll">
         <table>
             <thead>
-                <tr><th>Conta</th><th>Período</th><th>Saldo fechado</th><th>Status</th><th>Ação</th></tr>
+                <tr><th>{% trans "Conta" %}</th><th>{% trans "Período" %}</th><th>{% trans "Saldo fechado" %}</th><th>{% trans "Status" %}</th><th>{% trans "Ação" %}</th></tr>
             </thead>
             <tbody>
                 {% for close in recent_month_closes %}
@@ -116,7 +116,7 @@
                     <td>{{ close.account.owner.name }} / {{ close.account.institution.institution_name }} / {{ close.account.account_name }}</td>
                     <td>{{ close.month|stringformat:"02d" }}/{{ close.year }}</td>
                     <td data-sensitive-value="true">{{ close.closing_balance|money:close.account.currency }}</td>
-                    <td>{% if close.active %}Fechado{% else %}Reaberto{% endif %}</td>
+                    <td>{% if close.active %}{% trans "Fechado" %}{% else %}{% trans "Reaberto" %}{% endif %}</td>
                     <td>
                         {% if close.active %}
                         <form method="post" {% nav_escrita %} action="{% url 'core:settings_reopen_month' %}" data-ui="reopen-form">
@@ -128,19 +128,19 @@
                             <input type="hidden" name="account_id" value="{{ close.account_id }}">
                             <input type="hidden" name="year" value="{{ close.year }}">
                             <input type="hidden" name="month" value="{{ close.month }}">
-                            <input type="text" name="reason" class="form-control" placeholder="Motivo" maxlength="255" required>
+                            <input type="text" name="reason" class="form-control" placeholder="{% trans 'Motivo' %}" maxlength="255" required>
                             <button type="submit" class="btn btn-warning btn-sm"
-                                    data-sa-confirmar="Reabrir este mês? Informe um motivo auditável para liberar novas alterações no período."
-                                    data-sa-titulo="Confirmar reabertura mensal"
+                                    data-sa-confirmar="{% trans 'Reabrir este mês? Informe um motivo auditável para liberar novas alterações no período.' %}"
+                                    data-sa-titulo="{% trans 'Confirmar reabertura mensal' %}"
                                     data-sa-severidade="warning"
-                                    data-sa-ok="Reabrir">{% icon 'reopen' %}<span>Reabrir</span></button>
+                                    data-sa-ok="{% trans 'Reabrir' %}">{% icon 'reopen' %}<span>{% trans "Reabrir" %}</span></button>
                         </form>
                         {% else %}
                         <div class="monthly-close-reopen-info">
                             {% if close.reopen_reason %}
-                            <small class="monthly-close-reopen-reason">Motivo: {{ close.reopen_reason }}</small>
+                            <small class="monthly-close-reopen-reason">{% blocktrans trimmed with motivo=close.reopen_reason %}Motivo: {{ motivo }}{% endblocktrans %}</small>
                             {% else %}
-                            <span>Sem ação</span>
+                            <span>{% trans "Sem ação" %}</span>
                             {% endif %}
                         </div>
                         {% endif %}
@@ -151,7 +151,7 @@
         </table>
     </div>
     {% else %}
-    <p class="empty-state">Nenhum fechamento mensal registrado.</p>
+    <p class="empty-state">{% trans "Nenhum fechamento mensal registrado." %}</p>
     {% endif %}
 </div>
 {% endblock %}
