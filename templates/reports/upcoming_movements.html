@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static navegacao %}
+{% load static navegacao i18n %}
 {% load icons contas %}
-{% block title %}Relatórios • Próximos movimentos{% endblock %}
+{% block title %}{% trans "Relatórios • Próximos movimentos" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/upcoming-movements.css' %}">
@@ -11,15 +11,15 @@
 <div class="top-filter-card">
     <form method="get" class="top-filter-row upcoming-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
         <label class="top-filter-field top-filter-date">
-            Data inicial
+            {% trans "Data inicial" %}
             <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m-d' }}"{% endif %}>
         </label>
         <label class="top-filter-field top-filter-date">
-            Data final
+            {% trans "Data final" %}
             <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m-d' }}"{% endif %}>
         </label>
         <label class="top-filter-field compact">
-            Status
+            {% trans "Status" %}
             <select name="mode">
                 {% for mode_value, mode_label in status_options %}
                 <option value="{{ mode_value }}" {% if mode_value == view_mode %}selected{% endif %}>{{ mode_label }}</option>
@@ -27,27 +27,27 @@
             </select>
         </label>
         <label class="top-filter-field">
-            Titular
+            {% trans "Titular" %}
             <select name="owner_id">
-                <option value="">Todos os titulares</option>
+                <option value="">{% trans "Todos os titulares" %}</option>
                 {% for owner in owners %}
                 <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="top-filter-field">
-            Instituição
+            {% trans "Instituição" %}
             <select name="institution_id">
-                <option value="">Todas as instituições</option>
+                <option value="">{% trans "Todas as instituições" %}</option>
                 {% for bank in banks %}
                 <option value="{{ bank.id }}" {% if bank.id == current_institution_id %}selected{% endif %}>{{ bank.institution_name }}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="top-filter-field">
-            Conta
+            {% trans "Conta" %}
             <select name="account_id">
-                <option value="">Todas as contas</option>
+                <option value="">{% trans "Todas as contas" %}</option>
                 {% for titular, contas in accounts|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for account in contas %}
@@ -59,7 +59,7 @@
         </label>
         <div class="top-filter-actions">
             <a href="{% url 'reports:upcoming_movements_view' %}?mode=a_vencer&amp;start_date={{ default_start_date|date:'Y-m-d' }}&amp;end_date={{ default_end_date|date:'Y-m-d' }}"
-               class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>Limpar</span></a>
+               class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>{% trans "Limpar" %}</span></a>
         </div>
     </form>
 </div>
