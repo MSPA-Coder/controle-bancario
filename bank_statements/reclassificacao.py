@@ -38,6 +38,7 @@ from datetime import date
 
 from django.db import transaction as db_transaction
 from django.db.models import Q
+from django.utils.translation import gettext
 
 from accounts.services import has_function_permission
 from banking.models import FinancialAccount
@@ -245,12 +246,12 @@ def planejar(user, *, entry_ids, categoria_id, incluir_iguais=True, parecidas_id
     try:
         destino = CashFlowCategory.objects.get(id=int(categoria_id), kind=CATEGORY_KIND_MANAGERIAL)
     except (CashFlowCategory.DoesNotExist, TypeError, ValueError) as exc:
-        raise ValueError("Escolha a categoria de destino (receita ou despesa).") from exc
+        raise ValueError(gettext("Escolha a categoria de destino (receita ou despesa).")) from exc
 
     base = _gerenciais(user)
     selecionados = list(base.filter(id__in=_ids(entry_ids)))
     if not selecionados:
-        raise ValueError("Selecione ao menos um lançamento.")
+        raise ValueError(gettext("Selecione ao menos um lançamento."))
 
     chaves = {chave_da_descricao(e.description) for e in selecionados}
     palavras = {p for p in (primeira_palavra(c) for c in chaves) if p}
@@ -332,10 +333,10 @@ def aplicar(user, *, autorizar_meses=False, audit_context=None, **escolhas) -> i
         if plano.meses_fechados:
             if not autorizar_meses:
                 raise ValueError(
-                    "Há meses fechados entre os lançamentos: autorize a reabertura e o novo fechamento."
+                    gettext("Há meses fechados entre os lançamentos: autorize a reabertura e o novo fechamento.")
                 )
             if not has_function_permission(user, "settings.monthly_close.manage"):
-                raise ValueError("Reabrir mês fechado exige a permissão de fechamento mensal.")
+                raise ValueError(gettext("Reabrir mês fechado exige a permissão de fechamento mensal."))
         saldos = {}
         for conta, ano, mes in plano.meses_fechados:
             fechamento = AccountMonthClose.objects.get(account=conta, year=ano, month=mes, active=True)
@@ -358,9 +359,9 @@ def aplicar(user, *, autorizar_meses=False, audit_context=None, **escolhas) -> i
             fim = date(ano + (mes == 12), mes % 12 + 1, 1)
             novo = decimal_balance_before([conta_id], fim, VIEW_REALIZED)
             if novo != anterior:
-                raise ValueError(
-                    f"O saldo de fechamento de {mes:02d}/{ano} ({conta}) mudaria de {anterior} para {novo}; "
+                raise ValueError(gettext(
+                    "O saldo de fechamento de %(mes)02d/%(ano)s (%(conta)s) mudaria de %(anterior)s para %(novo)s; "
                     "nada foi gravado."
-                )
+                ) % {"mes": mes, "ano": ano, "conta": conta, "anterior": anterior, "novo": novo})
             close_month(conta, ano, mes, novo, user, audit_context=audit_context)
     return len(plano.alvo)
