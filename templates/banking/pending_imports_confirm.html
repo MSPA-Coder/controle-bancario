@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n static %}
-{% load icons contas %}
+{% load icons contas regional_filters %}
 
 {% block title %}{% trans "Movimentação • Confirmar importação" %}{% endblock %}
 
@@ -45,7 +45,7 @@
                     <td>{{ upload.original_filename }}</td>
                     <td>
                         {% if upload.detection_error %}
-                        <small style="color: var(--danger)">{{ upload.detection_error }}</small>
+                        <small style="color: var(--danger)">{{ upload.detection_error|traduzido }}</small>
                         {% elif upload.detected_label %}
                         {{ upload.detected_label }}
                         {% else %}

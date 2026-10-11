@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-11 02:47-0300\n"
+"POT-Creation-Date: 2026-10-11 04:08-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1598,14 +1598,20 @@ msgid "Nome da conta não pode exceder %(limite)s caracteres."
 msgstr "Account name cannot exceed %(limite)s characters."
 
 #: banking/services.py
-#, python-format
-msgid "%(campo)s do cartão é obrigatório (1 a 31)."
-msgstr "%(campo)s of the card is required (1 to 31)."
+msgid "Dia de fechamento do cartão é obrigatório (1 a 31)."
+msgstr "The card's closing day is required (1 to 31)."
 
 #: banking/services.py
-#, python-format
-msgid "%(campo)s do cartão deve estar entre 1 e 31."
-msgstr "%(campo)s of the card must be between 1 and 31."
+msgid "Dia de vencimento do cartão é obrigatório (1 a 31)."
+msgstr "The card's due day is required (1 to 31)."
+
+#: banking/services.py
+msgid "Dia de fechamento do cartão deve estar entre 1 e 31."
+msgstr "The card's closing day must be between 1 and 31."
+
+#: banking/services.py
+msgid "Dia de vencimento do cartão deve estar entre 1 e 31."
+msgstr "The card's due day must be between 1 and 31."
 
 #: banking/services.py
 msgid "Gasto mensal estimado do cartão inválido."
@@ -1638,14 +1644,6 @@ msgstr "The payment account must be a regular account, not another card."
 #: banking/services.py
 msgid "A conta de pagamento deve estar na mesma moeda do cartão."
 msgstr "The payment account must use the same currency as the card."
-
-#: banking/services.py
-msgid "Dia de fechamento"
-msgstr "Closing day"
-
-#: banking/services.py
-msgid "Dia de vencimento"
-msgstr "Due day"
 
 #: banking/services.py
 msgid "Conta de movimento inválida."
@@ -4804,8 +4802,8 @@ msgid "Controla quais telas e ações o usuário pode executar. Permissões crí
 msgstr "Controls which screens and actions the user can perform. Critical permissions are highlighted."
 
 #: templates/permissions/index.html
-msgid "Permissões críticas incluem exclusão de lançamentos, otimização de banco, gestão de usuários e gestão de permissões. O sistema impede que o usuário ativo remova o próprio acesso a"
-msgstr "Critical permissions include deleting entries, optimizing the database, managing users, and managing permissions. The system prevents the active user from removing their own access to"
+msgid "Permissões críticas incluem exclusão de lançamentos, otimização de banco, gestão de usuários e gestão de permissões. O sistema impede que o usuário ativo remova o próprio acesso a <span class=\"permission-key\">permissions.manage</span>."
+msgstr "Critical permissions include deleting entries, optimizing the database, managing users, and managing permissions. The system prevents the active user from removing their own access to <span class=\"permission-key\">permissions.manage</span>."
 
 #: templates/permissions/index.html
 msgid "Filtrar permissões"

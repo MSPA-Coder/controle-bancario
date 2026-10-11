@@ -294,7 +294,7 @@ def resolve_pending_uploads(
             continue
 
         if upload.detection_error:
-            erros.append((upload.original_filename, upload.detection_error))
+            erros.append((upload.original_filename, gettext(upload.detection_error)))
             _delete_pending(upload)
             continue
 
