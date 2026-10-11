@@ -3,7 +3,7 @@
 <div class="page-header-title" data-ui="mb-1">
     <div>
         <h1>Painel gerencial</h1>
-        <p>Tags, projetos/centros de custo e orçamento mensal por categoria. Esta camada não altera o núcleo bancário de contas, saldos e movimentos.</p>
+        <p>Tags, projetos/centros de custo e orçamento mensal por categoria. Esta camada não altera o núcleo bancário de contas, saldos e lançamentos.</p>
     </div>
 </div>
 
@@ -35,7 +35,7 @@
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
             <label>Titular
                 <select name="owner_id" required>
-                    <option value="">Selecione...</option>
+                    <option value="">Selecione…</option>
                     {% for owner in owners %}
                     <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                     {% endfor %}
@@ -43,7 +43,7 @@
             </label>
             <label>Categoria
                 <select name="category_id" required>
-                    <option value="">Selecione...</option>
+                    <option value="">Selecione…</option>
                     {% for category in categories %}
                     <option value="{{ category.id }}">{{ category.category_name }}</option>
                     {% endfor %}
@@ -58,20 +58,20 @@
 
 <div class="cards-grid" data-ui="cards-320">
     <div class="chart-card">
-        <h3>Vincular tag a movimento</h3>
+        <h3>Vincular tag a lançamento</h3>
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_tag' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact">ID do movimento<input type="number" name="entry_id" min="1" required></label>
+            <label class="top-filter-field compact">ID do lançamento<input type="number" name="entry_id" min="1" required></label>
             <label class="top-filter-field">Tag
                 <select name="tag_id" required>
-                    <option value="">Selecione...</option>
+                    <option value="">Selecione…</option>
                     {% for tag in active_tags %}
                     <option value="{{ tag.id }}">{{ tag.tag_name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="Vincular esta tag ao movimento?" data-sa-titulo="Confirmar vínculo" data-sa-severidade="info" data-sa-ok="Vincular">Vincular</button></div>
+            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="Vincular esta tag ao lançamento?" data-sa-titulo="Confirmar vínculo" data-sa-severidade="info" data-sa-ok="Vincular">Vincular</button></div>
         </form>
     </div>
     <div class="chart-card">
@@ -79,16 +79,16 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_project' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact">ID do movimento<input type="number" name="entry_id" min="1" required></label>
+            <label class="top-filter-field compact">ID do lançamento<input type="number" name="entry_id" min="1" required></label>
             <label class="top-filter-field">Projeto
                 <select name="project_id" required>
-                    <option value="">Selecione...</option>
+                    <option value="">Selecione…</option>
                     {% for project in active_projects %}
                     <option value="{{ project.id }}">{{ project.project_name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="Vincular este projeto ao movimento?" data-sa-titulo="Confirmar vínculo" data-sa-severidade="info" data-sa-ok="Vincular">Vincular</button></div>
+            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="Vincular este projeto ao lançamento?" data-sa-titulo="Confirmar vínculo" data-sa-severidade="info" data-sa-ok="Vincular">Vincular</button></div>
         </form>
     </div>
 </div>
@@ -118,7 +118,7 @@
 {% endif %}
 
 <div class="table-container" data-ui="mb-1">
-    <h3 data-ui="mb-075">Orçado x realizado no mês</h3>
+    <h3 data-ui="mb-075">Orçado × realizado no mês</h3>
     <table class="tx-table">
         <thead><tr><th>Titular</th><th>Categoria</th><th>Orçado</th><th>Realizado</th><th>Diferença</th></tr></thead>
         <tbody>
@@ -138,7 +138,7 @@
 </div>
 
 <div class="table-container">
-    <h3 data-ui="mb-075">Movimentos classificados recentemente</h3>
+    <h3 data-ui="mb-075">Lançamentos classificados recentemente</h3>
     <table class="tx-table">
         <thead><tr><th>ID</th><th>Data</th><th>Conta</th><th>Descrição</th><th>Valor</th><th>Projeto</th><th>Tags</th></tr></thead>
         <tbody>
@@ -155,7 +155,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="7" data-ui="empty-2">Nenhum movimento encontrado.</td></tr>
+            <tr><td colspan="7" data-ui="empty-2">Nenhum lançamento encontrado.</td></tr>
             {% endfor %}
         </tbody>
     </table>
