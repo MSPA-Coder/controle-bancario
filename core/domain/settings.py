@@ -80,7 +80,8 @@ def normalize_ui_theme(value: str | None) -> str:
 
 # Idioma da interface (`AppUser.language`). Só os textos que o usuário lê: dados
 # gravados, logs, importação e exportação não mudam com ele. O português é a
-# língua-fonte dos textos; o inglês vem do catálogo em `locale/`.
+# língua-fonte dos textos; o inglês vem do catálogo em `locale/` (que só passa a
+# existir na etapa de tradução: até lá o `en` cai no português).
 LANGUAGE_PT_BR: Final = "pt-br"
 LANGUAGE_EN: Final = "en"
 VALID_LANGUAGES: Final = (LANGUAGE_PT_BR, LANGUAGE_EN)

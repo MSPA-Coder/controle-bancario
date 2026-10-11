@@ -149,6 +149,12 @@ class TestPreferenciaDoUsuario:
         usuario.refresh_from_db()
         assert (usuario.language, usuario.regional_format) == ("pt-br", REGIONAL_FORMAT_AUTO)
 
+    def test_campo_ausente_mantem_o_valor_que_o_usuario_ja_tem(self, client, usuario):
+        self._salvar(client, language="en", regional_format="us")
+        self._salvar(client, language="pt-br")  # sem regional_format
+        usuario.refresh_from_db()
+        assert (usuario.language, usuario.regional_format) == ("pt-br", REGIONAL_FORMAT_US)
+
     def test_perfil_oferece_idiomas_e_regioes_e_marca_a_escolhida(self, client, usuario):
         usuario.language = "en"
         usuario.regional_format = REGIONAL_FORMAT_BR

@@ -82,14 +82,17 @@ def update_user_ui_theme(user, theme: str) -> str:
     return normalized
 
 
-def update_user_locale(user, language: str, regional_format: str) -> tuple[str, str]:
+def update_user_locale(user, language: str | None, regional_format: str | None) -> tuple[str, str]:
     """Idioma e formato regional na tela. Só apresentação: nada gravado muda.
 
     Valor fora da lista cai no padrão em vez de gerar erro: a escolha vem de um
-    seletor fechado, e um POST forjado não ganha nada com a recusa.
+    seletor fechado, e um POST forjado não ganha nada com a recusa. Campo ausente
+    (`None`) mantém o que o usuário já tem.
     """
-    user.language = normalize_language(language)
-    user.regional_format = normalize_regional_format(regional_format)
+    if language is not None:
+        user.language = normalize_language(language)
+    if regional_format is not None:
+        user.regional_format = normalize_regional_format(regional_format)
     user.save(update_fields=["language", "regional_format", "updated_at"])
     return user.language, user.regional_format
 

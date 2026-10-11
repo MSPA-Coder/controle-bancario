@@ -206,15 +206,29 @@ usuário e as permissões continuam pertencendo a este projeto. O repositório d
 SharedAuth é público: o build o instala por Git, na tag fixada no
 `pyproject.toml` e no commit registrado no `uv.lock`, sem credencial.
 
-## Formato regional (Brasil/EUA)
+## Idioma e formato regional
 
-Cada usuário escolhe em Configurações > Perfil como datas e números aparecem e
-são digitados (`AppUser.regional_format`, padrão `br`). É só UX: banco, serviços,
-importação, exportação, API e MCP seguem como sempre foram (ISO `AAAA-MM-DD` e
-decimal com ponto).
+Cada usuário escolhe em Configurações > Perfil o **idioma** da interface
+(`AppUser.language`: `pt-br` ou `en`) e o **formato regional** de datas e números
+(`AppUser.regional_format`: `auto`, `br` ou `us`; `auto` acompanha o idioma e é o
+padrão de quem nasce agora, enquanto quem já tinha `br` ou `us` o mantém). É só
+UX: banco, serviços, importação, exportação, API e MCP seguem como sempre foram
+(ISO `AAAA-MM-DD` e decimal com ponto). **Fuso horário não é preferência de
+usuário:** as regras de negócio são por data (`DateField`, `date.today()`) e o
+mesmo lançamento não pode estar vencido para um usuário e a vencer para outro.
+O fuso do sistema é `America/Sao_Paulo`, e hora gravada em UTC é convertida para
+ele ao exibir (`core/regional.py`).
 
-- `core/regional.py` guarda o formato da requisição (preenchido por
-  `core/regional_middleware.py`) e formata datas; fora de requisição vale Brasil.
+- `core/idioma_middleware.py` ativa o idioma da requisição (usuário logado, ou o
+  `Accept-Language` na tela de login) e `core/regional_middleware.py` ativa a
+  região efetiva, nessa ordem, porque `auto` consulta o idioma. Os dois voltam ao
+  que era no fim da requisição.
+- A tabela de formatos (ordem e separador da data, decimal, milhar) é dado, em
+  `core/domain/settings.py` (`REGIONAL_SPECS`); incluir uma região é uma linha ali
+  e uma opção no seletor. O `regional.js` a lê do JSON `#regional-spec` e não tem
+  nada fixo por região.
+- `core/regional.py` guarda a região da requisição e formata datas; fora de
+  requisição vale Brasil.
 - Templates: texto legível usa `|udate`, `|udatetime`, `|umonth` (de
   `regional_filters`) e `|money`; valores de `<input>` seguem ISO.
 - Texto de tela montado em Python usa `regional.formatar_data` e afins. Texto

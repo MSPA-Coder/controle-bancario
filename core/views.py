@@ -458,7 +458,7 @@ def settings_update_theme_view(request):
 @require_POST
 def settings_update_locale_view(request):
     idioma, _formato = update_user_locale(
-        request.user, request.POST.get('language', ''), request.POST.get('regional_format', ''),
+        request.user, request.POST.get('language'), request.POST.get('regional_format'),
     )
     # A mensagem sai já no idioma escolhido, não no que valia até agora.
     with translation.override(idioma):

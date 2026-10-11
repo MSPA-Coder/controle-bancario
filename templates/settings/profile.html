@@ -65,6 +65,7 @@
                 </label>
                 {% endfor %}
             </div>
+            <p class="locale-hint">{% trans "O símbolo da moeda é o da conta; a região só muda os separadores." %}</p>
             <p class="locale-preview" id="locale-preview" aria-live="polite">{% for option in regional_options %}{% if current_regional_format == option.value %}{{ option.preview }}{% endif %}{% endfor %}</p>
         </fieldset>
         <button type="submit" class="btn btn-primary" data-sa-confirmar="{{ texto_confirmacao }}" data-sa-titulo="{{ titulo_confirmacao }}" data-sa-severidade="info" data-sa-ok="{{ texto_salvar }}">{% icon 'save' %}<span>{{ texto_salvar }}</span></button>

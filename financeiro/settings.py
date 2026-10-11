@@ -203,6 +203,7 @@ LANGUAGES = [
     ('pt-br', 'Português (Brasil)'),
     ('en', 'English (US)'),
 ]
+# O catálogo do inglês entra na etapa de tradução; a pasta pode não existir ainda.
 LOCALE_PATHS = [BASE_DIR / 'locale']
 TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
