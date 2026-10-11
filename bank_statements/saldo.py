@@ -102,7 +102,7 @@ def _conta(user, account_id, acao: str) -> FinancialAccount:
     except (FinancialAccount.DoesNotExist, ValueError, TypeError) as exc:
         raise ValueError("Conta não encontrada.") from exc
     if not can_access_account(user, conta.id, acao):
-        raise ValueError("Acesso negado para esta conta.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar esta conta.")
     if conta.is_credit_card:
         raise ValueError("Cartão de crédito não tem saldo para atualizar: use a fatura.")
     return conta
@@ -161,7 +161,7 @@ def previa(user, *, account_id, data: date, saldo_informado) -> Previa:
 def _categoria(nome: str) -> CashFlowCategory:
     categoria = CashFlowCategory.objects.filter(category_name__iexact=nome).first()
     if categoria is None:
-        raise ValueError(f"Cadastre a categoria \"{nome}\" antes de lançar esta diferença.")
+        raise ValueError(f"Cadastre a categoria “{nome}” antes de lançar esta diferença.")
     return categoria
 
 
@@ -178,7 +178,7 @@ def aplicar(
     rotulo, nome_da_categoria, tipo_fixo, exige_motivo = DESTINOS[destino]
     motivo = (motivo or "").strip()
     if exige_motivo and not motivo:
-        raise ValueError(f"\"{rotulo}\" exige um motivo.")
+        raise ValueError(f"“{rotulo}” exige um motivo.")
 
     atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado)
     conta = _conta(user, account_id, "create")
@@ -189,7 +189,7 @@ def aplicar(
     if atual.tipo is None:
         raise ValueError("O saldo informado já bate com o do CB: não há o que lançar.")
     if tipo_fixo is not None and tipo_fixo != atual.tipo:
-        raise ValueError(f"\"{rotulo}\" não serve ao sentido desta diferença.")
+        raise ValueError(f"“{rotulo}” não serve ao sentido desta diferença.")
 
     descricao = f"{PREFIXO_DA_DESCRICAO}: {rotulo.lower()}"
     if motivo:

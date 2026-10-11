@@ -111,7 +111,7 @@ ROTULOS_CURTOS = {
     IGNORA: "ignorada(s)",
 }
 
-_SEM_DESTINO = "Você não tem permissão de destino de transferência para {conta}."
+_SEM_DESTINO = "Acesso negado: você não tem permissão para receber transferência em {conta}."
 _JANELA_DO_PAR = timedelta(days=2)
 _LIMITE_DO_POOL = 3000
 # Palavras que dão cara de transferência a uma linha de extrato.
@@ -390,10 +390,10 @@ def planejar(user, linhas) -> list[Plano]:
             destino = conta_de_destino(regra, linha.account)
             if destino is None:
                 motivo = (
-                    f"A regra \"{regra.name}\" pede a aplicação vinculada a esta conta, e não há "
+                    f"A regra “{regra.name}” pede a aplicação vinculada a esta conta, e não há "
                     "exatamente uma: confira a conta de movimento das aplicações."
                     if regra.action == RULE_ACTION_LINKED else
-                    f"A conta \"{regra.destination_account_name}\" da regra \"{regra.name}\" não existe para este titular."
+                    f"A conta “{regra.destination_account_name}” da regra “{regra.name}” não existe para este titular."
                 )
                 planos.append(Plano(linha, MANUAL, regra=regra, motivo=motivo))
                 continue
@@ -427,7 +427,7 @@ def planejar(user, linhas) -> list[Plano]:
         sugestao = sugerir_categoria(linha.description, linha.bank_category, regra=regra_de_categoria)
         if sugestao.categoria is None:
             planos.append(
-                Plano(linha, MANUAL, motivo="Sem categoria: cadastre \"Outros\" ou escolha uma.", regra=regra)
+                Plano(linha, MANUAL, motivo="Sem categoria: cadastre “Outros” ou escolha uma.", regra=regra)
             )
         else:
             planos.append(Plano(linha, CRIA, sugestao=sugestao, regra=regra))
@@ -486,7 +486,7 @@ def _linha_travada(user, linha_id, acao: str = "update") -> BankStatementLine:
         .get(id=linha_id)
     )
     if not can_access_account(user, linha.account_id, acao):
-        raise ValueError("Acesso negado para esta linha de extrato.")
+        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
     if linha.status != LINE_STATUS_NEW or linha.matched_entry_id is not None:
         raise ValueError("Linha de extrato já conciliada ou ignorada.")
     return linha

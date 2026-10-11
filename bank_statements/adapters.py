@@ -813,7 +813,7 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
         dia = date(int(year), int(month), int(day))
         descricao = anterior
         if not descricao or descricao.startswith("ID ") or descricao.startswith(_AVENUE_CABECALHO):
-            raise ValueError(f"Não achei a descrição do lançamento de {dia:%d/%m/%Y} no extrato Avenue.")
+            raise ValueError(f"Não encontrei a descrição do lançamento de {dia:%d/%m/%Y} no extrato Avenue.")
         valor = _avenue_valor(valor_raw)
         valor = -valor if sinal == "-" else valor
         if valor == 0:
@@ -1148,7 +1148,7 @@ def get_statement_adapter(file: UploadedFile | None, *, institution=None) -> Sta
         if adapter_cls is None:
             raise ValueError(
                 f"Não há suporte a importação em PDF para a corretora "
-                f"'{getattr(institution, 'institution_name', '')}'."
+                f"“{getattr(institution, 'institution_name', '')}”."
             )
         return adapter_cls()
     if any(filename.endswith(ext) for ext in _OFX_EXTENSIONS) or any(m in mimetype for m in _OFX_MIMETYPES):
