@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.utils.translation import gettext
 
 from banking.services import currency_blocks
 from core.account_group_filter import parse_account_groups
@@ -154,7 +155,7 @@ def account_position_view(request):
     view_mode = normalize_view_mode(request.GET.get("mode"), default=VIEW_REALIZED)
     raw_year, raw_month = request.GET.get("year"), request.GET.get("month")
     if (raw_year and _parse_int(raw_year) is None) or (raw_month and _parse_int(raw_month) is None):
-        return invalid_period_response(request, "Período informado é inválido.")
+        return invalid_period_response(request, gettext("Período informado é inválido."))
     try:
         year, month = services.resolve_month_period(
             request.GET.get("period"), _parse_int(raw_year), _parse_int(raw_month), today,
