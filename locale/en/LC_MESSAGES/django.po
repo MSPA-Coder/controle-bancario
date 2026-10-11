@@ -1,0 +1,64 @@
+# English (US) catalogue for Controle Bancario.
+# The Portuguese source text is the msgid; do not edit msgids here.
+msgid ""
+msgstr ""
+"Project-Id-Version: controle-bancario\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-11 02:05-0300\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: core/regional.py
+msgid "Padrão do idioma"
+msgstr ""
+
+#: core/regional.py
+msgid "Brasil (pt-BR)"
+msgstr ""
+
+#: core/regional.py
+msgid "Estados Unidos (en-US)"
+msgstr ""
+
+#: core/views.py
+msgid "Idioma e formato regional atualizados."
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Aparência, idioma, formatos e preferências pessoais de grade."
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Idioma e região"
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Idioma dos textos e formato de datas e números nas telas. Não altera o que já está gravado, nem importações e exportações."
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Salvar idioma e formato como sua preferência?"
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Confirmar idioma e região"
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Salvar"
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Idioma"
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "Região e formatos"
+msgstr ""
+
+#: templates/settings/profile.html
+msgid "O símbolo da moeda é o da conta; a região só muda os separadores."
+msgstr ""

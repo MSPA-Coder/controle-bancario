@@ -79,3 +79,6 @@ Thumbs.db
 # conteudo de runtime, servidos a partir de volume, nunca do repositorio.
 media/
 staticfiles/
+
+# Catalogo de traducao compilado (nasce no build)
+locale/**/*.mo

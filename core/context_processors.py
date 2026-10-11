@@ -21,6 +21,7 @@ from core.account_group_filter import (
 )
 from core.contexto_global import faixa_de_contexto, telas_com_contexto
 from core.currency_filter import currency_filter_options, parse_currency_filter
+from core.textos_js import textos_js
 
 
 @dataclass(frozen=True)
@@ -357,6 +358,7 @@ def app_shell(request):
         # Região EFETIVA (`br` ou `us`): `auto` já foi resolvida pelo idioma.
         "regional_format": regional.especificacao().code,
         "regional_spec": regional.especificacao().as_dict(),
+        "textos_js": textos_js(),
         "table_scroll_rows": getattr(user, "table_scroll_rows", 15) if user else 15,
         "current_active_user": user,
         "app_menu_items": menu_items,
