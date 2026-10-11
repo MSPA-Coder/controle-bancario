@@ -9,7 +9,9 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import translation
 from django.utils.http import urlencode
+from django.utils.translation import gettext
 from django.views.decorators.http import require_POST
 
 from accounts.models import AccountOwner, AppUser
@@ -43,8 +45,8 @@ from core.context_processors import primeira_tela_permitida
 from core.domain.identity import USER_TYPE_ADMINISTRATOR, USER_TYPE_LABELS
 from core.domain.settings import (
     APP_SETTING_LAST_OPTIMIZE_INFO,
-    REGIONAL_FORMAT_EXAMPLES,
-    REGIONAL_FORMAT_LABELS,
+    LANGUAGE_LABELS,
+    LANGUAGE_LOCALES,
     UI_THEME_LABELS,
 )
 from core.permissions import permission_required
@@ -68,7 +70,7 @@ from core.services import (
     update_password_policy_settings,
     update_recurring_projection_settings,
     update_system_start_date,
-    update_user_regional_format,
+    update_user_locale,
     update_user_table_scroll_rows,
     update_user_ui_theme,
 )
@@ -432,10 +434,11 @@ def settings_profile_view(request):
         "theme_descriptions": UI_THEME_DESCRIPTIONS,
         "current_theme": request.user.ui_theme,
         "current_table_scroll_rows": request.user.table_scroll_rows,
-        "regional_options": [
-            (value, label, REGIONAL_FORMAT_EXAMPLES[value])
-            for value, label in REGIONAL_FORMAT_LABELS.items()
+        "language_options": [
+            (value, label, LANGUAGE_LOCALES[value]) for value, label in LANGUAGE_LABELS.items()
         ],
+        "current_language": request.user.language,
+        "regional_options": regional.opcoes_de_regiao(request.user.language),
         "current_regional_format": request.user.regional_format,
     })
 
@@ -453,9 +456,13 @@ def settings_update_theme_view(request):
 @login_required
 @permission_required('settings.theme.update')
 @require_POST
-def settings_update_regional_format_view(request):
-    novo = update_user_regional_format(request.user, request.POST.get('regional_format', ''))
-    messages.success(request, f"Formato de datas e números alterado para: {REGIONAL_FORMAT_LABELS[novo]}")
+def settings_update_locale_view(request):
+    idioma, _formato = update_user_locale(
+        request.user, request.POST.get('language', ''), request.POST.get('regional_format', ''),
+    )
+    # A mensagem sai já no idioma escolhido, não no que valia até agora.
+    with translation.override(idioma):
+        messages.success(request, gettext("Idioma e formato regional atualizados."))
     return redirect('core:settings_profile')
 
 

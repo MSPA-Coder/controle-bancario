@@ -25,6 +25,7 @@ from core.domain.settings import (
     APP_SETTING_PROJECTION_HORIZON_MONTHS,
     APP_SETTING_PROJECTION_RUN_DAY,
     APP_SETTING_SYSTEM_START_DATE,
+    normalize_language,
     normalize_regional_format,
     normalize_table_scroll_rows,
     normalize_ui_theme,
@@ -81,12 +82,16 @@ def update_user_ui_theme(user, theme: str) -> str:
     return normalized
 
 
-def update_user_regional_format(user, regional_format: str) -> str:
-    """Formato de datas e números na tela. Só apresentação: nada gravado muda."""
-    normalized = normalize_regional_format(regional_format)
-    user.regional_format = normalized
-    user.save(update_fields=["regional_format", "updated_at"])
-    return normalized
+def update_user_locale(user, language: str, regional_format: str) -> tuple[str, str]:
+    """Idioma e formato regional na tela. Só apresentação: nada gravado muda.
+
+    Valor fora da lista cai no padrão em vez de gerar erro: a escolha vem de um
+    seletor fechado, e um POST forjado não ganha nada com a recusa.
+    """
+    user.language = normalize_language(language)
+    user.regional_format = normalize_regional_format(regional_format)
+    user.save(update_fields=["language", "regional_format", "updated_at"])
+    return user.language, user.regional_format
 
 
 def update_user_table_scroll_rows(user, rows: object) -> int:

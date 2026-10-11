@@ -7,6 +7,9 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from django.utils.translation import get_language
+
+from core import regional
 from core.account_group_filter import (
     ACCOUNT_GROUP_OPTIONS,
     ALL_ACCOUNT_GROUPS,
@@ -350,7 +353,10 @@ def app_shell(request):
         "global_currency": global_currency,
         "global_currency_options": currency_filter_options(global_currency),
         "ui_theme": getattr(user, "ui_theme", "light") if user else "light",
-        "regional_format": getattr(user, "regional_format", "br") if user else "br",
+        "language_code": get_language() or "pt-br",
+        # Região EFETIVA (`br` ou `us`): `auto` já foi resolvida pelo idioma.
+        "regional_format": regional.especificacao().code,
+        "regional_spec": regional.especificacao().as_dict(),
         "table_scroll_rows": getattr(user, "table_scroll_rows", 15) if user else 15,
         "current_active_user": user,
         "app_menu_items": menu_items,

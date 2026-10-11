@@ -3,7 +3,7 @@
 {% comment %}Pre-autenticacao `ui_theme` resolve para "light": o tema fica no AppUser e
    ainda nao ha usuario. O atributo segue o mesmo contrato de base.html.
 {% endcomment %}
-<html lang="pt-BR" data-theme="{{ ui_theme|default:'light' }}">
+<html lang="{{ language_code|default:'pt-br' }}" data-theme="{{ ui_theme|default:'light' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

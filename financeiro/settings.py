@@ -104,7 +104,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # Depois da autenticação: lê o formato regional do usuário (só UX).
+    # Depois da autenticação: ativam o idioma e o formato regional do usuário (só
+    # UX). O idioma vem primeiro porque o formato `auto` o consulta.
+    'core.idioma_middleware.IdiomaMiddleware',
     'core.regional_middleware.FormatoRegionalMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -194,7 +196,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
+# `LANGUAGE_CODE` é o idioma-fonte dos textos (o português é o `msgid`) e o padrão
+# de quem não escolheu outro. O idioma de cada usuário vem de `AppUser.language`.
 LANGUAGE_CODE = 'pt-br'
+LANGUAGES = [
+    ('pt-br', 'Português (Brasil)'),
+    ('en', 'English (US)'),
+]
+LOCALE_PATHS = [BASE_DIR / 'locale']
 TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
