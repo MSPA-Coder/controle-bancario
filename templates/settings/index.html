@@ -20,23 +20,23 @@
 {% block content %}
 <div class="settings-split-grid">
     <div class="section-card">
-        <h3>Configuração de Senha</h3>
+        <h3>Configuração de senha</h3>
         <form method="post" action="{% url 'core:settings_update_password_policy' %}" class="settings-password-grid">
             {% csrf_token %}
             <div class="form-group">
-                <label>Qtde mínima de caracteres</label>
+                <label>Quantidade mínima de caracteres</label>
                 <input type="number" name="min_length" class="form-control" min="8" max="256" value="{{ password_policy_settings.min_length }}" required>
             </div>
             <div class="form-group">
-                <label>Qtde de maiúsculas</label>
+                <label>Quantidade de maiúsculas</label>
                 <input type="number" name="min_uppercase" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_uppercase }}" required>
             </div>
             <div class="form-group">
-                <label>Qtde de números</label>
+                <label>Quantidade de números</label>
                 <input type="number" name="min_numbers" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_numbers }}" required>
             </div>
             <div class="form-group">
-                <label>Qtde de caracteres especiais</label>
+                <label>Quantidade de caracteres especiais</label>
                 <input type="number" name="min_special" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_special }}" required>
             </div>
             <div class="btn-group" data-ui="settings-actions">
@@ -46,7 +46,7 @@
     </div>
 
     <div class="section-card">
-        <h3>Bloqueio de Login</h3>
+        <h3>Bloqueio de login</h3>
         <form method="post" action="{% url 'core:settings_update_login_lockout' %}" class="settings-password-grid">
             {% csrf_token %}
             <div class="form-group">
@@ -64,7 +64,7 @@
     </div>
 
     <div class="section-card">
-        <h3>Projeção de Recorrências</h3>
+        <h3>Projeção de recorrências</h3>
         <form method="post" action="{% url 'core:settings_update_recurring_projection' %}" class="btn-group" data-ui="items-end">
             {% csrf_token %}
             <div class="form-group" data-ui="field-220">
@@ -88,12 +88,12 @@
                aumentar o horizonte. A guarda mensal se aplica somente ao
                disparo automatico; ver `transactions/recurring_projection.py`.
             {% endcomment %}
-            <button type="submit" class="btn btn-success" data-sa-confirmar="Executar a projeção recorrente agora? A operação é idempotente e pode gerar lançamentos projetados.">{% icon 'refresh' %}<span>Executar Projeção Agora</span></button>
+            <button type="submit" class="btn btn-success" data-sa-confirmar="Executar a projeção recorrente agora? A operação é idempotente e pode gerar lançamentos projetados.">{% icon 'refresh' %}<span>Executar projeção agora</span></button>
         </form>
     </div>
 
     <div class="section-card">
-        <h3>Setup do Sistema</h3>
+        <h3>Setup do sistema</h3>
         <form method="post" action="{% url 'core:settings_update_recurring_projection' %}" class="btn-group" data-ui="items-end">
             {% csrf_token %}
             <input type="hidden" name="horizon_months" value="{{ projection_settings.horizon_months }}">
