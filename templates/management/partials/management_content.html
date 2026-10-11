@@ -1,94 +1,94 @@
-{% load money_filters navegacao regional_filters %}
+{% load i18n money_filters navegacao regional_filters %}
 {% load icons %}
 <div class="page-header-title" data-ui="mb-1">
     <div>
-        <h1>Painel gerencial</h1>
-        <p>Tags, projetos/centros de custo e orçamento mensal por categoria. Esta camada não altera o núcleo bancário de contas, saldos e lançamentos.</p>
+        <h1>{% trans "Painel gerencial" %}</h1>
+        <p>{% trans "Tags, projetos/centros de custo e orçamento mensal por categoria. Esta camada não altera o núcleo bancário de contas, saldos e lançamentos." %}</p>
     </div>
 </div>
 
 {% if can_manage %}
 <div class="cards-grid" data-ui="cards-260">
     <div class="chart-card">
-        <h3>Criar tag</h3>
+        <h3>{% trans "Criar tag" %}</h3>
         <form method="post" {% nav_escrita %} action="{% url 'management:create_tag' %}" class="stack-form">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label>Nome da tag<input type="text" name="tag_name" maxlength="80" required placeholder="Ex.: reembolsável"></label>
-            <button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar esta tag?" data-sa-titulo="Confirmar tag" data-sa-severidade="info" data-sa-ok="Salvar">Salvar tag</button>
+            <label>{% trans "Nome da tag" %}<input type="text" name="tag_name" maxlength="80" required placeholder="{% trans 'Ex.: reembolsável' %}"></label>
+            <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar esta tag?' %}" data-sa-titulo="{% trans 'Confirmar tag' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar tag" %}</button>
         </form>
     </div>
     <div class="chart-card">
-        <h3>Criar projeto / centro de custo</h3>
+        <h3>{% trans "Criar projeto / centro de custo" %}</h3>
         <form method="post" {% nav_escrita %} action="{% url 'management:create_project' %}" class="stack-form">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label>Nome<input type="text" name="project_name" maxlength="120" required placeholder="Ex.: Reforma Apto"></label>
-            <label>Descrição<input type="text" name="description" maxlength="255" placeholder="Opcional"></label>
-            <button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar este projeto ou centro de custo?" data-sa-titulo="Confirmar projeto" data-sa-severidade="info" data-sa-ok="Salvar">Salvar projeto</button>
+            <label>{% trans "Nome" %}<input type="text" name="project_name" maxlength="120" required placeholder="{% trans 'Ex.: Reforma Apto' %}"></label>
+            <label>{% trans "Descrição" %}<input type="text" name="description" maxlength="255" placeholder="{% trans 'Opcional' %}"></label>
+            <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar este projeto ou centro de custo?' %}" data-sa-titulo="{% trans 'Confirmar projeto' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar projeto" %}</button>
         </form>
     </div>
     <div class="chart-card">
-        <h3>Orçamento mensal</h3>
+        <h3>{% trans "Orçamento mensal" %}</h3>
         <form method="post" {% nav_escrita %} action="{% url 'management:save_budget' %}" class="stack-form">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label>Titular
+            <label>{% trans "Titular" %}
                 <select name="owner_id" required>
-                    <option value="">Selecione…</option>
+                    <option value="">{% trans "Selecione…" %}</option>
                     {% for owner in owners %}
                     <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <label>Categoria
+            <label>{% trans "Categoria" %}
                 <select name="category_id" required>
-                    <option value="">Selecione…</option>
+                    <option value="">{% trans "Selecione…" %}</option>
                     {% for category in categories %}
                     <option value="{{ category.id }}">{{ category.category_name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <label>Mês<input type="month" name="budget_month" value="{{ period_value }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %} required></label>
-            <label>Valor orçado<input type="number" name="planned_amount" min="0" step="0.01" required></label>
-            <button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar este orçamento mensal?" data-sa-titulo="Confirmar orçamento" data-sa-severidade="info" data-sa-ok="Salvar">Salvar orçamento</button>
+            <label>{% trans "Mês" %}<input type="month" name="budget_month" value="{{ period_value }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %} required></label>
+            <label>{% trans "Valor orçado" %}<input type="number" name="planned_amount" min="0" step="0.01" required></label>
+            <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar este orçamento mensal?' %}" data-sa-titulo="{% trans 'Confirmar orçamento' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar orçamento" %}</button>
         </form>
     </div>
 </div>
 
 <div class="cards-grid" data-ui="cards-320">
     <div class="chart-card">
-        <h3>Vincular tag a lançamento</h3>
+        <h3>{% trans "Vincular tag a lançamento" %}</h3>
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_tag' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact">ID do lançamento<input type="number" name="entry_id" min="1" required></label>
-            <label class="top-filter-field">Tag
+            <label class="top-filter-field compact">{% trans "ID do lançamento" %}<input type="number" name="entry_id" min="1" required></label>
+            <label class="top-filter-field">{% trans "Tag" %}
                 <select name="tag_id" required>
-                    <option value="">Selecione…</option>
+                    <option value="">{% trans "Selecione…" %}</option>
                     {% for tag in active_tags %}
                     <option value="{{ tag.id }}">{{ tag.tag_name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="Vincular esta tag ao lançamento?" data-sa-titulo="Confirmar vínculo" data-sa-severidade="info" data-sa-ok="Vincular">Vincular</button></div>
+            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Vincular esta tag ao lançamento?' %}" data-sa-titulo="{% trans 'Confirmar vínculo' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Vincular' %}">{% trans "Vincular" %}</button></div>
         </form>
     </div>
     <div class="chart-card">
-        <h3>Vincular projeto/centro de custo</h3>
+        <h3>{% trans "Vincular projeto/centro de custo" %}</h3>
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_project' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact">ID do lançamento<input type="number" name="entry_id" min="1" required></label>
-            <label class="top-filter-field">Projeto
+            <label class="top-filter-field compact">{% trans "ID do lançamento" %}<input type="number" name="entry_id" min="1" required></label>
+            <label class="top-filter-field">{% trans "Projeto" %}
                 <select name="project_id" required>
-                    <option value="">Selecione…</option>
+                    <option value="">{% trans "Selecione…" %}</option>
                     {% for project in active_projects %}
                     <option value="{{ project.id }}">{{ project.project_name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="Vincular este projeto ao lançamento?" data-sa-titulo="Confirmar vínculo" data-sa-severidade="info" data-sa-ok="Vincular">Vincular</button></div>
+            <div class="top-filter-actions"><button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Vincular este projeto ao lançamento?' %}" data-sa-titulo="{% trans 'Confirmar vínculo' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Vincular' %}">{% trans "Vincular" %}</button></div>
         </form>
     </div>
 </div>
@@ -96,21 +96,21 @@
 
 {% if can_manage %}
 <div class="table-container" data-ui="mb-1">
-    <h3 data-ui="mb-075">Ciclo de vida</h3>
-    <p>Itens sem vínculos são excluídos. Itens com histórico são arquivados e deixam de aceitar novos vínculos.</p>
+    <h3 data-ui="mb-075">{% trans "Ciclo de vida" %}</h3>
+    <p>{% trans "Itens sem vínculos são excluídos. Itens com histórico são arquivados e deixam de aceitar novos vínculos." %}</p>
     <table class="tx-table">
-        <thead><tr><th>Tipo</th><th>Nome / período</th><th>Status</th><th>Ação</th></tr></thead>
+        <thead><tr><th>{% trans "Tipo" %}</th><th>{% trans "Nome / período" %}</th><th>{% trans "Status" %}</th><th>{% trans "Ação" %}</th></tr></thead>
         <tbody>
             {% for tag in tags %}
-            <tr><td>Tag</td><td>{{ tag.tag_name }}</td><td>{% if tag.active %}Ativa{% else %}Arquivada{% endif %}</td><td>{% if tag.active %}<form method="post" {% nav_escrita %} action="{% url 'management:retire_tag' %}">{% csrf_token %}<input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}"><input type="hidden" name="tag_id" value="{{ tag.id }}"><button class="btn btn-ghost btn-sm" data-sa-confirmar="Excluir esta tag sem histórico ou arquivá-la se houver vínculos?" data-sa-titulo="Confirmar ciclo de vida" data-sa-severidade="warning" data-sa-ok="Confirmar">Excluir / arquivar</button></form>{% else %}-{% endif %}</td></tr>
+            <tr><td>{% trans "Tag" %}</td><td>{{ tag.tag_name }}</td><td>{% if tag.active %}{% trans "Ativa" %}{% else %}{% trans "Arquivada" %}{% endif %}</td><td>{% if tag.active %}<form method="post" {% nav_escrita %} action="{% url 'management:retire_tag' %}">{% csrf_token %}<input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}"><input type="hidden" name="tag_id" value="{{ tag.id }}"><button class="btn btn-ghost btn-sm" data-sa-confirmar="{% trans 'Excluir esta tag sem histórico ou arquivá-la se houver vínculos?' %}" data-sa-titulo="{% trans 'Confirmar ciclo de vida' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Confirmar' %}">{% trans "Excluir / arquivar" %}</button></form>{% else %}-{% endif %}</td></tr>
             {% endfor %}
             {% for project in projects %}
-            <tr><td>Projeto</td><td>{{ project.project_name }}</td><td>{% if project.active %}Ativo{% else %}Arquivado{% endif %}</td><td>{% if project.active %}<form method="post" {% nav_escrita %} action="{% url 'management:retire_project' %}">{% csrf_token %}<input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}"><input type="hidden" name="project_id" value="{{ project.id }}"><button class="btn btn-ghost btn-sm" data-sa-confirmar="Excluir este projeto sem histórico ou arquivá-lo se houver vínculos?" data-sa-titulo="Confirmar ciclo de vida" data-sa-severidade="warning" data-sa-ok="Confirmar">Excluir / arquivar</button></form>{% else %}-{% endif %}</td></tr>
+            <tr><td>{% trans "Projeto" %}</td><td>{{ project.project_name }}</td><td>{% if project.active %}{% trans "Ativo" %}{% else %}{% trans "Arquivado" %}{% endif %}</td><td>{% if project.active %}<form method="post" {% nav_escrita %} action="{% url 'management:retire_project' %}">{% csrf_token %}<input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}"><input type="hidden" name="project_id" value="{{ project.id }}"><button class="btn btn-ghost btn-sm" data-sa-confirmar="{% trans 'Excluir este projeto sem histórico ou arquivá-lo se houver vínculos?' %}" data-sa-titulo="{% trans 'Confirmar ciclo de vida' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Confirmar' %}">{% trans "Excluir / arquivar" %}</button></form>{% else %}-{% endif %}</td></tr>
             {% endfor %}
             {% for row in budget_rows %}
-            <tr><td>Orçamento</td><td>{{ row.budget.category.category_name }} — {{ row.budget.month|stringformat:'02d' }}/{{ row.budget.year }}</td><td>{% if row.budget.active %}Ativo{% else %}Arquivado{% endif %}</td><td>{% if row.budget.active %}<form method="post" {% nav_escrita %} action="{% url 'management:retire_budget' %}">{% csrf_token %}<input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}"><input type="hidden" name="budget_id" value="{{ row.budget.id }}"><button class="btn btn-ghost btn-sm" data-sa-confirmar="Excluir este orçamento sem realizado ou arquivá-lo se houver histórico?" data-sa-titulo="Confirmar ciclo de vida" data-sa-severidade="warning" data-sa-ok="Confirmar">Excluir / arquivar</button></form>{% else %}-{% endif %}</td></tr>
+            <tr><td>{% trans "Orçamento" %}</td><td>{{ row.budget.category.category_name }} — {{ row.budget.month|stringformat:'02d' }}/{{ row.budget.year }}</td><td>{% if row.budget.active %}{% trans "Ativo" %}{% else %}{% trans "Arquivado" %}{% endif %}</td><td>{% if row.budget.active %}<form method="post" {% nav_escrita %} action="{% url 'management:retire_budget' %}">{% csrf_token %}<input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}"><input type="hidden" name="budget_id" value="{{ row.budget.id }}"><button class="btn btn-ghost btn-sm" data-sa-confirmar="{% trans 'Excluir este orçamento sem realizado ou arquivá-lo se houver histórico?' %}" data-sa-titulo="{% trans 'Confirmar ciclo de vida' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Confirmar' %}">{% trans "Excluir / arquivar" %}</button></form>{% else %}-{% endif %}</td></tr>
             {% empty %}
-            <tr><td colspan="4" data-ui="empty-2">Nenhum item gerencial no período.</td></tr>
+            <tr><td colspan="4" data-ui="empty-2">{% trans "Nenhum item gerencial no período." %}</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -118,9 +118,9 @@
 {% endif %}
 
 <div class="table-container" data-ui="mb-1">
-    <h3 data-ui="mb-075">Orçado × realizado no mês</h3>
+    <h3 data-ui="mb-075">{% trans "Orçado × realizado no mês" %}</h3>
     <table class="tx-table">
-        <thead><tr><th>Titular</th><th>Categoria</th><th>Orçado</th><th>Realizado</th><th>Diferença</th></tr></thead>
+        <thead><tr><th>{% trans "Titular" %}</th><th>{% trans "Categoria" %}</th><th>{% trans "Orçado" %}</th><th>{% trans "Realizado" %}</th><th>{% trans "Diferença" %}</th></tr></thead>
         <tbody>
             {% for row in budget_rows %}
             <tr>
@@ -131,16 +131,16 @@
                 <td class="amount {{ row.difference|amount_class }}">{{ row.difference|money_signed }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" data-ui="empty-2">Nenhum orçamento cadastrado para o filtro atual.</td></tr>
+            <tr><td colspan="5" data-ui="empty-2">{% trans "Nenhum orçamento cadastrado para o filtro atual." %}</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
 <div class="table-container">
-    <h3 data-ui="mb-075">Lançamentos classificados recentemente</h3>
+    <h3 data-ui="mb-075">{% trans "Lançamentos classificados recentemente" %}</h3>
     <table class="tx-table">
-        <thead><tr><th>ID</th><th>Data</th><th>Conta</th><th>Descrição</th><th>Valor</th><th>Projeto</th><th>Tags</th></tr></thead>
+        <thead><tr><th>{% trans "ID" %}</th><th>{% trans "Data" %}</th><th>{% trans "Conta" %}</th><th>{% trans "Descrição" %}</th><th>{% trans "Valor" %}</th><th>{% trans "Projeto" %}</th><th>{% trans "Tags" %}</th></tr></thead>
         <tbody>
             {% for entry in recent_entries %}
             <tr>
@@ -155,7 +155,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="7" data-ui="empty-2">Nenhum lançamento encontrado.</td></tr>
+            <tr><td colspan="7" data-ui="empty-2">{% trans "Nenhum lançamento encontrado." %}</td></tr>
             {% endfor %}
         </tbody>
     </table>
