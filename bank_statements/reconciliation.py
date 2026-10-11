@@ -585,7 +585,9 @@ def correcao_da_realizacao(*, entry_antes: tuple, line: BankStatementLine) -> st
         })
     if valor != abs(line.amount):
         partes.append(gettext("valor de %(antes)s para %(depois)s") % {"antes": valor, "depois": abs(line.amount)})
-    return gettext(" e ").join(partes)
+    if len(partes) == 2:
+        return gettext("%(primeira)s e %(segunda)s") % {"primeira": partes[0], "segunda": partes[1]}
+    return "".join(partes)
 
 
 @db_transaction.atomic

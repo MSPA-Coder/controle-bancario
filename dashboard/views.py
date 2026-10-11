@@ -26,7 +26,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse
-from django.utils.translation import gettext
+from django.utils.translation import gettext, gettext_noop
 
 from banking.services import account_ids_by_currency
 from core import regional
@@ -122,7 +122,7 @@ def _saldo_diario(account_ids, month_start: date, next_month: date, view_mode: s
 	return list(por_dia.items())
 
 
-SEM_GRUPO = "Sem grupo"
+SEM_GRUPO = gettext_noop("Sem grupo")
 
 
 def _categorias(
@@ -143,7 +143,7 @@ def _categorias(
 			grupo = entry.category.group
 			if grupo is not None and not grupo.in_charts:
 				continue
-			nome = grupo.group_name if grupo is not None else SEM_GRUPO
+			nome = grupo.group_name if grupo is not None else gettext(SEM_GRUPO)
 		else:
 			nome = entry.category.category_name
 		totais[nome] = totais.get(nome, Decimal("0.00")) + entry_amount_for_view_mode(entry, view_mode)

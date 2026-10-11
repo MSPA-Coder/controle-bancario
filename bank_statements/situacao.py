@@ -117,6 +117,7 @@ class Celula:
     lote_id: int | None = None  # o lote mais recente com linhas no mês
     url: str = ""  # para onde a célula leva; quem monta a tela preenche
     motivo: str = ""  # aplicação vinculada: o que a deixa neste estado
+    saldo_pendente: bool = False  # aplicação vinculada à espera do saldo do fim do mês
 
     @property
     def icone(self) -> str:
@@ -280,8 +281,13 @@ def _celula_da_aplicacao(conta, mes: date, movimento: Celula, *, informado_no_fi
             return Celula(mes=mes, estado=CONCILIADO, motivo=gettext("%(rotulo)s conciliada; saldo de %(dia)s informado") % {"rotulo": rotulo, "dia": regional.formatar_dia_mes(_ultimo_dia(mes))})
         if zerada:
             return Celula(mes=mes, estado=CONCILIADO, motivo=gettext("%(rotulo)s conciliada; aplicação zerada e sem movimento") % {"rotulo": rotulo})
-        # Não marcar: `_motivo_do_fechado` compara este texto com startswith("falta informar").
-        return Celula(mes=mes, estado=COM_PENDENCIAS, motivo=f"falta informar o saldo de {regional.formatar_dia_mes(_ultimo_dia(mes))}")
+        return Celula(
+            mes=mes,
+            estado=COM_PENDENCIAS,
+            motivo=gettext("falta informar o saldo de %(dia)s")
+            % {"dia": regional.formatar_dia_mes(_ultimo_dia(mes))},
+            saldo_pendente=True,
+        )
     if movimento.estado == COM_PENDENCIAS:
         return Celula(mes=mes, estado=COM_PENDENCIAS, motivo=gettext("falta conciliar %(rotulo)s") % {"rotulo": rotulo})
     return Celula(mes=mes, estado=SEM_IMPORTACAO, motivo=gettext("sem extrato de %(rotulo)s") % {"rotulo": rotulo})
@@ -355,7 +361,7 @@ def _motivo_do_fechado(celula: Celula) -> str:
     """O que faltava ao mês, que o fechamento deu por conferido."""
     if celula.estado == SEM_IMPORTACAO:
         return gettext("fechado sem extrato importado")
-    if celula.motivo.startswith("falta informar"):
+    if celula.saldo_pendente:
         return gettext("fechado sem o saldo do fim do mês informado")
     return gettext("fechado")
 

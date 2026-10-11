@@ -16,7 +16,7 @@
 {% endif %}
 {% if global_context_labels %}
 <div class="global-filter-banner" role="status" data-global-context>
-    <span>{% trans "Recorte:" %} <strong>{{ global_context_labels|join:" · " }}</strong>{% trans ". Ele acompanha a navegação pelo menu." %}</span>
+    <span>{% trans "Recorte:" %} <strong>{{ global_context_labels|join:" · " }}</strong>. {% trans "Ele acompanha a navegação pelo menu." %}</span>
     <a href="{{ global_context_reset_url }}">{% trans "Limpar recorte" %}</a>
 </div>
 {% endif %}

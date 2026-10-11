@@ -16,7 +16,7 @@
         <span>{{ grupo.mes|umonth }} · {{ grupo.conta.owner.name }} / {{ grupo.conta.institution.institution_name }} / {{ grupo.conta.account_name }}
             · {% blocktrans trimmed count counter=grupo.quantidade %}{{ counter }} linha{% plural %}{{ counter }} linhas{% endblocktrans %} · <strong class="amount amount-positive">{{ grupo.total|money:grupo.conta.currency }}</strong></span>
         <button type="submit" class="btn-sm btn-primary"
-                data-sa-confirmar="{% blocktrans trimmed count counter=grupo.quantidade %}Criar {{ counter }} lançamento de rendimento deste mês?{% plural %}Criar {{ counter }} lançamentos de rendimento deste mês?{% endblocktrans %}"
+                data-sa-confirmar="{% blocktrans trimmed count counter=grupo.quantidade %}Criar {{ counter }} lançamento de rendimento deste mês?{% plural %}Criar os {{ counter }} lançamentos de rendimento deste mês?{% endblocktrans %}"
                 data-sa-titulo="{% trans 'Aplicar rendimentos do mês' %}"
                 data-sa-severidade="info"
                 data-sa-ok="{% trans 'Aplicar' %}">{% trans "Aplicar o mês" %}</button>

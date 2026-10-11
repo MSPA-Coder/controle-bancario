@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
+from django.utils.translation import gettext_noop
+
 # Tema e densidade de tabela sao preferencias por usuario e ficam em
 # `AppUser.ui_theme` / `AppUser.table_scroll_rows`, nao em app_setting.
 APP_SETTING_LAST_OPTIMIZE_INFO: Final = "last_optimize_info"
@@ -59,18 +61,18 @@ UI_THEME_LABELS: Final = {
     UI_THEME_EMERALD: "Emerald",
 }
 UI_THEME_DESCRIPTIONS: Final = {
-    UI_THEME_LIGHT: "Claro e neutro",
-    UI_THEME_DARK: "Escuro e focado",
-    UI_THEME_SOLARIZED_LIGHT: "Claro suave",
-    UI_THEME_SOLARIZED_DARK: "Escuro suave",
-    UI_THEME_DRACULA: "Alto contraste",
-    UI_THEME_NORD: "Azul frio",
-    UI_THEME_MONOKAI: "Técnico vibrante",
-    UI_THEME_GRAY: "Neutro analítico",
-    UI_THEME_SOFT_LIGHT: "Claro confortável",
-    UI_THEME_SOFT_DARK: "Escuro confortável",
-    UI_THEME_CORPORATE_BLUE: "Azul corporativo",
-    UI_THEME_EMERALD: "Verde financeiro",
+    UI_THEME_LIGHT: gettext_noop("Claro e neutro"),
+    UI_THEME_DARK: gettext_noop("Escuro e focado"),
+    UI_THEME_SOLARIZED_LIGHT: gettext_noop("Claro suave"),
+    UI_THEME_SOLARIZED_DARK: gettext_noop("Escuro suave"),
+    UI_THEME_DRACULA: gettext_noop("Alto contraste"),
+    UI_THEME_NORD: gettext_noop("Azul frio"),
+    UI_THEME_MONOKAI: gettext_noop("Técnico vibrante"),
+    UI_THEME_GRAY: gettext_noop("Neutro analítico"),
+    UI_THEME_SOFT_LIGHT: gettext_noop("Claro confortável"),
+    UI_THEME_SOFT_DARK: gettext_noop("Escuro confortável"),
+    UI_THEME_CORPORATE_BLUE: gettext_noop("Azul corporativo"),
+    UI_THEME_EMERALD: gettext_noop("Verde financeiro"),
 }
 
 

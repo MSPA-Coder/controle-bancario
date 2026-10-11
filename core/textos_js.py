@@ -63,6 +63,8 @@ FONTES: tuple[str, ...] = (
     gettext_noop("Geração"),
     gettext_noop("Saldo"),
     gettext_noop("Valores"),
+    # Mesmo texto que o servidor usa para a fatia sem grupo; o JS compara com ele.
+    gettext_noop("Sem grupo"),
     # static/js/transactions.js: diálogo ao editar com escopo "este e os próximos".
     gettext_noop("Este registro e os próximos serão recriados. Deseja continuar?"),
     gettext_noop("Confirmar alteração"),

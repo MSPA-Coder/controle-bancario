@@ -127,7 +127,7 @@
             /* Por grupo, a fatia abre Lançamentos filtrado pelo grupo; por
                categoria, pela categoria. "Sem grupo" não é um grupo cadastrado. */
             if (d.catMode === 'grupo') {
-                if (label === 'Sem grupo') return;
+                if (label === t('Sem grupo')) return;
                 extras.filter_group = label;
             } else {
                 extras.filter_category = label;

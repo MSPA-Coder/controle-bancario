@@ -435,7 +435,7 @@ def settings_profile_view(request):
     from core.domain.settings import UI_THEME_DESCRIPTIONS
     return render(request, "settings/profile.html", {
         "theme_options": UI_THEME_LABELS,
-        "theme_descriptions": UI_THEME_DESCRIPTIONS,
+        "theme_descriptions": {tema: gettext(texto) for tema, texto in UI_THEME_DESCRIPTIONS.items()},
         "current_theme": request.user.ui_theme,
         "current_table_scroll_rows": request.user.table_scroll_rows,
         "language_options": [
@@ -708,7 +708,7 @@ def settings_health_check_view(request):
         if result.ok:
             messages.success(request, gettext("Health check concluído. %(resumo)s") % {"resumo": result.summary})
         else:
-            messages.warning(request, gettext("Health check encontrou inconsistência(s). %(resumo)s") % {"resumo": result.summary})
+            messages.warning(request, gettext("Health check encontrou inconsistências. %(resumo)s") % {"resumo": result.summary})
             for label, count in result.orphan_checks:
                 if count:
                     messages.warning(request, ngettext("%(rotulo)s: %(n)s registro órfão.", "%(rotulo)s: %(n)s registros órfãos.", count) % {"rotulo": label, "n": count})

@@ -108,7 +108,7 @@ def _erro_de_leitura(file_like: UploadedFile, institution=None) -> str:
     except ValueError as exc:
         return str(exc)
     if not linhas and extract_statement_balance(file_like) is None:
-        return "O extrato não tem movimento nem saldo: não há o que importar."
+        return gettext("O extrato não tem movimento nem saldo: não há o que importar.")
     return ""
 
 
@@ -210,7 +210,9 @@ def stage_uploaded_files(user, files: list[UploadedFile]) -> list[PendingStateme
         extension = Path(safe_original).suffix.lower()
         if extension and extension not in ALLOWED_UPLOAD_EXTENSIONS:
             staged.append(
-                _failed_upload(user, uploaded_file, safe_original, "Tipo de arquivo não permitido para importação.")
+                _failed_upload(
+                    user, uploaded_file, safe_original, gettext("Tipo de arquivo não permitido para importação.")
+                )
             )
             continue
 

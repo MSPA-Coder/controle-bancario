@@ -509,16 +509,21 @@ def optimize_database() -> str:
                 cursor.execute(f"VACUUM ANALYZE {table}")  # noqa: S608 - nomes fixos, não vêm de entrada do usuário
         finally:
             connection.set_autocommit(previous_autocommit)
-    summary = ngettext(
-        "VACUUM ANALYZE executado em %(n)s tabela.",
-        "VACUUM ANALYZE executado em %(n)s tabelas.",
-        len(_HEALTH_CHECK_TABLES),
-    ) % {"n": len(_HEALTH_CHECK_TABLES)}
+    total = len(_HEALTH_CHECK_TABLES)
+    # Grava a contagem, não a frase: o texto sai na leitura, no idioma de quem lê.
     upsert_app_setting(
         APP_SETTING_LAST_OPTIMIZE_INFO,
-        f"{datetime.now().isoformat(timespec='seconds')}|{summary}",
+        f"{datetime.now().isoformat(timespec='seconds')}|{total}",
     )
-    return summary
+    return _resumo_da_otimizacao(total)
+
+
+def _resumo_da_otimizacao(tabelas: int) -> str:
+    return ngettext(
+        "VACUUM ANALYZE executado em %(n)s tabela.",
+        "VACUUM ANALYZE executado em %(n)s tabelas.",
+        tabelas,
+    ) % {"n": tabelas}
 
 
 def format_last_optimize_info(setting_value: str | None) -> str:
@@ -529,6 +534,8 @@ def format_last_optimize_info(setting_value: str | None) -> str:
         formatted = regional.formatar_data_hora(datetime.fromisoformat(timestamp), segundos=True)
     except ValueError:
         return setting_value
+    if summary.isdigit():
+        summary = _resumo_da_otimizacao(int(summary))
     return f"{formatted} — {summary}" if summary else formatted
 
 

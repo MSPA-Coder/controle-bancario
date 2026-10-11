@@ -128,8 +128,10 @@ def process_imports_view(request):
     if faturas:
         if len(faturas) > 1:
             outras = ", ".join(lote.source_filename for lote in faturas[1:])
-            messages.info(request, gettext(
-                "Outras faturas aguardando processamento: %(outras)s."
+            messages.info(request, ngettext(
+                "Outra fatura aguardando processamento: %(outras)s.",
+                "Outras faturas aguardando processamento: %(outras)s.",
+                len(faturas) - 1,
             ) % {"outras": outras})
         destino = reverse('bank_statements:fatura', args=[faturas[0].id])
         if quer_fragmento(request):
@@ -151,21 +153,23 @@ def undo_import_view(request, batch_id):
     """Desfaz um lote de importação inteiro (lançamento, não fatura de cartão)."""
     try:
         line_count, reconciled_count = reconciliation.undo_statement_import(request.user, batch_id=batch_id)
-        texto = ngettext(
-            "Importação desfeita: %(linhas)s linha de extrato removida",
-            "Importação desfeita: %(linhas)s linhas de extrato removidas",
+        linhas = ngettext(
+            "Importação desfeita: %(n)s linha de extrato removida",
+            "Importação desfeita: %(n)s linhas de extrato removidas",
             line_count,
-        ) % {"linhas": line_count}
+        ) % {"n": line_count}
         if reconciled_count:
-            texto += ngettext(
-                ", %(conciliacoes)s conciliação revertida — os lançamentos "
-                "voltaram a ficar em aberto, conforme o vencimento, sem serem apagados.",
-                ", %(conciliacoes)s conciliações revertidas — os lançamentos "
-                "voltaram a ficar em aberto, conforme o vencimento, sem serem apagados.",
+            conciliacoes = ngettext(
+                "%(n)s conciliação revertida",
+                "%(n)s conciliações revertidas",
                 reconciled_count,
-            ) % {"conciliacoes": reconciled_count}
+            ) % {"n": reconciled_count}
+            texto = gettext(
+                "%(linhas)s, %(conciliacoes)s — os lançamentos "
+                "voltaram a ficar em aberto, conforme o vencimento, sem serem apagados."
+            ) % {"linhas": linhas, "conciliacoes": conciliacoes}
         else:
-            texto += "."
+            texto = gettext("%(linhas)s.") % {"linhas": linhas}
         messages.success(request, texto)
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -253,7 +257,7 @@ def _mes_do_get(valor) -> date | None:
 
 def _destino_da_celula(conta, celula) -> str:
     """Onde resolver a célula: importar o que falta, conciliar o pendente, ver o que já está feito."""
-    if conta.movement_account_id and celula.motivo.startswith("falta informar"):
+    if conta.movement_account_id and celula.saldo_pendente:
         return reverse('bank_statements:atualizar_saldo')
     if celula.estado == situacao.SEM_IMPORTACAO:
         return reverse('bank_statements:imports_view')
@@ -309,9 +313,9 @@ def processar_fatura_view(request, batch_id):
             feitas,
         ) % {"n": feitas}
         if pendentes:
-            texto += ngettext(
-                " %(n)s pagamento sem transferência ficou em Conciliação.",
-                " %(n)s pagamentos sem transferência ficaram em Conciliação.",
+            texto += " " + ngettext(
+                "%(n)s pagamento sem transferência ficou em Conciliação.",
+                "%(n)s pagamentos sem transferência ficaram em Conciliação.",
                 pendentes,
             ) % {"n": pendentes}
         messages.success(request, texto)

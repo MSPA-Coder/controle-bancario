@@ -875,7 +875,7 @@ def annual_planning_presentation(
                 "owner_values": owner_zeroes(),
                 "months": zeroes(),
                 "descriptions": {},
-                "group": (grupo.position, grupo.group_name) if grupo else (10**6, "Sem grupo"),
+                "group": (grupo.position, grupo.group_name) if grupo else (10**6, gettext("Sem grupo")),
             },
         )
         category_bucket["months"][month_index] += signed_amount

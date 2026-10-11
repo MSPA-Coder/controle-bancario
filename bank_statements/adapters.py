@@ -28,6 +28,10 @@ from django.utils.translation import gettext, ngettext
 from core import regional
 
 
+class ValorZeradoError(ValueError):
+    """Valor 0,00 no extrato: a fatura em CSV trata como linha ignorável, não como erro."""
+
+
 @dataclass(frozen=True)
 class ParsedStatementLine:
     """Linha de extrato já normalizada para o domínio interno."""
@@ -142,7 +146,7 @@ def _parse_amount(raw: str) -> Decimal:
         value = value.replace(",", ".")
     amount = _to_decimal(value)
     if amount == 0:
-        raise ValueError("Valor zerado no extrato não é aceito.")
+        raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
     return amount
 
 
@@ -256,7 +260,7 @@ def _parse_ofx_amount(raw: str) -> Decimal:
     value = (raw or "").strip().replace(",", ".")
     amount = _to_decimal(value)
     if amount == 0:
-        raise ValueError("Valor zerado no extrato não é aceito.")
+        raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
     return amount
 
 
@@ -471,7 +475,7 @@ def _parse_genial_amount(sign: str, raw: str) -> Decimal:
     if sign == "-":
         amount = -amount
     if amount == 0:
-        raise ValueError("Valor zerado no extrato não é aceito.")
+        raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
     return amount
 
 
@@ -653,7 +657,7 @@ def _parse_mercadopago_lines(text: str, account_id: int) -> list[ParsedStatement
                 % {"data": regional.formatar_data(statement_date), "variacao": amount, "valor": valor_raw}
             )
         if amount == 0:
-            raise ValueError("Valor zerado no extrato não é aceito.")
+            raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
         partes = [*movimento["acima"], inline or "", *movimento["abaixo"]]
         description = " ".join(parte.strip() for parte in partes if parte and parte.strip())[:255]
         if not description:
@@ -806,7 +810,7 @@ def _parse_itau_lines(text: str, account_id: int) -> list[ParsedStatementLine]:
     # Do mais antigo para o mais recente; dentro do dia, na ordem do arquivo.
     for dia, descricao, valor in sorted(leitura.lancamentos, key=lambda item: item[0]):
         if valor == 0:
-            raise ValueError("Valor zerado no extrato não é aceito.")
+            raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
         descricao = descricao[:255]
         parsed.append(
             ParsedStatementLine(
@@ -877,7 +881,7 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
         valor = _avenue_valor(valor_raw)
         valor = -valor if sinal == "-" else valor
         if valor == 0:
-            raise ValueError("Valor zerado no extrato não é aceito.")
+            raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
         saldo += valor
         if abs(saldo - _avenue_valor(saldo_raw)) > Decimal("0.01"):
             raise ValueError(
@@ -1139,7 +1143,7 @@ def _parse_xp_linhas(linhas: list[_LinhaXp], account_id: int) -> list[ParsedStat
     parsed = []
     for linha in linhas:
         if linha.valor == 0:
-            raise ValueError("Valor zerado no extrato não é aceito.")
+            raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
         descricao = linha.descricao[:255] or "Movimento XP"
         parsed.append(
             ParsedStatementLine(
