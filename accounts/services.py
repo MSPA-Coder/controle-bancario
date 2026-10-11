@@ -172,13 +172,13 @@ PERMISSION_MENU_GROUPS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
         "transactions.view", "transactions.create", "transactions.update",
         "transactions.realize", "transactions.delete",
     )),
-    ("Movimentação · Parcelas e Recorrências", ("operations.view",)),
+    ("Movimentação · Parcelas e recorrências", ("operations.view",)),
     ("Movimentação · Comprovantes", ("banking.attachments.manage",)),
     ("Movimentação · Instituições · Acesso geral", ("banking.view",)),
     ("Movimentação · Importação · Extratos e faturas", ("banking.import",)),
     ("Movimentação · Importação · Conciliação", ("banking.reconcile",)),
     ("Movimentação · Reclassificação", ("banking.reclassify",)),
-    ("Movimentação · Fechamento Mensal", ("settings.monthly_close.manage",)),
+    ("Movimentação · Fechamento mensal", ("settings.monthly_close.manage",)),
     ("Relatórios · Próximos movimentos", ("reports.upcoming_movements.view",)),
     ("Relatórios · Projeções", ("projections.view",)),
     ("Relatórios · Posição por conta", ("reports.account_position.view",)),
@@ -372,10 +372,10 @@ def user_mutation_block_message(
             return "Ação bloqueada: não é permitido excluir o último administrator."
 
     if action in ("add", "edit") and _is_elevated_user_type(requested_user_type) and current_user.user_type != USER_TYPE_ADMINISTRATOR:
-        return "Acesso negado: somente administrator pode criar ou promover usuários privilegiados."
+        return "Acesso negado: você não tem permissão para criar ou promover usuários privilegiados."
 
     if action == "edit" and target_user and _is_elevated_user_type(target_user.user_type) and current_user.user_type != USER_TYPE_ADMINISTRATOR:
-        return "Acesso negado: somente administrator pode alterar usuário privilegiado."
+        return "Acesso negado: você não tem permissão para alterar usuário privilegiado."
 
     return None
 
@@ -468,9 +468,9 @@ def reset_managed_user_password(user: AppUser) -> str:
         validate_password(senha, user=user)
     except ValidationError as exc:
         raise ValueError(
-            "A senha sorteada nao atende a politica configurada em "
-            "Configuracoes > Parametros (" + " ".join(exc.messages) + "). "
-            "Ajuste a politica ou defina a senha pela edicao do usuario."
+            "A senha sorteada não atende à política configurada em "
+            "Configurações > Parâmetros: " + " ".join(exc.messages) + " "
+            "Ajuste a política ou defina a senha pela edição do usuário."
         ) from exc
 
     user.set_password(senha)
@@ -622,7 +622,7 @@ def update_owner(user, owner: AccountOwner, name: str) -> AccountOwner:
     # `tables.owners.manage` diz que a pessoa gerencia titulares, não QUAIS: o
     # escopo por titular vale aqui como vale para as contas do titular.
     if not can_access_owner(user, owner.id, "update"):
-        raise ValueError("Acesso negado: você não pode alterar este titular.")
+        raise ValueError("Acesso negado: você não tem permissão para alterar este titular.")
     clean_name = _clean_owner_name(name)
     if AccountOwner.objects.filter(name__iexact=clean_name).exclude(id=owner.id).exists():
         raise ValueError("Já existe um titular com esse nome.")
@@ -636,7 +636,7 @@ def update_owner(user, owner: AccountOwner, name: str) -> AccountOwner:
 
 def delete_owner(user, owner: AccountOwner) -> None:
     if not can_access_owner(user, owner.id, "delete"):
-        raise ValueError("Acesso negado: você não pode excluir este titular.")
+        raise ValueError("Acesso negado: você não tem permissão para excluir este titular.")
     try:
         owner.delete()
     except ProtectedError as exc:
