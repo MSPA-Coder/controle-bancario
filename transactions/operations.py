@@ -24,7 +24,11 @@ from django.db.models import Max
 from django.utils.translation import gettext, gettext_lazy
 
 from accounts.services import accessible_owner_ids
-from core.domain.finance import COMPOSITE_OPERATION_TYPES, OPERATION_INTERNAL_TRANSFER
+from core.domain.finance import (
+    COMPOSITE_OPERATION_TYPES,
+    OPERATION_INTERNAL_TRANSFER,
+    STATUS_OPTIONS,
+)
 from core.services import system_start_date
 
 from .models import CashFlowEntry
@@ -65,9 +69,10 @@ def _account_label(account) -> str:
 
 
 def _status_summary(entries: Iterable[CashFlowEntry]) -> str:
-    statuses = sorted({entry.status or "-" for entry in entries})
+    rotulos = dict(STATUS_OPTIONS)
+    statuses = sorted({str(rotulos.get(entry.status, entry.status or "-")) for entry in entries})
     if len(statuses) == 1:
-        return statuses[0].capitalize()
+        return statuses[0]
     return gettext("Misto: %(statuses)s") % {"statuses": ", ".join(statuses)}
 
 

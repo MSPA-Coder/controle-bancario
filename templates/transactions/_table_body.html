@@ -24,7 +24,7 @@
                 <th class="filter-type">
                     <select data-table-filter name="filter_type" aria-label="{% trans 'Filtrar por tipo' %}" hx-get="{% url 'transactions:transactions_view' %}" hx-trigger="change" hx-include="#contextForm, [data-table-filter]" hx-target="#transactions-table-container" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
                         <option value="">{% trans "Todos" %}</option>
-                        {% for t in available_types %}<option value="{{ t }}" {% if t == filter_type %}selected{% endif %}>{{ t|capfirst }}</option>{% endfor %}
+                        {% for t in available_types %}<option value="{{ t }}" {% if t == filter_type %}selected{% endif %}>{% if t == 'receita' %}{% trans 'Receita' %}{% elif t == 'despesa' %}{% trans 'Despesa' %}{% else %}{{ t|capfirst }}{% endif %}</option>{% endfor %}
                     </select>
                 </th>
                 <th>
@@ -58,7 +58,7 @@
             {% for t in txs %}
             <tr id="tx-row-{{ t.id }}" class="{% if entry_id and t.id == entry_id %}tx-highlight{% endif %}">
                 <td>{% if t.display_date %}{{ t.display_date|udate }}{% else %}-{% endif %}</td>
-                <td>{{ t.entry_type|capfirst }}</td>
+                <td>{{ t.get_entry_type_display }}</td>
                 <td>{{ t.category.category_name }}</td>
                 <td>{{ t.description }}</td>
                 <td>{% if t.installments > 1 %}{{ t.current_installment }}/{{ t.installments }}{% else %}-{% endif %}</td>

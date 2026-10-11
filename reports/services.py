@@ -24,6 +24,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db.models import Case, DecimalField, F, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
+from django.utils import dateformat
 from django.utils.translation import gettext, ngettext
 
 from accounts.models import AccountOwner
@@ -767,7 +768,7 @@ def annual_planning_presentation(
             "months": [
                 {
                     "key": month.strftime("%Y-%m"),
-                    "label": month.strftime("%b/%y").capitalize(),
+                    "label": dateformat.format(month, "M/y").capitalize(),
                     "is_current": month == reference_month,
                 }
                 for month in months
@@ -1039,7 +1040,7 @@ def annual_planning_presentation(
         "months": [
             {
                 "key": month.strftime("%Y-%m"),
-                "label": month.strftime("%b/%y").capitalize(),
+                "label": dateformat.format(month, "M/y").capitalize(),
                 "is_current": month == reference_month,
             }
             for month in months

@@ -58,7 +58,7 @@
                 <th scope="col" class="situacao-conta">{% trans "Conta" %}</th>
                 {% for mes in matriz.meses %}
                 <th scope="col" class="{% if mes == resumo.mes %}situacao-referencia{% endif %}">
-                    <a href="?meses={{ quantos }}&amp;ref={{ mes|date:'Y-m' }}" title="{% trans 'Resumir' %} {{ mes|date:'F \d\e Y' }}">{{ mes|date:"M/y" }}</a>
+                    <a href="?meses={{ quantos }}&amp;ref={{ mes|date:'Y-m' }}" title="{% trans 'Resumir' %} {{ mes|date:'YEAR_MONTH_FORMAT' }}">{{ mes|date:"M/y" }}</a>
                     {% if mes.year == matriz.hoje.year and mes.month == matriz.hoje.month %}<small>{% trans "em andamento" %}</small>{% endif %}
                 </th>
                 {% endfor %}

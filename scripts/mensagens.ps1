@@ -24,7 +24,8 @@ $extrair = "cp -r /workspace /tmp/w && cd /tmp/w && django-admin makemessages -l
 
 if ($Conferir) {
     # A data de criacao do cabecalho muda a cada extracao e nao conta.
-    $comando = "$extrair && diff -I '^`"POT-Creation-Date' /tmp/w/$po /workspace/$po"
+    # O ponto casa a aspa que abre a linha: o PowerShell 5.1 perde aspas duplas em argumento nativo.
+    $comando = "$extrair && diff -I '^.POT-Creation-Date' /tmp/w/$po /workspace/$po"
 } else {
     $comando = "$extrair && cp /tmp/w/$po /workspace/$po"
 }

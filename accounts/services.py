@@ -30,8 +30,8 @@ from .password_validators import current_min_length
 # @permission_required ou item de menu realmente referencia hoje. Novas
 # chaves entram junto com o módulo que passa a usá-las.
 # As descrições são marcadas com gettext_noop, e não com gettext_lazy: o texto
-# do dicionário é comparado com o que o banco guarda (ver `_descricao_exibida`),
-# e um lazy compara pelo idioma ativo, o que faria a comparação falhar em inglês.
+# do dicionário é a chave de comparação em `_descricao_exibida`; um lazy compara
+# pelo idioma ativo, o que mudaria o resultado em inglês.
 PERMISSION_DEFINITIONS: Final[dict[str, str]] = {
     "dashboard.view": gettext_noop("Visualizar Dashboard"),
     "transactions.view": gettext_noop("Visualizar lançamentos"),
@@ -228,12 +228,12 @@ for _group_name, _keys in PERMISSION_MENU_GROUPS:
 def _descricao_exibida(permission: AppPermission) -> str:
     """Descrição que a matriz mostra para a permissão.
 
-    A tela lê o texto do banco, que as migrations semeiam. Esse texto só é
-    traduzido quando é igual ao do dicionário: aí há msgid para ele. Se o banco
-    diverge do dicionário, nenhuma tradução corresponde, e vale o do banco.
+    O dicionário é a fonte do texto e do msgid. O banco guarda o que as migrations
+    semearam, que pode ter ficado para trás de um renomeio de tela; só uma
+    permissão fora do dicionário mostra o texto do banco.
     """
     semente = PERMISSION_DEFINITIONS.get(permission.name)
-    if semente is not None and permission.description == semente:
+    if semente is not None:
         return gettext(semente)
     return permission.description
 
@@ -395,7 +395,7 @@ def user_mutation_block_message(
             user_type=USER_TYPE_ADMINISTRATOR
         ).exclude(id=target_user.id).exists()
         if not other_admin_exists:
-            return gettext("Ação bloqueada: não é permitido excluir o último administrator.")
+            return gettext("Ação bloqueada: não é permitido excluir o último administrador.")
 
     if action in ("add", "edit") and _is_elevated_user_type(requested_user_type) and current_user.user_type != USER_TYPE_ADMINISTRATOR:
         return gettext("Acesso negado: você não tem permissão para criar ou promover usuários privilegiados.")

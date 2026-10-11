@@ -33,7 +33,7 @@
             <select name="status" aria-label="{% trans 'Status' %}">
                 <option value="">{% trans "Todos" %}</option>
                 {% for s in statuses %}
-                <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|capfirst }}</option>
+                <option value="{{ s }}" {% if status == s %}selected{% endif %}>{% if s == 'a_vencer' %}{% trans 'A vencer' %}{% elif s == 'vencidos' %}{% trans 'Vencidos' %}{% elif s == 'realizado' %}{% trans 'Realizado' %}{% else %}{{ s|capfirst }}{% endif %}</option>
                 {% endfor %}
             </select>
         </label>

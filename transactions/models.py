@@ -1,6 +1,7 @@
 """Models de transações e fluxo de caixa."""
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy
 
 from core.domain.finance import (
     CATEGORY_KIND_MANAGERIAL,
@@ -140,10 +141,10 @@ class BankOperation(models.Model):
     operation_type = models.CharField(
         max_length=30,
         choices=[
-            (OPERATION_SINGLE, 'Única'),
-            (OPERATION_INSTALLMENT, 'Parcelado'),
-            (OPERATION_RECURRING, 'Recorrente'),
-            (OPERATION_INTERNAL_TRANSFER, 'Transferência Interna'),
+            (OPERATION_SINGLE, gettext_lazy('Única')),
+            (OPERATION_INSTALLMENT, gettext_lazy('Parcelado')),
+            (OPERATION_RECURRING, gettext_lazy('Recorrente')),
+            (OPERATION_INTERNAL_TRANSFER, gettext_lazy('Transferência Interna')),
         ],
         default=OPERATION_SINGLE,
     )
@@ -151,9 +152,9 @@ class BankOperation(models.Model):
     status = models.CharField(
         max_length=20,
         choices=[
-            (STATUS_PROJECTED, 'A vencer'),
-            (STATUS_PENDING, 'Vencidos'),
-            (STATUS_REALIZED, 'Realizado'),
+            (STATUS_PROJECTED, gettext_lazy('A vencer')),
+            (STATUS_PENDING, gettext_lazy('Vencidos')),
+            (STATUS_REALIZED, gettext_lazy('Realizado')),
         ],
         default=STATUS_PROJECTED,
     )
@@ -211,8 +212,8 @@ class CashFlowEntry(models.Model):
     entry_type = models.CharField(
         max_length=10,
         choices=[
-            (ENTRY_TYPE_INCOME, 'Receita'),
-            (ENTRY_TYPE_EXPENSE, 'Despesa'),
+            (ENTRY_TYPE_INCOME, gettext_lazy('Receita')),
+            (ENTRY_TYPE_EXPENSE, gettext_lazy('Despesa')),
         ],
     )
     description = models.CharField(max_length=255, blank=True)
@@ -226,9 +227,9 @@ class CashFlowEntry(models.Model):
     status = models.CharField(
         max_length=20,
         choices=[
-            (STATUS_PROJECTED, 'A vencer'),
-            (STATUS_PENDING, 'Vencidos'),
-            (STATUS_REALIZED, 'Realizado'),
+            (STATUS_PROJECTED, gettext_lazy('A vencer')),
+            (STATUS_PENDING, gettext_lazy('Vencidos')),
+            (STATUS_REALIZED, gettext_lazy('Realizado')),
         ],
         default=STATUS_PROJECTED,
     )
