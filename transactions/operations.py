@@ -21,6 +21,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.db.models import Max
+from django.utils.translation import gettext, gettext_lazy
 
 from accounts.services import accessible_owner_ids
 from core.domain.finance import COMPOSITE_OPERATION_TYPES, OPERATION_INTERNAL_TRANSFER
@@ -29,9 +30,9 @@ from core.services import system_start_date
 from .models import CashFlowEntry
 
 OPERATION_LABELS = {
-    "installment": "Parcelas",
-    "recurring": "Recorrência",
-    OPERATION_INTERNAL_TRANSFER: "Transferência interna",
+    "installment": gettext_lazy("Parcelas"),
+    "recurring": gettext_lazy("Recorrência"),
+    OPERATION_INTERNAL_TRANSFER: gettext_lazy("Transferência interna"),
 }
 
 DEFAULT_PAGE_SIZE = 20
@@ -67,7 +68,7 @@ def _status_summary(entries: Iterable[CashFlowEntry]) -> str:
     statuses = sorted({entry.status or "-" for entry in entries})
     if len(statuses) == 1:
         return statuses[0].capitalize()
-    return "Misto: " + ", ".join(statuses)
+    return gettext("Misto: %(statuses)s") % {"statuses": ", ".join(statuses)}
 
 
 def _base_description(entries: list[CashFlowEntry]) -> str:
