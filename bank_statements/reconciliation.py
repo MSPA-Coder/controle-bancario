@@ -30,6 +30,7 @@ from decimal import Decimal
 
 from django.db import transaction as db_transaction
 from django.db.models import Q
+from django.utils.translation import gettext
 
 from banking.services import accessible_account_ids, can_access_account
 from core import regional
@@ -277,16 +278,16 @@ def _get_line_in_scope(
     user, line_id, action: str = "view", *, for_update: bool = False
 ) -> BankStatementLine:
     if not line_id:
-        raise ValueError("Linha de extrato inválida.")
+        raise ValueError(gettext("Linha de extrato inválida."))
     lines = BankStatementLine.objects.select_related("account")
     if for_update:
         lines = lines.select_for_update()
     try:
         line = lines.get(id=line_id)
     except BankStatementLine.DoesNotExist as exc:
-        raise ValueError("Linha de extrato não encontrada.") from exc
+        raise ValueError(gettext("Linha de extrato não encontrada.")) from exc
     if not can_access_account(user, line.account_id, action):
-        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar esta linha de extrato."))
     return line
 
 
@@ -302,7 +303,7 @@ def _locked_entry_for_update(entry_id) -> CashFlowEntry:
     try:
         snapshot = CashFlowEntry.objects.get(id=entry_id)
     except CashFlowEntry.DoesNotExist as exc:
-        raise ValueError("Lançamento não encontrado.") from exc
+        raise ValueError(gettext("Lançamento não encontrado.")) from exc
 
     entry_ids = {snapshot.id}
     if snapshot.source_entry_id:
@@ -321,7 +322,7 @@ def _locked_entry_for_update(entry_id) -> CashFlowEntry:
     for entry in locked_entries:
         if entry.id == snapshot.id:
             return entry
-    raise ValueError("Lançamento não encontrado.")
+    raise ValueError(gettext("Lançamento não encontrado."))
 
 
 def rendimentos_agrupados(lines) -> list[dict]:
@@ -438,21 +439,21 @@ def reconcile_line_with_entry(
     """
     line = _get_line_in_scope(user, line_id, "update", for_update=True)
     if not entry_id:
-        raise ValueError("Selecione a linha do extrato e o lançamento a conciliar.")
+        raise ValueError(gettext("Selecione a linha do extrato e o lançamento a conciliar."))
     try:
         entry_scope = CashFlowEntry.objects.select_related("account").get(id=entry_id)
     except CashFlowEntry.DoesNotExist as exc:
-        raise ValueError("Lançamento não encontrado.") from exc
+        raise ValueError(gettext("Lançamento não encontrado.")) from exc
     if not can_access_account(user, entry_scope.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar este lançamento.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar este lançamento."))
     entry = _locked_entry_for_update(entry_id)
     # A autorização é revalidada depois dos locks: a leitura feita antes da
     # operação não pode ser a única barreira para uma mudança concorrente de
     # permissões ou de concessão de destino de transferência.
     if not can_access_account(user, line.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar esta linha de extrato."))
     if not can_access_account(user, entry.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar este lançamento.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar este lançamento."))
     # Uma transferência já realizada com a mesma data/valor não chama
     # `realize_transaction` abaixo. Revalide aqui para que esse atalho de
     # conciliação não contorne uma concessão de destino posteriormente
@@ -461,24 +462,24 @@ def reconcile_line_with_entry(
         assert_transfer_destination_authorized(user, entry, "update")
 
     if line.status != LINE_STATUS_NEW or line.matched_entry_id is not None:
-        raise ValueError("Linha de extrato já conciliada ou ignorada.")
+        raise ValueError(gettext("Linha de extrato já conciliada ou ignorada."))
     if BankStatementLine.objects.filter(
         matched_entry_id=entry.id, status=LINE_STATUS_RECONCILED
     ).exclude(id=line.id).exists():
-        raise ValueError("Lançamento já está conciliado com outra linha de extrato.")
+        raise ValueError(gettext("Lançamento já está conciliado com outra linha de extrato."))
     if line.account_id != entry.account_id:
-        raise ValueError("A linha de extrato e o lançamento pertencem a contas diferentes.")
+        raise ValueError(gettext("A linha de extrato e o lançamento pertencem a contas diferentes."))
 
     expected_type = ENTRY_TYPE_INCOME if line.amount > 0 else ENTRY_TYPE_EXPENSE
     if entry.entry_type != expected_type:
-        raise ValueError("Tipo do lançamento incompatível com o sinal da linha de extrato.")
+        raise ValueError(gettext("Tipo do lançamento incompatível com o sinal da linha de extrato."))
 
     line_value = abs(line.amount)
     realizado_pelo_valor = entry.status == STATUS_REALIZED and entry.realized_amount == line_value
     if entry.entry_amount != line_value and not realizado_pelo_valor:
         variavel = aceitar_valor_diferente and entry.is_recurring and entry.status != STATUS_REALIZED
         if not variavel:
-            raise ValueError("Valor do lançamento incompatível com a linha de extrato.")
+            raise ValueError(gettext("Valor do lançamento incompatível com a linha de extrato."))
 
     already_realized_matching = False
     if entry.status == STATUS_REALIZED:
@@ -500,8 +501,9 @@ def reconcile_line_with_entry(
         assert_entry_period_open(entry, action_label="conciliar")
         if is_month_closed(entry.account, line.statement_date.year, line.statement_date.month):
             raise ValueError(
-                f"Não é possível conciliar: mês {line.statement_date.month:02d}/"
-                f"{line.statement_date.year} fechado para a conta {entry.account}."
+                gettext("Não é possível conciliar: mês %(mes)02d/%(ano)s fechado para a conta %(conta)s.") % {
+                    "mes": line.statement_date.month, "ano": line.statement_date.year, "conta": entry.account,
+                }
             )
 
     line.matched_entry = entry
@@ -545,14 +547,14 @@ def _conciliar_corrigindo_realizacao(
         contraparte = transfer_counterparty(entry)
         if contraparte is not None and contraparte.account.currency == entry.account.currency:
             raise ValueError(
-                "A transferência foi realizada por outro valor: corrija a transferência antes de conciliar."
+                gettext("A transferência foi realizada por outro valor: corrija a transferência antes de conciliar.")
             )
     meses = {
         (entry.account_id, dia.year, dia.month) for dia in (antes_data, line.statement_date) if dia is not None
     }
     if not autorizar_meses and meses_fechados(meses):
         raise ValueError(
-            "Corrigir a data ou o valor realizado mexe em mês fechado: use o botão Conciliar da própria linha."
+            gettext("Corrigir a data ou o valor realizado mexe em mês fechado: use o botão Conciliar da própria linha.")
         )
     with meses_reabertos(
         user, meses, autorizar=autorizar_meses, motivo=MOTIVO_DA_CORRECAO, audit_context=audit_context
@@ -578,10 +580,14 @@ def correcao_da_realizacao(*, entry_antes: tuple, line: BankStatementLine) -> st
     data, valor = entry_antes
     partes = []
     if data != line.statement_date:
-        partes.append(f"data de {regional.formatar_data(data)} para {regional.formatar_data(line.statement_date)}")
+        partes.append(gettext("data de %(antes)s para %(depois)s") % {
+            "antes": regional.formatar_data(data), "depois": regional.formatar_data(line.statement_date),
+        })
     if valor != abs(line.amount):
-        partes.append(f"valor de {valor} para {abs(line.amount)}")
-    return " e ".join(partes)
+        partes.append(gettext("valor de %(antes)s para %(depois)s") % {"antes": valor, "depois": abs(line.amount)})
+    if len(partes) == 2:
+        return gettext("%(primeira)s e %(segunda)s") % {"primeira": partes[0], "segunda": partes[1]}
+    return "".join(partes)
 
 
 @db_transaction.atomic
@@ -590,13 +596,13 @@ def undo_reconciliation(user, *, line_id) -> BankStatementLine:
     para "vencidos" (e sua contraparte de transferência, se houver)."""
     line = _get_line_in_scope(user, line_id, "update", for_update=True)
     if line.status != LINE_STATUS_RECONCILED or line.matched_entry_id is None:
-        raise ValueError("Linha de extrato não está conciliada.")
+        raise ValueError(gettext("Linha de extrato não está conciliada."))
 
     entry = _locked_entry_for_update(line.matched_entry_id)
     if not can_access_account(user, line.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar esta linha de extrato."))
     if not can_access_account(user, entry.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar este lançamento.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar este lançamento."))
     if entry.status == STATUS_REALIZED:
         unrealize_transaction(entry, user=user)
 
@@ -629,14 +635,14 @@ def undo_statement_import(user, *, batch_id) -> tuple[int, int]:
     try:
         batch = BankStatementImport.objects.select_related("account").get(id=batch_id)
     except BankStatementImport.DoesNotExist as exc:
-        raise ValueError("Lote de importação não encontrado.") from exc
+        raise ValueError(gettext("Lote de importação não encontrado.")) from exc
     if not can_access_account(user, batch.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar este lote de importação.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar este lote de importação."))
     if batch.account.is_credit_card:
-        raise ValueError(
+        raise ValueError(gettext(
             "Fatura de cartão de crédito não pode ser desfeita por aqui — "
             "use a tela de Fatura para reverter linha a linha."
-        )
+        ))
 
     lines = list(BankStatementLine.objects.select_for_update().filter(import_batch_id=batch.id))
     reconciled_count = 0
@@ -671,16 +677,17 @@ def create_entry_from_line(user, *, line_id, category_id, audit_context=None) ->
 def _create_entry_from_locked_line(user, *, line, category_id, audit_context=None) -> BankStatementLine:
     """Implementa a criação com a linha já travada pela transação chamadora."""
     if not can_access_account(user, line.account_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar esta linha de extrato."))
     if line.status != LINE_STATUS_NEW or line.matched_entry_id is not None:
-        raise ValueError("Linha de extrato já conciliada ou ignorada.")
+        raise ValueError(gettext("Linha de extrato já conciliada ou ignorada."))
     if not category_id:
-        raise ValueError("Selecione uma categoria para criar o lançamento.")
+        raise ValueError(gettext("Selecione uma categoria para criar o lançamento."))
 
     if is_month_closed(line.account, line.statement_date.year, line.statement_date.month):
         raise ValueError(
-            f"Não é possível criar lançamento: mês {line.statement_date.month:02d}/"
-            f"{line.statement_date.year} fechado para a conta {line.account}."
+            gettext("Não é possível criar lançamento: mês %(mes)02d/%(ano)s fechado para a conta %(conta)s.") % {
+                "mes": line.statement_date.month, "ano": line.statement_date.year, "conta": line.account,
+            }
         )
 
     value = abs(line.amount)
@@ -716,9 +723,9 @@ def ignore_statement_line(user, *, line_id) -> BankStatementLine:
     with db_transaction.atomic():
         line = _get_line_in_scope(user, line_id, "update", for_update=True)
         if not can_access_account(user, line.account_id, "update"):
-            raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
+            raise ValueError(gettext("Acesso negado: você não tem permissão para acessar esta linha de extrato."))
         if line.status != LINE_STATUS_NEW or line.matched_entry_id is not None:
-            raise ValueError("Apenas linhas novas e não conciliadas podem ser ignoradas.")
+            raise ValueError(gettext("Apenas linhas novas e não conciliadas podem ser ignoradas."))
         line.status = LINE_STATUS_IGNORED
         line.save(update_fields=["status", "updated_at"])
         return line
@@ -737,7 +744,7 @@ def bulk_create_entries_from_lines(user, *, line_ids: Iterable, audit_context=No
             line = _get_line_in_scope(user, line_id, "update")
             suggested = suggested_category_for_line(line)
             if suggested is None:
-                raise ValueError("Nenhuma categoria disponível para sugerir (nem “Outros”).")
+                raise ValueError(gettext("Nenhuma categoria disponível para sugerir (nem “Outros”)."))
             create_entry_from_line(user, line_id=line_id, category_id=suggested.id, audit_context=audit_context)
             created += 1
         except ValueError as exc:
@@ -760,9 +767,9 @@ def bulk_reconcile_lines(user, *, line_ids: Iterable, audit_context=None) -> tup
             line = _get_line_in_scope(user, line_id, "update")
             candidates = desempatar_pelo_dia(line, list(candidate_entries_for_line(line)))
             if not candidates:
-                raise ValueError("Nenhum lançamento candidato para conciliar.")
+                raise ValueError(gettext("Nenhum lançamento candidato para conciliar."))
             if len(candidates) > 1:
-                raise ValueError("Mais de um lançamento candidato — concilie manualmente.")
+                raise ValueError(gettext("Mais de um lançamento candidato — concilie manualmente."))
             reconcile_line_with_entry(
                 user,
                 line_id=line_id,

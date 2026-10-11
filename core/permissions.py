@@ -15,6 +15,7 @@ from functools import wraps
 
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.utils.translation import gettext
 from django_htmx.http import HttpResponseClientRedirect
 
 
@@ -36,7 +37,7 @@ def permission_required(perm: str, fallback: str = "core:inicio") -> Callable:
         def wrapper(request, *args, **kwargs):
             if not request.user.has_perm(perm):
                 messages.warning(
-                    request, "Acesso negado: você não tem permissão para esta funcionalidade."
+                    request, gettext("Acesso negado: você não tem permissão para esta funcionalidade.")
                 )
                 fallback_url = redirect(fallback).url
                 if getattr(request, "htmx", False):

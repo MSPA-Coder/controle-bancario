@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.timezone import localdate
+from django.utils.translation import gettext_lazy
 
 from core.domain.finance import (
     ACCOUNT_KIND_CREDIT_CARD,
@@ -24,8 +25,8 @@ class FinancialInstitution(models.Model):
     """Instituição financeira: banco ou corretora."""
     
     INSTITUTION_TYPE_CHOICES = [
-        ('Banco', 'Banco'),
-        ('Corretora', 'Corretora'),
+        ('Banco', gettext_lazy('Banco')),
+        ('Corretora', gettext_lazy('Corretora')),
     ]
     
     institution_name = models.CharField(max_length=100)

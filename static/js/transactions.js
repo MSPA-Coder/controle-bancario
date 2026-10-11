@@ -278,7 +278,7 @@ function _initEditScopeConfirm(root) {
             var normalMessage = button.dataset.transactionEditConfirm;
             var tokenValue = select.dataset.currentFutureToken;
             var msg = currentFuture
-                ? (select.dataset.currentFutureConfirm || 'Este registro e os próximos serão recriados. Deseja continuar?')
+                ? (select.dataset.currentFutureConfirm || t('Este registro e os próximos serão recriados. Deseja continuar?'))
                 : normalMessage;
             if (!msg || !window.sharedauth || typeof window.sharedauth.confirmar !== 'function' ||
                 (currentFuture && (!tokenValue || !token))) {
@@ -289,7 +289,7 @@ function _initEditScopeConfirm(root) {
             e.preventDefault();
             window.sharedauth.confirmar({
                 mensagem: msg,
-                titulo: currentFuture ? 'Confirmar alteração' : (button.dataset.saTitulo || 'Confirmar alteração'),
+                titulo: currentFuture ? t('Confirmar alteração') : (button.dataset.saTitulo || t('Confirmar alteração')),
                 severidade: currentFuture ? 'error' : (button.dataset.saSeveridade || 'info')
             }).then(function (ok) {
                 if (!ok) return;

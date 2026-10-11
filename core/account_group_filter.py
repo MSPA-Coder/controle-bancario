@@ -24,6 +24,7 @@ from collections.abc import Iterable, Mapping
 
 from django.core.exceptions import SuspiciousOperation
 from django.db.models import Q
+from django.utils.translation import gettext, gettext_lazy
 
 from core.domain.finance import (
     ACCOUNT_KIND_CREDIT_CARD,
@@ -42,11 +43,11 @@ GROUP_INVESTMENTS = "aplicacoes"
 GROUP_ADMINISTERED = "administradas"
 # A ordem é a da tela.
 ACCOUNT_GROUP_OPTIONS = (
-    (GROUP_BANKS, "Bancos"),
-    (GROUP_BROKERS, "Corretoras"),
-    (GROUP_CARDS, "Cartões"),
-    (GROUP_INVESTMENTS, "Aplicações"),
-    (GROUP_ADMINISTERED, "Administradas"),
+    (GROUP_BANKS, gettext_lazy("Bancos")),
+    (GROUP_BROKERS, gettext_lazy("Corretoras")),
+    (GROUP_CARDS, gettext_lazy("Cartões")),
+    (GROUP_INVESTMENTS, gettext_lazy("Aplicações")),
+    (GROUP_ADMINISTERED, gettext_lazy("Administradas")),
 )
 ALL_ACCOUNT_GROUPS = frozenset(code for code, _label in ACCOUNT_GROUP_OPTIONS)
 # O que vale quando a URL não diz nada: tudo, menos o dinheiro de terceiros.
@@ -68,7 +69,7 @@ def parse_account_groups(params: Mapping[str, str]) -> frozenset[str]:
         return DEFAULT_ACCOUNT_GROUPS
     groups = frozenset(part.strip().lower() for part in raw.split(",") if part.strip())
     if not groups or not groups <= ALL_ACCOUNT_GROUPS:
-        raise SuspiciousOperation("Filtro de grupos de conta inválido.")
+        raise SuspiciousOperation(gettext("Filtro de grupos de conta inválido."))
     return groups
 
 

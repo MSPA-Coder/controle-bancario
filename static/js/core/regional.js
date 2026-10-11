@@ -1,8 +1,10 @@
-/* Formato regional (Brasil ou EUA) dos campos de data, mês e valor.
+/* Formato regional dos campos de data, mês e valor.
 
    Só UX. O navegador mostra <input type="date|month|number"> no idioma DELE,
    não no do usuário do sistema; por isso cada um desses campos ganha um campo
-   de texto que mostra e aceita o formato escolhido (`<html data-regional>`).
+   de texto que mostra e aceita o formato escolhido. O formato (ordem da data,
+   separadores) vem do servidor, no JSON `#regional-spec` (`core/domain/settings.py`),
+   e não há nada por região neste arquivo: incluir uma região não o altera.
    O campo original continua no formulário, escondido, com o mesmo `name`, e
    guarda o valor de sempre (AAAA-MM-DD, AAAA-MM, 1234.56): o servidor recebe
    exatamente o que recebia antes.
@@ -13,19 +15,52 @@
 (function () {
     'use strict';
 
-    var US = document.documentElement.getAttribute('data-regional') === 'us';
-    var LOCALE = US ? 'en-US' : 'pt-BR';
-    var DECIMAL = US ? '.' : ',';
+    // Sem o JSON (página sem ele, ou ele ilegível) vale o Brasil, o que o sistema sempre mostrou.
+    var SPEC = (function () {
+        var padrao = { code: 'br', locale: 'pt-BR', dateOrder: 'dmy', dateSep: '/', decimal: ',', thousands: '.' };
+        try {
+            var el = document.getElementById('regional-spec');
+            var lido = el ? JSON.parse(el.textContent) : null;
+            return lido && lido.dateOrder ? lido : padrao;
+        } catch (e) {
+            return padrao;
+        }
+    }());
+    var US = SPEC.code === 'us';
+    var LOCALE = SPEC.locale;
+    var DECIMAL = SPEC.decimal;
+    var THOUSANDS = SPEC.thousands;
+    var ORDER = SPEC.dateOrder;
+    var SEP = SPEC.dateSep;
+
+    /* Posição de dia, mês e ano num texto de data, conforme a ordem da região. */
+    var POS = { d: ORDER.indexOf('d'), m: ORDER.indexOf('m'), y: ORDER.indexOf('y') };
+    var DATE_GROUPS = ORDER === 'ymd' ? [4, 2, 2] : [2, 2, 4];
+    var MONTH_GROUPS = ORDER === 'ymd' ? [4, 2] : [2, 4];
+    /* Dia, mês e ano no formato mostrado (placeholder e mensagem): texto traduzível. */
+    function palavra(letra) {
+        if (letra === 'd') return t('dd');
+        if (letra === 'm') return t('mm');
+        return t('aaaa');
+    }
+
+    function dateShape() {
+        return ORDER.split('').map(palavra).join(SEP);
+    }
+
+    function monthShape() {
+        return (ORDER === 'ymd' ? [palavra('y'), palavra('m')] : [palavra('m'), palavra('y')]).join(SEP);
+    }
 
     var MSG = {
-        date: US ? 'Informe uma data válida (mm/dd/aaaa).' : 'Informe uma data válida (dd/mm/aaaa).',
-        month: 'Informe um mês válido (mm/aaaa).',
-        number: 'Informe um valor numérico válido.',
-        required: 'Preencha este campo.',
-        requiredDate: 'Informe uma data.',
-        min: 'Informe um valor igual ou maior que o mínimo permitido.',
-        max: 'Informe um valor igual ou menor que o máximo permitido.',
-        step: 'Informe um valor válido para este campo.'
+        date: t('Informe uma data válida (%(formato)s).', { formato: dateShape() }),
+        month: t('Informe um mês válido (%(formato)s).', { formato: monthShape() }),
+        number: t('Informe um valor numérico válido.'),
+        required: t('Preencha este campo.'),
+        requiredDate: t('Informe uma data.'),
+        min: t('Informe um valor igual ou maior que o mínimo permitido.'),
+        max: t('Informe um valor igual ou menor que o máximo permitido.'),
+        step: t('Informe um valor válido para este campo.')
     };
 
     function pad(n, size) {
@@ -45,7 +80,8 @@
     function isoToDisplayDate(iso) {
         var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
         if (!m) return '';
-        return US ? m[2] + '/' + m[3] + '/' + m[1] : m[3] + '/' + m[2] + '/' + m[1];
+        var parts = { y: m[1], m: m[2], d: m[3] };
+        return ORDER.split('').map(function (l) { return parts[l]; }).join(SEP);
     }
 
     /* '' = vazio; null = inválido; senão AAAA-MM-DD. */
@@ -54,13 +90,14 @@
         if (!raw) return '';
         var parts = raw.split(/[\/.\-\s]+/);
         if (parts.length === 1 && /^\d{8}$/.test(raw)) {
-            parts = US ? [raw.slice(0, 2), raw.slice(2, 4), raw.slice(4)] : [raw.slice(0, 2), raw.slice(2, 4), raw.slice(4)];
+            parts = [raw.slice(0, DATE_GROUPS[0]), raw.slice(DATE_GROUPS[0], DATE_GROUPS[0] + DATE_GROUPS[1]),
+                raw.slice(DATE_GROUPS[0] + DATE_GROUPS[1])];
         }
         if (parts.length !== 3 || !parts.every(function (p) { return /^\d+$/.test(p); })) return null;
-        if (parts[2].length !== 4) return null;
-        var day = parseInt(US ? parts[1] : parts[0], 10);
-        var month = parseInt(US ? parts[0] : parts[1], 10);
-        var year = parseInt(parts[2], 10);
+        if (parts[POS.y].length !== 4) return null;
+        var day = parseInt(parts[POS.d], 10);
+        var month = parseInt(parts[POS.m], 10);
+        var year = parseInt(parts[POS.y], 10);
         if (!validDay(year, month, day)) return null;
         return pad(year, 4) + '-' + pad(month, 2) + '-' + pad(day, 2);
     }
@@ -69,18 +106,20 @@
 
     function isoToDisplayMonth(iso) {
         var m = /^(\d{4})-(\d{2})/.exec(iso || '');
-        return m ? m[2] + '/' + m[1] : '';
+        if (!m) return '';
+        return (ORDER === 'ymd' ? [m[1], m[2]] : [m[2], m[1]]).join(SEP);
     }
 
     function displayToIsoMonth(text) {
         var raw = String(text || '').trim();
         if (!raw) return '';
         var parts = raw.split(/[\/.\-\s]+/);
-        if (parts.length === 1 && /^\d{6}$/.test(raw)) parts = [raw.slice(0, 2), raw.slice(2)];
+        if (parts.length === 1 && /^\d{6}$/.test(raw)) parts = [raw.slice(0, MONTH_GROUPS[0]), raw.slice(MONTH_GROUPS[0])];
         if (parts.length !== 2 || !parts.every(function (p) { return /^\d+$/.test(p); })) return null;
-        var month = parseInt(parts[0], 10);
-        var year = parseInt(parts[1], 10);
-        if (parts[1].length !== 4 || month < 1 || month > 12 || year < 1000) return null;
+        var yearFirst = ORDER === 'ymd';
+        var month = parseInt(parts[yearFirst ? 1 : 0], 10);
+        var year = parseInt(parts[yearFirst ? 0 : 1], 10);
+        if (parts[yearFirst ? 0 : 1].length !== 4 || month < 1 || month > 12 || year < 1000) return null;
         return pad(year, 4) + '-' + pad(month, 2);
     }
 
@@ -90,7 +129,7 @@
     function canonToDisplayNumber(canon) {
         var s = String(canon == null ? '' : canon).trim();
         if (!s) return '';
-        return US ? s : s.replace('.', ',');
+        return s.replace('.', DECIMAL);
     }
 
     /* Texto -> valor canônico. '' = vazio; null = inválido.
@@ -109,7 +148,7 @@
         if (!/^[\d.,]+$/.test(raw) || !/\d/.test(raw)) return null;
 
         var own = DECIMAL;
-        var other = US ? ',' : '.';
+        var other = THOUSANDS;
         var ownCount = raw.split(own).length - 1;
         var otherCount = raw.split(other).length - 1;
         var integer, fraction = '';
@@ -167,7 +206,7 @@
             out.push(digits.substr(pos, groups[g]));
             pos += groups[g];
         }
-        return out.join('/');
+        return out.join(SEP);
     }
 
     /* ---------- o componente ---------- */
@@ -211,8 +250,8 @@
         visible.inputMode = kind === 'number' ? 'decimal' : 'numeric';
         if (kind === 'date') visible.maxLength = 10;
         if (kind === 'month') visible.maxLength = 7;
-        if (kind === 'date') visible.placeholder = input.getAttribute('placeholder') || (US ? 'mm/dd/aaaa' : 'dd/mm/aaaa');
-        if (kind === 'month') visible.placeholder = input.getAttribute('placeholder') || 'mm/aaaa';
+        if (kind === 'date') visible.placeholder = input.getAttribute('placeholder') || dateShape();
+        if (kind === 'month') visible.placeholder = input.getAttribute('placeholder') || monthShape();
         COPIED.forEach(function (attr) {
             if (input.hasAttribute(attr)) visible.setAttribute(attr, input.getAttribute(attr));
         });
@@ -267,10 +306,14 @@
                 return '';
             }
             if (min && canon < min.slice(0, canon.length)) {
-                return 'Informe ' + (kind === 'date' ? 'uma data' : 'um mês') + ' a partir de ' + toText(min) + '.';
+                return kind === 'date'
+                    ? t('Informe uma data a partir de %(data)s.', { data: toText(min) })
+                    : t('Informe um mês a partir de %(data)s.', { data: toText(min) });
             }
             if (max && canon > max.slice(0, canon.length)) {
-                return 'Informe ' + (kind === 'date' ? 'uma data' : 'um mês') + ' até ' + toText(max) + '.';
+                return kind === 'date'
+                    ? t('Informe uma data até %(data)s.', { data: toText(max) })
+                    : t('Informe um mês até %(data)s.', { data: toText(max) });
             }
             return '';
         }
@@ -293,8 +336,8 @@
             var inserting = !event.inputType || event.inputType.indexOf('insert') === 0;
             if (inserting && kind !== 'number' && /^[\d\/.\-\s]*$/.test(text)) {
                 var masked = kind === 'date'
-                    ? maskDigits(text, [2, 2, 4])
-                    : maskDigits(text, [2, 4]);
+                    ? maskDigits(text, DATE_GROUPS)
+                    : maskDigits(text, MONTH_GROUPS);
                 if (/\d$/.test(text) || text === '') visible.value = masked;
             }
             var canon = fromText(visible.value);
@@ -335,7 +378,7 @@
             var button = document.createElement('button');
             button.type = 'button';
             button.className = 'regional-picker-button';
-            button.setAttribute('aria-label', kind === 'date' ? 'Abrir calendário' : 'Escolher mês');
+            button.setAttribute('aria-label', kind === 'date' ? t('Abrir calendário') : t('Escolher mês'));
             button.innerHTML = CALENDAR_ICON;
             button.addEventListener('click', function () {
                 valueDescriptor.set.call(proxy, carrier());

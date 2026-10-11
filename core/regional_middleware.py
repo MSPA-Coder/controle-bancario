@@ -9,8 +9,10 @@ class FormatoRegionalMiddleware:
     """Lê `request.user.regional_format` e o deixa disponível a filtros e helpers.
 
     Vem depois do `AuthenticationMiddleware`. Quem não está logado (tela de
-    login) fica no padrão Brasil. O token é devolvido no `finally` para o valor
-    não vazar para a requisição seguinte da mesma thread.
+    login) segue o idioma do navegador, que o `IdiomaMiddleware` deixa ativo. O token é devolvido no `finally` para o valor
+    não vazar para a requisição seguinte da mesma thread. Resposta em streaming
+    seria gerada depois disso, já no padrão: se algum export passar a usar
+    `StreamingHttpResponse` com data ou número, formate antes de devolver.
     """
 
     def __init__(self, get_response):

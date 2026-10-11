@@ -191,6 +191,16 @@ backups sem autorização inequívoca.
 Consulte `docs/domain.md` antes de alterar saldos, recorrências, transferências,
 fechamentos, importação ou conciliação.
 
+## Texto da interface
+
+A interface existe em português (língua-fonte) e inglês. Texto novo que o usuário lê
+nasce marcado, com o português como `msgid`; `docs/architecture.md` (seção "Idioma e
+formato regional") diz como marcar em template, Python e JavaScript, e
+`docs/GLOSSARIO_I18N.md` fixa os termos e o tom nos dois idiomas. Depois de marcar,
+rode `.\scripts\mensagens.ps1`, traduza o que entrou e confira com `-Conferir`
+(`docs/development.md`). Mudar a redação de um texto em português muda o `msgid` e
+pede nova tradução. Dado gravado, nome digitado e texto de máquina não se traduzem.
+
 ## Segurança
 
 Autenticação é obrigatória; autorização permanece no servidor; escritas usam

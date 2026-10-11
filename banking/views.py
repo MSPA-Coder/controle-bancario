@@ -8,6 +8,7 @@ from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
+from django.utils.translation import gettext
 from django.views.decorators.http import require_POST
 
 from accounts.services import accessible_owner_ids
@@ -53,7 +54,7 @@ def _referencia_da_conta(request) -> date:
         try:
             return date.fromisoformat(raw_value)
         except ValueError as exc:
-            raise ValueError("Data informada é inválida.") from exc
+            raise ValueError(gettext("Data informada é inválida.")) from exc
 
     raw_period = request.GET.get("period", "")
     if raw_period:
@@ -61,7 +62,7 @@ def _referencia_da_conta(request) -> date:
 
         period = parse_month_input(raw_period)
         if period is None:
-            raise ValueError("Período informado é inválido.")
+            raise ValueError(gettext("Período informado é inválido."))
         # Para um período que ainda está aberto, "fim do mês" ainda não é uma
         # foto real. O saldo não pode incorporar um futuro que não aconteceu.
         return min(month_bounds(period.year, period.month)[1] - timedelta(days=1), timezone.localdate())
@@ -161,7 +162,7 @@ def institutions_view(request):
 def create_institution_view(request):
     try:
         create_institution(request.POST.get('institution_name', ''), request.POST.get('institution_type', ''))
-        messages.success(request, "Instituição cadastrada.")
+        messages.success(request, gettext("Instituição cadastrada."))
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:institutions_view', sucesso=False)
@@ -180,7 +181,7 @@ def update_institution_view(request, institution_id):
             request.POST.get('institution_name', ''),
             request.POST.get('institution_type', ''),
         )
-        messages.success(request, "Instituição atualizada.")
+        messages.success(request, gettext("Instituição atualizada."))
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:institutions_view', sucesso=False)
@@ -195,7 +196,7 @@ def delete_institution_view(request, institution_id):
     institution = get_object_or_404(FinancialInstitution, id=institution_id)
     try:
         delete_institution(institution)
-        messages.success(request, "Instituição excluída.")
+        messages.success(request, gettext("Instituição excluída."))
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:institutions_view', sucesso=False)
@@ -282,7 +283,7 @@ def create_account_view(request):
             statement_identifier=request.POST.get('statement_identifier', ''),
             **_card_fields_from_post(request),
         )
-        messages.success(request, "Conta cadastrada.")
+        messages.success(request, gettext("Conta cadastrada."))
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:accounts_view', sucesso=False)
@@ -313,7 +314,7 @@ def update_account_view(request, account_id):
         from bank_statements.fatura_projetada import atualizar
 
         atualizar(account)
-        messages.success(request, "Conta atualizada.")
+        messages.success(request, gettext("Conta atualizada."))
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:accounts_view', sucesso=False)
@@ -328,7 +329,7 @@ def delete_account_view(request, account_id):
     account = get_object_or_404(FinancialAccount, id=account_id)
     try:
         delete_account(request.user, account)
-        messages.success(request, "Conta excluída.")
+        messages.success(request, gettext("Conta excluída."))
     except ValueError as exc:
         messages.error(request, str(exc))
         return _respond(request, 'banking:accounts_view', sucesso=False)

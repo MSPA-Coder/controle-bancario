@@ -7,6 +7,9 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from django.utils.translation import get_language, gettext
+
+from core import regional
 from core.account_group_filter import (
     ACCOUNT_GROUP_OPTIONS,
     ALL_ACCOUNT_GROUPS,
@@ -18,6 +21,7 @@ from core.account_group_filter import (
 )
 from core.contexto_global import faixa_de_contexto, telas_com_contexto
 from core.currency_filter import currency_filter_options, parse_currency_filter
+from core.textos_js import textos_js
 
 
 @dataclass(frozen=True)
@@ -37,50 +41,50 @@ class MenuItem:
 
 def _build_menu_items() -> list[MenuItem]:
     return [
-        MenuItem("Dashboard", "/dashboard/", "\U0001F4CA", "/dashboard/", required_permission="dashboard.view"),
+        MenuItem(gettext("Dashboard"), "/dashboard/", "\U0001F4CA", "/dashboard/", required_permission="dashboard.view"),
         MenuItem(
-            "Movimentação",
+            gettext("Movimentação"),
             "/transactions/",
             "\U0001F4B8",
             "/transactions/",
             children=(
                 MenuItem(
-                    "Lançamentos",
+                    gettext("Lançamentos"),
                     "/transactions/",
                     "\U0001F4D2",
                     "/transactions/",
                     required_permission="transactions.view",
                 ),
                 MenuItem(
-                    "Saldo aplicações",
+                    gettext("Saldo aplicações"),
                     "/banking/balance/",
                     "\U0001F4B0",
                     "/banking/balance/",
                     required_permission="banking.reconcile",
                 ),
                 MenuItem(
-                    "Importação",
+                    gettext("Importação"),
                     "/banking/imports/",
                     "\U0001F4E5",
                     "/banking/imports/",
                     exact_match=True,
                     children=(
                         MenuItem(
-                            "Importar extratos e faturas",
+                            gettext("Importar extratos e faturas"),
                             "/banking/imports/",
                             "\U0001F4E9",
                             "/banking/imports/",
                             required_permission="banking.import",
                         ),
                         MenuItem(
-                            "Conciliação",
+                            gettext("Conciliação"),
                             "/banking/reconciliation/",
                             "\U00002705",
                             "/banking/reconciliation/",
                             required_permission="banking.reconcile",
                         ),
                         MenuItem(
-                            "Extratos importados",
+                            gettext("Extratos importados"),
                             "/banking/statements/",
                             "\U0001F9FE",
                             "/banking/statements/",
@@ -88,7 +92,7 @@ def _build_menu_items() -> list[MenuItem]:
                             active_patterns=(r"^/banking/import/\d+/extrato/",),
                         ),
                         MenuItem(
-                            "Faturas e projeção",
+                            gettext("Faturas e projeção"),
                             "/banking/cards/",
                             "\U0001F4B3",
                             "/banking/cards/",
@@ -96,7 +100,7 @@ def _build_menu_items() -> list[MenuItem]:
                             active_patterns=(r"^/banking/import/\d+/fatura/",),
                         ),
                         MenuItem(
-                            "Situação das contas",
+                            gettext("Situação das contas"),
                             "/banking/status/",
                             "\U0001F6A6",
                             "/banking/status/",
@@ -105,28 +109,28 @@ def _build_menu_items() -> list[MenuItem]:
                     ),
                 ),
                 MenuItem(
-                    "Reclassificação",
+                    gettext("Reclassificação"),
                     "/banking/reclassification/",
                     "\U0001F500",
                     "/banking/reclassification/",
                     required_permission="banking.reclassify",
                 ),
                 MenuItem(
-                    "Fechamento mensal",
+                    gettext("Fechamento mensal"),
                     "/settings/monthly-close/",
                     "\U0001F512",
                     "/settings/monthly-close/",
                     required_permission="settings.monthly_close.manage",
                 ),
                 MenuItem(
-                    "Parcelas e recorrências",
+                    gettext("Parcelas e recorrências"),
                     "/operations/",
                     "\U0001F501",
                     "/operations/",
                     required_permission="operations.view",
                 ),
                 MenuItem(
-                    "Comprovantes",
+                    gettext("Comprovantes"),
                     "/banking/attachments/",
                     "\U0001F4CE",
                     "/banking/attachments/",
@@ -135,23 +139,23 @@ def _build_menu_items() -> list[MenuItem]:
             ),
         ),
         MenuItem(
-            "Relatórios",
+            gettext("Relatórios"),
             "/reports/upcoming-movements/",
             "\U0001F4C8",
             "/reports/",
             children=(
-                MenuItem("Próximos movimentos", "/reports/upcoming-movements/", "\U000023F3", "/reports/upcoming-movements/", required_permission="reports.upcoming_movements.view"),
-                MenuItem("Projeções", "/reports/projections/", "\U0001F52E", "/reports/projections/", required_permission="projections.view"),
-                MenuItem("Posição por conta", "/reports/account-position/", "\U0001F9EE", "/reports/account-position/", required_permission="reports.account_position.view"),
+                MenuItem(gettext("Próximos movimentos"), "/reports/upcoming-movements/", "\U000023F3", "/reports/upcoming-movements/", required_permission="reports.upcoming_movements.view"),
+                MenuItem(gettext("Projeções"), "/reports/projections/", "\U0001F52E", "/reports/projections/", required_permission="projections.view"),
+                MenuItem(gettext("Posição por conta"), "/reports/account-position/", "\U0001F9EE", "/reports/account-position/", required_permission="reports.account_position.view"),
                 MenuItem(
-                    "Planejamento anual",
+                    gettext("Planejamento anual"),
                     "/reports/annual-planning/",
                     "\U0001F4C5",
                     "/reports/annual-planning/",
                     required_permission="reports.annual_planning.view",
                 ),
                 MenuItem(
-                    "Controle gerencial",
+                    gettext("Controle gerencial"),
                     "/management/",
                     "\U0001F5C2",
                     "/management/",
@@ -160,40 +164,40 @@ def _build_menu_items() -> list[MenuItem]:
             ),
         ),
         MenuItem(
-            "Cadastros",
+            gettext("Cadastros"),
             "/tables/owners/",
             "\U0001F4C7",
             "/tables/",
             required_permission="tables.view",
             children=(
-                MenuItem("Titulares", "/tables/owners/", "\U0001F464", "/tables/owners/", required_permission="tables.owners.manage"),
-                MenuItem("Instituições", "/tables/banks/", "\U0001F3DB", "/tables/banks/", required_permission="tables.institutions.manage"),
-                MenuItem("Contas", "/tables/accounts/", "\U0001F4BC", "/tables/accounts/", required_permission="tables.accounts.manage"),
-                MenuItem("Categorias", "/tables/categories/", "\U0001F516", "/tables/categories/", required_permission="tables.categories.manage"),
-                MenuItem("Grupos de categoria", "/tables/category-groups/", "\U0001F9E9", "/tables/category-groups/", required_permission="tables.categories.manage"),
+                MenuItem(gettext("Titulares"), "/tables/owners/", "\U0001F464", "/tables/owners/", required_permission="tables.owners.manage"),
+                MenuItem(gettext("Instituições"), "/tables/banks/", "\U0001F3DB", "/tables/banks/", required_permission="tables.institutions.manage"),
+                MenuItem(gettext("Contas"), "/tables/accounts/", "\U0001F4BC", "/tables/accounts/", required_permission="tables.accounts.manage"),
+                MenuItem(gettext("Categorias"), "/tables/categories/", "\U0001F516", "/tables/categories/", required_permission="tables.categories.manage"),
+                MenuItem(gettext("Grupos de categoria"), "/tables/category-groups/", "\U0001F9E9", "/tables/category-groups/", required_permission="tables.categories.manage"),
             ),
         ),
         MenuItem(
-            "Configurações",
+            gettext("Configurações"),
             "/settings/profile/",
             "⚙",
             "/settings/profile/",
             required_permission="settings.view",
             children=(
-                MenuItem("Perfil e tema", "/settings/profile/", "\U0001F3A8", "/settings/profile/"),
-                MenuItem("Parâmetros", "/settings/", "\U0001F39A", "/settings/", exact_match=True),
-                MenuItem("Banco de dados", "/settings/database/", "\U0001F5C4", "/settings/database/"),
+                MenuItem(gettext("Perfil e tema"), "/settings/profile/", "\U0001F3A8", "/settings/profile/"),
+                MenuItem(gettext("Parâmetros"), "/settings/", "\U0001F39A", "/settings/", exact_match=True),
+                MenuItem(gettext("Banco de dados"), "/settings/database/", "\U0001F5C4", "/settings/database/"),
             ),
         ),
         MenuItem(
-            "Segurança",
+            gettext("Segurança"),
             "/change-password/",
             "\U0001F6E1",
             "/change-password/",
             children=(
-                MenuItem("Alterar senha", "/change-password/", "\U0001F511", "/change-password/"),
-                MenuItem("Permissões", "/permissions/", "\U0001F465", "/permissions/", required_permission="permissions.manage"),
-                MenuItem("Trilha de auditoria", "/settings/audit-log/", "\U0001F4DC", "/settings/audit-log/", required_permission="settings.audit.view"),
+                MenuItem(gettext("Alterar senha"), "/change-password/", "\U0001F511", "/change-password/"),
+                MenuItem(gettext("Permissões"), "/permissions/", "\U0001F465", "/permissions/", required_permission="permissions.manage"),
+                MenuItem(gettext("Trilha de auditoria"), "/settings/audit-log/", "\U0001F4DC", "/settings/audit-log/", required_permission="settings.audit.view"),
             ),
         ),
         # NAO ha item "Administracao" apontando para `/admin/`. O
@@ -350,7 +354,11 @@ def app_shell(request):
         "global_currency": global_currency,
         "global_currency_options": currency_filter_options(global_currency),
         "ui_theme": getattr(user, "ui_theme", "light") if user else "light",
-        "regional_format": getattr(user, "regional_format", "br") if user else "br",
+        "language_code": get_language() or "pt-br",
+        # Região EFETIVA (`br` ou `us`): `auto` já foi resolvida pelo idioma.
+        "regional_format": regional.especificacao().code,
+        "regional_spec": regional.especificacao().as_dict(),
+        "textos_js": textos_js(),
         "table_scroll_rows": getattr(user, "table_scroll_rows", 15) if user else 15,
         "current_active_user": user,
         "app_menu_items": menu_items,

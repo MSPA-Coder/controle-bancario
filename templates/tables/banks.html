@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static navegacao %}
-{% load icons %}
+{% load icons i18n %}
 
-{% block title %}Cadastros • Instituições{% endblock %}
+{% block title %}{% trans "Cadastros • Instituições" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/banks.css' %}">
@@ -11,23 +11,23 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Cadastros • Instituições</h1>
+        <h1>{% trans "Cadastros • Instituições" %}</h1>
     </div>
-    {% include "tables/_cadastro_acoes.html" with confirmar="Cadastrar esta instituição financeira?" %}
+    {% trans "Cadastrar esta instituição financeira?" as t_confirmar %}{% include "tables/_cadastro_acoes.html" with confirmar=t_confirmar %}
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="chart-card">
     <div id="cadastro-novo" class="cadastro-novo" hidden>
-    <div class="section-header"><h4>Nova instituição</h4></div>
+    <div class="section-header"><h4>{% trans "Nova instituição" %}</h4></div>
     <form method="post" data-cadastro-htmx="#institutionsTableBody" id="cadastro-form" action="{% url 'banking:create_institution' %}" class="add-form">
         {% csrf_token %}
-        <select name="institution_type" aria-label="Tipo de instituição" required data-ui="w-140">
-            <option value="Banco">Banco</option>
-            <option value="Corretora">Corretora</option>
+        <select name="institution_type" aria-label="{% trans 'Tipo de instituição' %}" required data-ui="w-140">
+            <option value="Banco">{% trans "Banco" %}</option>
+            <option value="Corretora">{% trans "Corretora" %}</option>
         </select>
-        <input type="text" name="institution_name" aria-label="Nome da instituição" placeholder="Nome da instituição…" maxlength="100" required data-ui="flex-1">
+        <input type="text" name="institution_name" aria-label="{% trans 'Nome da instituição' %}" placeholder="{% trans 'Nome da instituição…' %}" maxlength="100" required data-ui="flex-1">
     </form>
     </div>
 
@@ -36,15 +36,15 @@
             <thead>
                 <tr>
                     <th>
-                        <select data-table-filter name="filter_type" aria-label="Filtrar por tipo" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#institutionsTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
-                            <option value="">Todos os tipos</option>
-                            <option value="Banco" {% if current_filter_type == 'Banco' %}selected{% endif %}>Banco</option>
-                            <option value="Corretora" {% if current_filter_type == 'Corretora' %}selected{% endif %}>Corretora</option>
+                        <select data-table-filter name="filter_type" aria-label="{% trans 'Filtrar por tipo' %}" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#institutionsTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
+                            <option value="">{% trans "Todos os tipos" %}</option>
+                            <option value="Banco" {% if current_filter_type == 'Banco' %}selected{% endif %}>{% trans "Banco" %}</option>
+                            <option value="Corretora" {% if current_filter_type == 'Corretora' %}selected{% endif %}>{% trans "Corretora" %}</option>
                         </select>
                     </th>
-                    <th>Nome</th>
-                    <th data-ui="w-100">Homologada para PDF</th>
-                    <th data-ui="w-100">Ações</th>
+                    <th>{% trans "Nome" %}</th>
+                    <th data-ui="w-100">{% trans "Homologada para PDF" %}</th>
+                    <th data-ui="w-100">{% trans "Ações" %}</th>
                 </tr>
             </thead>
             {% include "tables/_institutions_table.html" %}

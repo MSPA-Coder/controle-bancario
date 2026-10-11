@@ -13,6 +13,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
+from django.utils.translation import gettext_lazy
 
 STATUS_IMPORTED = "importado"
 STATUS_PROCESSED = "processado"
@@ -46,9 +47,9 @@ class BankStatementImport(models.Model):
     status = models.CharField(
         max_length=20,
         choices=[
-            (STATUS_IMPORTED, "Importado"),
-            (STATUS_PROCESSED, "Processado"),
-            (STATUS_ERROR, "Erro"),
+            (STATUS_IMPORTED, gettext_lazy("Importado")),
+            (STATUS_PROCESSED, gettext_lazy("Processado")),
+            (STATUS_ERROR, gettext_lazy("Erro")),
         ],
         default=STATUS_IMPORTED,
     )
@@ -209,19 +210,19 @@ class StatementRule(models.Model):
     sign = models.CharField(
         max_length=10,
         choices=[
-            (RULE_SIGN_ANY, "Entrada ou saída"),
-            (RULE_SIGN_CREDIT, "Só entrada"),
-            (RULE_SIGN_DEBIT, "Só saída"),
+            (RULE_SIGN_ANY, gettext_lazy("Entrada ou saída")),
+            (RULE_SIGN_CREDIT, gettext_lazy("Só entrada")),
+            (RULE_SIGN_DEBIT, gettext_lazy("Só saída")),
         ],
         default=RULE_SIGN_ANY,
     )
     action = models.CharField(
         max_length=20,
         choices=[
-            (RULE_ACTION_CATEGORY, "Categorizar"),
-            (RULE_ACTION_TRANSFER, "Transferência para conta do mesmo titular"),
-            (RULE_ACTION_IGNORE, "Ignorar a linha"),
-            (RULE_ACTION_LINKED, "Transferência para a aplicação vinculada à conta"),
+            (RULE_ACTION_CATEGORY, gettext_lazy("Categorizar")),
+            (RULE_ACTION_TRANSFER, gettext_lazy("Transferência para conta do mesmo titular")),
+            (RULE_ACTION_IGNORE, gettext_lazy("Ignorar a linha")),
+            (RULE_ACTION_LINKED, gettext_lazy("Transferência para a aplicação vinculada à conta")),
         ],
     )
     category = models.ForeignKey(
@@ -319,9 +320,9 @@ class BankStatementLine(models.Model):
     status = models.CharField(
         max_length=20,
         choices=[
-            (LINE_STATUS_NEW, "Novo"),
-            (LINE_STATUS_RECONCILED, "Conciliado"),
-            (LINE_STATUS_IGNORED, "Ignorado"),
+            (LINE_STATUS_NEW, gettext_lazy("Novo")),
+            (LINE_STATUS_RECONCILED, gettext_lazy("Conciliado")),
+            (LINE_STATUS_IGNORED, gettext_lazy("Ignorado")),
         ],
         default=LINE_STATUS_NEW,
     )

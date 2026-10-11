@@ -36,6 +36,7 @@ from core.domain.finance import MAX_TRANSACTION_INSTALLMENTS
 
 from .adapters import (
     ParsedStatementLine,
+    ValorZeradoError,
     _parse_amount,
     _parse_date,
     line_hash,
@@ -106,10 +107,8 @@ def _valor(raw: str) -> Decimal | None:
     """Valor da fatura; `None` para linha zerada, que não é movimento."""
     try:
         return _parse_amount(raw)
-    except ValueError as exc:
-        if "zerado" in str(exc):
-            return None
-        raise
+    except ValorZeradoError:
+        return None
 
 
 def _primeiro_nome(nome: str) -> str:

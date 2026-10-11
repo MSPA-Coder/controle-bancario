@@ -206,19 +206,49 @@ usuário e as permissões continuam pertencendo a este projeto. O repositório d
 SharedAuth é público: o build o instala por Git, na tag fixada no
 `pyproject.toml` e no commit registrado no `uv.lock`, sem credencial.
 
-## Formato regional (Brasil/EUA)
+## Idioma e formato regional
 
-Cada usuário escolhe em Configurações > Perfil como datas e números aparecem e
-são digitados (`AppUser.regional_format`, padrão `br`). É só UX: banco, serviços,
-importação, exportação, API e MCP seguem como sempre foram (ISO `AAAA-MM-DD` e
-decimal com ponto).
+Cada usuário escolhe em Configurações > Perfil o **idioma** da interface
+(`AppUser.language`: `pt-br` ou `en`) e o **formato regional** de datas e números
+(`AppUser.regional_format`: `auto`, `br` ou `us`; `auto` acompanha o idioma e é o
+padrão de quem nasce agora, enquanto quem já tinha `br` ou `us` o mantém). É só
+UX: banco, serviços, importação, exportação, API e MCP seguem como sempre foram
+(ISO `AAAA-MM-DD` e decimal com ponto). **Fuso horário não é preferência de
+usuário:** as regras de negócio são por data (`DateField`, `date.today()`) e o
+mesmo lançamento não pode estar vencido para um usuário e a vencer para outro.
+O fuso do sistema é `America/Sao_Paulo`, e hora gravada em UTC é convertida para
+ele ao exibir (`core/regional.py`).
 
-- `core/regional.py` guarda o formato da requisição (preenchido por
-  `core/regional_middleware.py`) e formata datas; fora de requisição vale Brasil.
-- Templates: texto legível usa `|udate`, `|udatetime`, `|umonth` (de
+- `core/idioma_middleware.py` ativa o idioma da requisição (usuário logado, ou o
+  `Accept-Language` na tela de login) e `core/regional_middleware.py` ativa a
+  região efetiva, nessa ordem, porque `auto` consulta o idioma. Os dois voltam ao
+  que era no fim da requisição.
+- A tabela de formatos (ordem e separador da data, decimal, milhar) é dado, em
+  `core/domain/settings.py` (`REGIONAL_SPECS`); incluir uma região é uma linha ali
+  e uma opção no seletor. O `regional.js` a lê do JSON `#regional-spec` e não tem
+  nada fixo por região.
+- `core/regional.py` guarda a região da requisição e formata datas; fora de
+  requisição vale Brasil.
+- Templates: texto legível usa `|udate`, `|udatetime`, `|umonth`, `|udaymonth` (de
   `regional_filters`) e `|money`; valores de `<input>` seguem ISO.
 - Texto de tela montado em Python usa `regional.formatar_data` e afins. Texto
   gravado (descrição de operação, trilha de auditoria) fica com data fixa.
+- **Texto da interface** é marcado no ponto em que nasce, com o português como
+  `msgid`: `{% trans %}`/`{% blocktrans %}` em template; `gettext`/`ngettext` dentro
+  de função (mensagem de `raise`, de `messages.*`, rótulo do menu); `gettext_lazy`
+  em constante de módulo, atributo de classe e `choices`; `gettext_noop` quando o
+  texto é chave de comparação e só é traduzido ao exibir (descrição de permissão,
+  `SEM_GRUPO`). Valor com variável usa marcador nomeado (`%(n)s`), nunca `f-string`
+  dentro de `gettext`; contagem usa `ngettext`, nunca "(s)".
+- **Não se traduz o que é dado:** valor gravado (status, tipo, `institution_type`),
+  nome digitado pelo usuário, resumo de auditoria, texto de exportação e de parser
+  de extrato. Rótulo de `choices` traduz, o valor gravado não: não gera migration.
+- Texto de JavaScript passa por `t('texto em português')` e é registrado em
+  `core/textos_js.py` (`FONTES`); o servidor o entrega já traduzido no JSON
+  `#i18n-js`. `tests/test_textos_js.py` reprova `t()` sem registro.
+- Nome de mês e `date:'...'` seguem o idioma ativo (`YEAR_MONTH_FORMAT`,
+  `dateformat.format`), não o do processo; `strftime` com nome de mês não serve.
+- O glossário que fixa os termos nos dois idiomas é [GLOSSARIO_I18N.md](GLOSSARIO_I18N.md).
 - `static/js/core/regional.js` troca `input[type=date|month]` e os decimais
   (`step` fracionário ou `data-regional-kind="decimal"`) por um campo de texto
   no formato escolhido; o original fica escondido, com o mesmo `name` e o valor

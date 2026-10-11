@@ -167,7 +167,7 @@ def test_saldo_da_aplicacao_espera_o_extrato_do_mes_da_conta_de_movimento(c):
     assert "ainda não foi importado" in saldo.pendencia_da_movimentacao(c.cofrinho, date(2026, 9, 30))
 
     pendente = _linha(c.corrente, date(2026, 9, 10), "-50.00")
-    assert "1 linha(s) de extrato pendente(s)" in saldo.pendencia_da_movimentacao(c.cofrinho, date(2026, 9, 30))
+    assert "1 linha de extrato pendente" in saldo.pendencia_da_movimentacao(c.cofrinho, date(2026, 9, 30))
     with pytest.raises(ValueError, match="pendente"):
         saldo.aplicar(
             c.user, account_id=c.cofrinho.id, data=date(2026, 9, 30), saldo_informado="510,00",

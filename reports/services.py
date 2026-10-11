@@ -24,6 +24,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.db.models import Case, DecimalField, F, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
+from django.utils import dateformat
+from django.utils.translation import gettext, ngettext
 
 from accounts.models import AccountOwner
 from accounts.services import accessible_owner_ids
@@ -82,9 +84,9 @@ def month_bounds(year: int, month: int) -> tuple[date, date]:
     try:
         start = date(year, month, 1)
     except (TypeError, ValueError) as exc:
-        raise InvalidMonthPeriodError("Período informado é inválido.") from exc
+        raise InvalidMonthPeriodError(gettext("Período informado é inválido.")) from exc
     if start > MAX_SAFE_MONTH:
-        raise InvalidMonthPeriodError("Período informado excede o limite suportado.")
+        raise InvalidMonthPeriodError(gettext("Período informado excede o limite suportado."))
     return start, add_months(start, 1)
 
 
@@ -133,15 +135,15 @@ def resolve_month_period(period_value: str | None, year_value: int | None, month
     if period_value not in (None, ""):
         period_month = parse_month_input(period_value)
         if period_month is None:
-            raise InvalidMonthPeriodError("Período informado é inválido.")
+            raise InvalidMonthPeriodError(gettext("Período informado é inválido."))
         month_bounds(period_month.year, period_month.month)
         resolved = enforce_system_start_month(period_month)
         month_bounds(resolved.year, resolved.month)
         return resolved.year, resolved.month
     if year_value is not None and (not isinstance(year_value, int) or isinstance(year_value, bool)):
-        raise InvalidMonthPeriodError("Ano informado é inválido.")
+        raise InvalidMonthPeriodError(gettext("Ano informado é inválido."))
     if month_value is not None and (not isinstance(month_value, int) or isinstance(month_value, bool)):
-        raise InvalidMonthPeriodError("Mês informado é inválido.")
+        raise InvalidMonthPeriodError(gettext("Mês informado é inválido."))
     year = today.year if year_value is None else year_value
     month = today.month if month_value is None else month_value
     month_bounds(year, month)
@@ -161,7 +163,7 @@ def bounded_projection_month_range(start_month: date, end_month: date) -> tuple[
     if end_month < start_month:
         start_month, end_month = end_month, start_month
     if start_month > MAX_PROJECTION_END_MONTH or end_month > MAX_PROJECTION_END_MONTH:
-        raise InvalidMonthPeriodError("Período informado excede o limite suportado.")
+        raise InvalidMonthPeriodError(gettext("Período informado excede o limite suportado."))
     max_months = max(
         1,
         int(getattr(settings, "REPORT_MAX_PROJECTION_RANGE_MONTHS", MAX_PROJECTION_RANGE_MONTHS)),
@@ -169,7 +171,7 @@ def bounded_projection_month_range(start_month: date, end_month: date) -> tuple[
     month_span = (end_month.year - start_month.year) * 12 + end_month.month - start_month.month + 1
     if month_span > max_months:
         raise InvalidMonthPeriodError(
-            f"Período de projeção excede o limite de {max_months} meses."
+            gettext("Período de projeção excede o limite de %(max_months)s meses.") % {"max_months": max_months}
         )
     return start_month, end_month
 
@@ -212,7 +214,7 @@ def bounded_upcoming_period(start_date: date, end_date: date) -> tuple[date, dat
     max_days = _report_limit("REPORT_MAX_UPCOMING_PERIOD_DAYS", DEFAULT_MAX_UPCOMING_PERIOD_DAYS)
     if (end_date - start_date).days + 1 > max_days:
         raise InvalidMonthPeriodError(
-            f"Período de movimentos excede o limite de {max_days} dias."
+            gettext("Período de movimentos excede o limite de %(max_days)s dias.") % {"max_days": max_days}
         )
     return start_date, end_date
 
@@ -222,7 +224,8 @@ def _limited_list(queryset, *, limit: int, description: str) -> list:
     rows = list(queryset[: limit + 1])
     if len(rows) > limit:
         raise ReportSizeLimitError(
-            f"Relatório excede o limite de {limit} {description}; refine os filtros."
+            gettext("Relatório excede o limite de %(limit)s %(description)s; refine os filtros.")
+            % {"limit": limit, "description": description}
         )
     return rows
 
@@ -765,7 +768,7 @@ def annual_planning_presentation(
             "months": [
                 {
                     "key": month.strftime("%Y-%m"),
-                    "label": month.strftime("%b/%y").capitalize(),
+                    "label": dateformat.format(month, "M/y").capitalize(),
                     "is_current": month == reference_month,
                 }
                 for month in months
@@ -790,10 +793,10 @@ def annual_planning_presentation(
     owner_positions = {owner.id: index for index, owner in enumerate(selected_owners)}
 
     section_specs = (
-        ("expense_recurring", "Despesas recorrentes", "despesa", True, -1),
-        ("expense_non_recurring", "Despesas não recorrentes", "despesa", False, -1),
-        ("income_recurring", "Receitas recorrentes", ENTRY_TYPE_INCOME, True, 1),
-        ("income_non_recurring", "Receitas não recorrentes", ENTRY_TYPE_INCOME, False, 1),
+        ("expense_recurring", gettext("Despesas recorrentes"), "despesa", True, -1),
+        ("expense_non_recurring", gettext("Despesas não recorrentes"), "despesa", False, -1),
+        ("income_recurring", gettext("Receitas recorrentes"), ENTRY_TYPE_INCOME, True, 1),
+        ("income_non_recurring", gettext("Receitas não recorrentes"), ENTRY_TYPE_INCOME, False, 1),
     )
     spec_by_key = {spec[0]: spec for spec in section_specs}
     month_positions = {month: index for index, month in enumerate(months)}
@@ -864,7 +867,7 @@ def annual_planning_presentation(
         spec = spec_by_key[section_key]
         signed_amount = amount * spec[4]
         category_id = entry.category_id
-        category_name = entry.category.category_name if entry.category else "Sem categoria"
+        category_name = entry.category.category_name if entry.category else gettext("Sem categoria")
         category_key = (section_key, category_id, category_name)
         grupo = entry.category.group if entry.category else None
         category_bucket = buckets.setdefault(
@@ -873,7 +876,7 @@ def annual_planning_presentation(
                 "owner_values": owner_zeroes(),
                 "months": zeroes(),
                 "descriptions": {},
-                "group": (grupo.position, grupo.group_name) if grupo else (10**6, "Sem grupo"),
+                "group": (grupo.position, grupo.group_name) if grupo else (10**6, gettext("Sem grupo")),
             },
         )
         category_bucket["months"][month_index] += signed_amount
@@ -885,7 +888,7 @@ def annual_planning_presentation(
                 section_totals[section_key]["owner_values"][owner_index] += signed_amount
 
         if show_descriptions:
-            description = entry.description.strip() or "Sem descrição"
+            description = entry.description.strip() or gettext("Sem descrição")
             description_bucket = category_bucket["descriptions"].setdefault(
                 description, {"owner_values": owner_zeroes(), "months": zeroes()}
             )
@@ -1023,12 +1026,12 @@ def annual_planning_presentation(
         for month in months
     ]
     summary_rows = [
-        {"label": "Geração de caixa", "owner_values": generation_owner, "months": _month_values(generation_months)},
-        {"label": "Saldo previsto / final", "owner_values": end_owner, "months": _month_values(end_months)},
-        {"label": "Total receitas", "owner_values": income_owner, "months": _month_values(income_months)},
-        {"label": "Total despesas", "owner_values": expense_owner, "months": _month_values(expense_months)},
-        {"label": "Transferências internas", "owner_values": transfer_owner_values, "months": _month_values(transfer_months)},
-        {"label": "Saldo atual / inicial", "owner_values": start_owner, "months": _month_values(start_months)},
+        {"label": gettext("Geração de caixa"), "owner_values": generation_owner, "months": _month_values(generation_months)},
+        {"label": gettext("Saldo previsto / final"), "owner_values": end_owner, "months": _month_values(end_months)},
+        {"label": gettext("Total receitas"), "owner_values": income_owner, "months": _month_values(income_months)},
+        {"label": gettext("Total despesas"), "owner_values": expense_owner, "months": _month_values(expense_months)},
+        {"label": gettext("Transferências internas"), "owner_values": transfer_owner_values, "months": _month_values(transfer_months)},
+        {"label": gettext("Saldo atual / inicial"), "owner_values": start_owner, "months": _month_values(start_months)},
     ]
 
     return {
@@ -1037,7 +1040,7 @@ def annual_planning_presentation(
         "months": [
             {
                 "key": month.strftime("%Y-%m"),
-                "label": month.strftime("%b/%y").capitalize(),
+                "label": dateformat.format(month, "M/y").capitalize(),
                 "is_current": month == reference_month,
             }
             for month in months
@@ -1278,7 +1281,7 @@ def entries_for_period(account_ids: list[int], start: date, end_exclusive: date,
     return _limited_list(
         qs,
         limit=_report_limit("REPORT_MAX_ENTRIES", DEFAULT_MAX_REPORT_ENTRIES),
-        description="lançamentos",
+        description=gettext("lançamentos"),
     )
 
 
@@ -1657,7 +1660,7 @@ def _list_upcoming_movement_entries(account_ids: list[int], start_date: date, en
     return _limited_list(
         qs,
         limit=_report_limit("REPORT_MAX_ENTRIES", DEFAULT_MAX_REPORT_ENTRIES),
-        description="lançamentos",
+        description=gettext("lançamentos"),
     )
 
 
@@ -1665,37 +1668,42 @@ def _account_action(minimum_balance: Decimal, minimum_balance_date: date, *, has
     if minimum_balance < 0:
         return (
             "danger",
-            "Transferir/cobrir",
-            f"Saldo fica negativo em {regional.formatar_data(minimum_balance_date)}.",
+            gettext("Transferir/cobrir"),
+            gettext("Saldo fica negativo em %(data)s.") % {"data": regional.formatar_data(minimum_balance_date)},
             (-minimum_balance).quantize(MONEY_QUANT),
         )
     if not has_movements:
-        return ("neutral", "Sem lançamentos", "Não há lançamentos no período.", Decimal("0.00"))
-    return ("success", "Suficiente", "Saldo cobre os lançamentos previstos.", Decimal("0.00"))
+        return ("neutral", gettext("Sem lançamentos"), gettext("Não há lançamentos no período."), Decimal("0.00"))
+    return ("success", gettext("Suficiente"), gettext("Saldo cobre os lançamentos previstos."), Decimal("0.00"))
 
 
 def _summary_action(rows: list[UpcomingMovementAccountRow], minimum_balance: Decimal, minimum_balance_date: date, *, has_movements: bool, has_candidate_accounts: bool) -> tuple[str, str, str, Decimal]:
     if not has_candidate_accounts:
-        return ("neutral", "Sem contas", "Nenhuma conta disponível para os filtros selecionados.", Decimal("0.00"))
+        return ("neutral", gettext("Sem contas"), gettext("Nenhuma conta disponível para os filtros selecionados."), Decimal("0.00"))
     if not has_movements:
-        return ("neutral", "Sem lançamentos", "Não há lançamentos no período selecionado.", Decimal("0.00"))
+        return ("neutral", gettext("Sem lançamentos"), gettext("Não há lançamentos no período selecionado."), Decimal("0.00"))
     if minimum_balance < 0:
         return (
             "danger",
-            "Caixa insuficiente",
-            f"O conjunto das contas fica negativo em {regional.formatar_data(minimum_balance_date)}.",
+            gettext("Caixa insuficiente"),
+            gettext("O conjunto das contas fica negativo em %(data)s.") % {"data": regional.formatar_data(minimum_balance_date)},
             (-minimum_balance).quantize(MONEY_QUANT),
         )
     deficit_rows = [row for row in rows if row.minimum_balance < 0]
     if deficit_rows:
         total_transfer = sum((row.action_amount for row in deficit_rows), Decimal("0.00")).quantize(MONEY_QUANT)
+        negative_accounts = len(deficit_rows)
         return (
             "warning",
-            "Avaliar transferência",
-            f"{len(deficit_rows)} conta(s) ficam negativas, mas o caixa total cobre o período.",
+            gettext("Avaliar transferência"),
+            ngettext(
+                "%(n)s conta fica negativa, mas o caixa total cobre o período.",
+                "%(n)s contas ficam negativas, mas o caixa total cobre o período.",
+                negative_accounts,
+            ) % {"n": negative_accounts},
             total_transfer,
         )
-    return ("success", "Tudo coberto", "Os saldos previstos cobrem os lançamentos do período.", Decimal("0.00"))
+    return ("success", gettext("Tudo coberto"), gettext("Os saldos previstos cobrem os lançamentos do período."), Decimal("0.00"))
 
 
 def upcoming_movements_report(account_ids: list[int], start_date: date, end_date: date, view_mode: str) -> UpcomingMovementsReport:
@@ -1708,7 +1716,7 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
         .filter(id__in=[int(a) for a in account_ids if a])
         .order_by("owner__name", "institution__institution_name", "account_name"),
         limit=_report_limit("REPORT_MAX_ACCOUNTS", DEFAULT_MAX_REPORT_ACCOUNTS),
-        description="contas",
+        description=gettext("contas"),
     )
     candidate_ids = [account.id for account in candidate_accounts]
     entries = _list_upcoming_movement_entries(candidate_ids, start_date, end_exclusive, mode)

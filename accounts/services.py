@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import ProtectedError
 from django.utils import timezone
+from django.utils.translation import gettext, gettext_lazy, gettext_noop
 from sharedauth.passwords import TAMANHO_SENHA_TEMPORARIA, gerar_senha_temporaria
 
 from core.domain.identity import USER_TYPE_ADMINISTRATOR, USER_TYPE_SUPER_USER, normalize_user_type
@@ -28,39 +29,42 @@ from .password_validators import current_min_length
 # AppPermissionBackend. Mantido enxuto: somente chaves que algum
 # @permission_required ou item de menu realmente referencia hoje. Novas
 # chaves entram junto com o módulo que passa a usá-las.
+# As descrições são marcadas com gettext_noop, e não com gettext_lazy: o texto
+# do dicionário é a chave de comparação em `_descricao_exibida`; um lazy compara
+# pelo idioma ativo, o que mudaria o resultado em inglês.
 PERMISSION_DEFINITIONS: Final[dict[str, str]] = {
-    "dashboard.view": "Visualizar Dashboard",
-    "transactions.view": "Visualizar lançamentos",
-    "transactions.create": "Incluir lançamentos",
-    "transactions.update": "Editar lançamentos",
-    "transactions.realize": "Marcar lançamentos como realizados",
-    "transactions.delete": "Excluir lançamentos",
-    "projections.view": "Visualizar Projeções",
-    "reports.upcoming_movements.view": "Visualizar Próximos movimentos",
-    "reports.account_position.view": "Visualizar Posição por conta",
-    "reports.annual_planning.view": "Visualizar Planejamento anual",
-    "management.view": "Visualizar Gestão",
-    "management.manage": "Gerenciar Gestão (tags, projetos, orçamento)",
-    "tables.view": "Visualizar Cadastros",
-    "tables.owners.manage": "Gerenciar titulares",
-    "tables.institutions.manage": "Gerenciar instituições financeiras",
-    "tables.accounts.manage": "Gerenciar contas",
-    "tables.categories.manage": "Gerenciar categorias",
-    "banking.view": "Visualizar módulo Instituições",
-    "banking.import": "Importar extratos bancários",
-    "banking.reconcile": "Conciliar extratos bancários",
-    "banking.reclassify": "Reclassificar categorias de lançamentos em lote",
-    "banking.attachments.manage": "Gerenciar comprovantes de lançamentos",
-    "operations.view": "Visualizar Parcelas e Recorrências (lançamentos agrupados)",
-    "settings.view": "Visualizar Configurações",
-    "settings.theme.update": "Atualizar perfil e visibilidade de contas",
-    "settings.audit.view": "Visualizar trilha de auditoria",
-    "settings.monthly_close.manage": "Fechar/reabrir mês pela tela de Configurações",
-    "settings.database.optimize": "Executar diagnóstico e otimização do banco de dados",
-    "settings.projection.manage": "Gerenciar projeção de lançamentos recorrentes",
-    "settings.password_policy.manage": "Gerenciar política de senha e bloqueio de login",
-    "tables.users.manage": "Gerenciar usuários",
-    "permissions.manage": "Gerenciar permissões de usuários",
+    "dashboard.view": gettext_noop("Visualizar Dashboard"),
+    "transactions.view": gettext_noop("Visualizar lançamentos"),
+    "transactions.create": gettext_noop("Incluir lançamentos"),
+    "transactions.update": gettext_noop("Editar lançamentos"),
+    "transactions.realize": gettext_noop("Marcar lançamentos como realizados"),
+    "transactions.delete": gettext_noop("Excluir lançamentos"),
+    "projections.view": gettext_noop("Visualizar Projeções"),
+    "reports.upcoming_movements.view": gettext_noop("Visualizar Próximos movimentos"),
+    "reports.account_position.view": gettext_noop("Visualizar Posição por conta"),
+    "reports.annual_planning.view": gettext_noop("Visualizar Planejamento anual"),
+    "management.view": gettext_noop("Visualizar Gestão"),
+    "management.manage": gettext_noop("Gerenciar Gestão (tags, projetos, orçamento)"),
+    "tables.view": gettext_noop("Visualizar Cadastros"),
+    "tables.owners.manage": gettext_noop("Gerenciar titulares"),
+    "tables.institutions.manage": gettext_noop("Gerenciar instituições financeiras"),
+    "tables.accounts.manage": gettext_noop("Gerenciar contas"),
+    "tables.categories.manage": gettext_noop("Gerenciar categorias"),
+    "banking.view": gettext_noop("Visualizar módulo Instituições"),
+    "banking.import": gettext_noop("Importar extratos bancários"),
+    "banking.reconcile": gettext_noop("Conciliar extratos bancários"),
+    "banking.reclassify": gettext_noop("Reclassificar categorias de lançamentos em lote"),
+    "banking.attachments.manage": gettext_noop("Gerenciar comprovantes de lançamentos"),
+    "operations.view": gettext_noop("Visualizar Parcelas e Recorrências (lançamentos agrupados)"),
+    "settings.view": gettext_noop("Visualizar Configurações"),
+    "settings.theme.update": gettext_noop("Atualizar perfil e visibilidade de contas"),
+    "settings.audit.view": gettext_noop("Visualizar trilha de auditoria"),
+    "settings.monthly_close.manage": gettext_noop("Fechar/reabrir mês pela tela de Configurações"),
+    "settings.database.optimize": gettext_noop("Executar diagnóstico e otimização do banco de dados"),
+    "settings.projection.manage": gettext_noop("Gerenciar projeção de lançamentos recorrentes"),
+    "settings.password_policy.manage": gettext_noop("Gerenciar política de senha e bloqueio de login"),
+    "tables.users.manage": gettext_noop("Gerenciar usuários"),
+    "permissions.manage": gettext_noop("Gerenciar permissões de usuários"),
 }
 
 # Permissões que, quando concedidas, implicam outra permissão mais genérica
@@ -166,39 +170,45 @@ CRITICAL_PERMISSION_KEYS: Final[set[str]] = {
 # Agrupamento visual das permissões funcionais por item de menu, usado para renderizar a
 # matriz de permissões em seções/subgrupos. É só apresentação: a autorização efetiva
 # vem de has_function_permission, nunca deste agrupamento.
+# Os títulos seguem a mesma regra do dicionário acima: são chaves de agrupamento
+# (comparadas, ordenadas e divididas por " · "), então ficam como texto puro e
+# só são traduzidos na saída, em `permission_catalog_grouped`.
 PERMISSION_MENU_GROUPS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
-    ("Dashboard", ("dashboard.view",)),
-    ("Movimentação · Lançamentos", (
+    (gettext_noop("Dashboard"), ("dashboard.view",)),
+    (gettext_noop("Movimentação · Lançamentos"), (
         "transactions.view", "transactions.create", "transactions.update",
         "transactions.realize", "transactions.delete",
     )),
-    ("Movimentação · Parcelas e recorrências", ("operations.view",)),
-    ("Movimentação · Comprovantes", ("banking.attachments.manage",)),
-    ("Movimentação · Instituições · Acesso geral", ("banking.view",)),
-    ("Movimentação · Importação · Extratos e faturas", ("banking.import",)),
-    ("Movimentação · Importação · Conciliação", ("banking.reconcile",)),
-    ("Movimentação · Reclassificação", ("banking.reclassify",)),
-    ("Movimentação · Fechamento mensal", ("settings.monthly_close.manage",)),
-    ("Relatórios · Próximos movimentos", ("reports.upcoming_movements.view",)),
-    ("Relatórios · Projeções", ("projections.view",)),
-    ("Relatórios · Posição por conta", ("reports.account_position.view",)),
-    ("Relatórios · Planejamento anual", ("reports.annual_planning.view",)),
-    ("Relatórios · Controle gerencial", ("management.view", "management.manage")),
-    ("Cadastros · Acesso geral", ("tables.view",)),
-    ("Cadastros · Titulares", ("tables.owners.manage",)),
-    ("Cadastros · Instituições", ("tables.institutions.manage",)),
-    ("Cadastros · Contas", ("tables.accounts.manage",)),
-    ("Cadastros · Categorias", ("tables.categories.manage",)),
-    ("Configurações · Acesso geral", ("settings.view",)),
-    ("Configurações · Perfil e tema", ("settings.theme.update",)),
-    ("Configurações · Parâmetros", (
+    (gettext_noop("Movimentação · Parcelas e recorrências"), ("operations.view",)),
+    (gettext_noop("Movimentação · Comprovantes"), ("banking.attachments.manage",)),
+    (gettext_noop("Movimentação · Instituições · Acesso geral"), ("banking.view",)),
+    (gettext_noop("Movimentação · Importação · Extratos e faturas"), ("banking.import",)),
+    (gettext_noop("Movimentação · Importação · Conciliação"), ("banking.reconcile",)),
+    (gettext_noop("Movimentação · Reclassificação"), ("banking.reclassify",)),
+    (gettext_noop("Movimentação · Fechamento mensal"), ("settings.monthly_close.manage",)),
+    (gettext_noop("Relatórios · Próximos movimentos"), ("reports.upcoming_movements.view",)),
+    (gettext_noop("Relatórios · Projeções"), ("projections.view",)),
+    (gettext_noop("Relatórios · Posição por conta"), ("reports.account_position.view",)),
+    (gettext_noop("Relatórios · Planejamento anual"), ("reports.annual_planning.view",)),
+    (gettext_noop("Relatórios · Controle gerencial"), ("management.view", "management.manage")),
+    (gettext_noop("Cadastros · Acesso geral"), ("tables.view",)),
+    (gettext_noop("Cadastros · Titulares"), ("tables.owners.manage",)),
+    (gettext_noop("Cadastros · Instituições"), ("tables.institutions.manage",)),
+    (gettext_noop("Cadastros · Contas"), ("tables.accounts.manage",)),
+    (gettext_noop("Cadastros · Categorias"), ("tables.categories.manage",)),
+    (gettext_noop("Configurações · Acesso geral"), ("settings.view",)),
+    (gettext_noop("Configurações · Perfil e tema"), ("settings.theme.update",)),
+    (gettext_noop("Configurações · Parâmetros"), (
         "settings.projection.manage", "settings.password_policy.manage",
     )),
-    ("Configurações · Banco de dados", ("settings.database.optimize",)),
-    ("Segurança · Auditoria", ("settings.audit.view",)),
-    ("Segurança · Permissões · Usuários", ("tables.users.manage",)),
-    ("Segurança · Permissões", ("permissions.manage",)),
+    (gettext_noop("Configurações · Banco de dados"), ("settings.database.optimize",)),
+    (gettext_noop("Segurança · Auditoria"), ("settings.audit.view",)),
+    (gettext_noop("Segurança · Permissões · Usuários"), ("tables.users.manage",)),
+    (gettext_noop("Segurança · Permissões"), ("permissions.manage",)),
 )
+# Grupo de chaves que não estão em nenhum item de menu. Hoje nenhuma chave cai
+# aqui, mas se alguma cair, a matriz mostra este título traduzido, não texto cru.
+_GRUPO_SEM_MENU: Final[str] = gettext_noop("Outras")
 _PERMISSION_GROUP_BY_KEY: Final[dict[str, str]] = {
     key: group_name for group_name, keys in PERMISSION_MENU_GROUPS for key in keys
 }
@@ -215,16 +225,32 @@ for _group_name, _keys in PERMISSION_MENU_GROUPS:
     _PERMISSION_GROUP_ORDER.setdefault(_top_level, len(_PERMISSION_GROUP_ORDER))
 
 
+def _descricao_exibida(permission: AppPermission) -> str:
+    """Descrição que a matriz mostra para a permissão.
+
+    O dicionário é a fonte do texto e do msgid. O banco guarda o que as migrations
+    semearam, que pode ter ficado para trás de um renomeio de tela; só uma
+    permissão fora do dicionário mostra o texto do banco.
+    """
+    semente = PERMISSION_DEFINITIONS.get(permission.name)
+    if semente is not None:
+        return gettext(semente)
+    return permission.description
+
+
 def permission_catalog_grouped():
     """Permissões cadastradas, agrupadas por item de menu (nome do grupo -> lista ordenada)."""
     permissions = list(AppPermission.objects.filter(name__in=PERMISSION_DEFINITIONS.keys()))
     groups: dict[str, list] = {}
     for permission in permissions:
-        group = _PERMISSION_GROUP_BY_KEY.get(permission.name, "Outras")
+        group = _PERMISSION_GROUP_BY_KEY.get(permission.name, _GRUPO_SEM_MENU)
+        # A matriz lê `permission.description`. A instância é só desta leitura:
+        # nada aqui a grava, então o texto traduzido não chega ao banco.
+        permission.description = _descricao_exibida(permission)
         groups.setdefault(group, []).append(permission)
     return [
         {
-            "name": group,
+            "name": gettext(group),
             "permissions": sorted(
                 groups[group],
                 key=lambda p: (_PERMISSION_ORDER_BY_KEY.get(p.name, len(_PERMISSION_ORDER_BY_KEY)), p.name),
@@ -270,8 +296,8 @@ def permission_catalog_sections(permission_groups):
 # conjunto de UserPermission que o perfil grava.
 PROFILE_DEFINITIONS: Final[dict[str, dict]] = {
     "consulta": {
-        "label": "Consulta",
-        "description": "Acesso de leitura às principais telas, sem inclusão, edição, exclusão ou ações administrativas.",
+        "label": gettext_lazy("Consulta"),
+        "description": gettext_lazy("Acesso de leitura às principais telas, sem inclusão, edição, exclusão ou ações administrativas."),
         "permissions": {
             "dashboard.view", "transactions.view", "projections.view",
             "reports.upcoming_movements.view", "reports.account_position.view", "reports.annual_planning.view",
@@ -279,8 +305,8 @@ PROFILE_DEFINITIONS: Final[dict[str, dict]] = {
         },
     },
     "operador": {
-        "label": "Operador",
-        "description": "Consulta, inclusão, edição e realização de lançamentos. Não inclui exclusão nem administração.",
+        "label": gettext_lazy("Operador"),
+        "description": gettext_lazy("Consulta, inclusão, edição e realização de lançamentos. Não inclui exclusão nem administração."),
         "permissions": {
             "dashboard.view", "transactions.view", "transactions.create",
             "transactions.update", "transactions.realize", "projections.view",
@@ -289,8 +315,8 @@ PROFILE_DEFINITIONS: Final[dict[str, dict]] = {
         },
     },
     "gestor": {
-        "label": "Gestor",
-        "description": "Operação financeira completa, cadastros financeiros e rotinas administrativas não destrutivas.",
+        "label": gettext_lazy("Gestor"),
+        "description": gettext_lazy("Operação financeira completa, cadastros financeiros e rotinas administrativas não destrutivas."),
         "permissions": {
             "dashboard.view", "transactions.view", "transactions.create",
             "transactions.update", "transactions.delete", "transactions.realize",
@@ -306,8 +332,8 @@ PROFILE_DEFINITIONS: Final[dict[str, dict]] = {
         },
     },
     "administrador": {
-        "label": "Administrador",
-        "description": "Todas as permissões funcionais cadastradas, incluindo permissões críticas.",
+        "label": gettext_lazy("Administrador"),
+        "description": gettext_lazy("Todas as permissões funcionais cadastradas, incluindo permissões críticas."),
         "permissions": set(),
     },
 }
@@ -362,20 +388,20 @@ def user_mutation_block_message(
 ) -> str | None:
     """Mensagem de bloqueio se a mutação de usuário não for permitida, ou None se liberada."""
     if action == "delete" and target_user and target_user.id == current_user.id:
-        return "Ação bloqueada: você não pode excluir a própria conta."
+        return gettext("Ação bloqueada: você não pode excluir a própria conta.")
 
     if action == "delete" and target_user and target_user.user_type == USER_TYPE_ADMINISTRATOR:
         other_admin_exists = AppUser.objects.filter(
             user_type=USER_TYPE_ADMINISTRATOR
         ).exclude(id=target_user.id).exists()
         if not other_admin_exists:
-            return "Ação bloqueada: não é permitido excluir o último administrator."
+            return gettext("Ação bloqueada: não é permitido excluir o último administrador.")
 
     if action in ("add", "edit") and _is_elevated_user_type(requested_user_type) and current_user.user_type != USER_TYPE_ADMINISTRATOR:
-        return "Acesso negado: você não tem permissão para criar ou promover usuários privilegiados."
+        return gettext("Acesso negado: você não tem permissão para criar ou promover usuários privilegiados.")
 
     if action == "edit" and target_user and _is_elevated_user_type(target_user.user_type) and current_user.user_type != USER_TYPE_ADMINISTRATOR:
-        return "Acesso negado: você não tem permissão para alterar usuário privilegiado."
+        return gettext("Acesso negado: você não tem permissão para alterar usuário privilegiado.")
 
     return None
 
@@ -390,11 +416,11 @@ def _username_taken(username: str, *, excluding_user_id: int | None = None) -> b
 def create_managed_user(username: str, user_type: str, password: str, password_confirm: str) -> AppUser:
     username = (username or "").strip()
     if not username:
-        raise ValueError("Nome do usuário é obrigatório.")
+        raise ValueError(gettext("Nome do usuário é obrigatório."))
     if _username_taken(username):
-        raise ValueError("Já existe um usuário com este nome.")
+        raise ValueError(gettext("Já existe um usuário com este nome."))
     if password != password_confirm:
-        raise ValueError("A confirmação de senha não confere.")
+        raise ValueError(gettext("A confirmação de senha não confere."))
 
     user = AppUser(username=username, user_type=normalize_user_type(user_type))
     try:
@@ -418,16 +444,16 @@ def update_managed_user(
 ) -> AppUser:
     username = (username or "").strip()
     if not username:
-        raise ValueError("Nome do usuário é obrigatório.")
+        raise ValueError(gettext("Nome do usuário é obrigatório."))
     if _username_taken(username, excluding_user_id=user.id):
-        raise ValueError("Já existe um usuário com este nome.")
+        raise ValueError(gettext("Já existe um usuário com este nome."))
 
     password = (password or "").strip()
     password_confirm = (password_confirm or "").strip()
     password_changed = False
     if password or password_confirm:
         if password != password_confirm:
-            raise ValueError("A confirmação de senha não confere.")
+            raise ValueError(gettext("A confirmação de senha não confere."))
         try:
             validate_password(password, user=user)
         except ValidationError as exc:
@@ -468,9 +494,11 @@ def reset_managed_user_password(user: AppUser) -> str:
         validate_password(senha, user=user)
     except ValidationError as exc:
         raise ValueError(
-            "A senha sorteada não atende à política configurada em "
-            "Configurações > Parâmetros: " + " ".join(exc.messages) + " "
-            "Ajuste a política ou defina a senha pela edição do usuário."
+            gettext(
+                "A senha sorteada não atende à política configurada em "
+                "Configurações > Parâmetros: %(erros)s "
+                "Ajuste a política ou defina a senha pela edição do usuário."
+            ) % {"erros": " ".join(exc.messages)}
         ) from exc
 
     user.set_password(senha)
@@ -602,46 +630,48 @@ def list_owners(user):
 def _clean_owner_name(name: str) -> str:
     name = (name or "").strip()
     if not name:
-        raise ValueError("Nome do titular é obrigatório.")
+        raise ValueError(gettext("Nome do titular é obrigatório."))
     if len(name) > _MAX_OWNER_NAME_LENGTH:
-        raise ValueError(f"Nome do titular não pode exceder {_MAX_OWNER_NAME_LENGTH} caracteres.")
+        raise ValueError(
+            gettext("Nome do titular não pode exceder %(maximo)s caracteres.") % {"maximo": _MAX_OWNER_NAME_LENGTH}
+        )
     return name
 
 
 def create_owner(name: str) -> AccountOwner:
     clean_name = _clean_owner_name(name)
     if AccountOwner.objects.filter(name__iexact=clean_name).exists():
-        raise ValueError("Já existe um titular com esse nome.")
+        raise ValueError(gettext("Já existe um titular com esse nome."))
     try:
         return AccountOwner.objects.create(name=clean_name)
     except IntegrityError as exc:
-        raise ValueError("Já existe um titular com esse nome.") from exc
+        raise ValueError(gettext("Já existe um titular com esse nome.")) from exc
 
 
 def update_owner(user, owner: AccountOwner, name: str) -> AccountOwner:
     # `tables.owners.manage` diz que a pessoa gerencia titulares, não QUAIS: o
     # escopo por titular vale aqui como vale para as contas do titular.
     if not can_access_owner(user, owner.id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para alterar este titular.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para alterar este titular."))
     clean_name = _clean_owner_name(name)
     if AccountOwner.objects.filter(name__iexact=clean_name).exclude(id=owner.id).exists():
-        raise ValueError("Já existe um titular com esse nome.")
+        raise ValueError(gettext("Já existe um titular com esse nome."))
     owner.name = clean_name
     try:
         owner.save(update_fields=["name", "updated_at"])
     except IntegrityError as exc:
-        raise ValueError("Já existe um titular com esse nome.") from exc
+        raise ValueError(gettext("Já existe um titular com esse nome.")) from exc
     return owner
 
 
 def delete_owner(user, owner: AccountOwner) -> None:
     if not can_access_owner(user, owner.id, "delete"):
-        raise ValueError("Acesso negado: você não tem permissão para excluir este titular.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para excluir este titular."))
     try:
         owner.delete()
     except ProtectedError as exc:
         raise ValueError(
-            "Não é possível excluir este titular: existem contas vinculadas a ele."
+            gettext("Não é possível excluir este titular: existem contas vinculadas a ele.")
         ) from exc
 
 
@@ -657,16 +687,16 @@ def change_user_password(
     sequestrada em tomada de conta), confirmação idêntica e aderência à
     política de complexidade (AUTH_PASSWORD_VALIDATORS)."""
     if not user.check_password(current_password or ""):
-        raise ValueError("Senha atual inválida.")
+        raise ValueError(gettext("Senha atual inválida."))
     if new_password != confirmation:
-        raise ValueError("A confirmação de senha não confere.")
+        raise ValueError(gettext("A confirmação de senha não confere."))
     if new_password == current_password:
         # O caso que motiva a regra é a senha temporária: quem foi obrigado a
         # trocar redigita a que o administrador acabou de ditar, a marca se
         # apaga, e a senha que um terceiro conhece continua valendo --
         # exatamente o que a obrigação existia para impedir. Mesma regra de
         # `sharedauth.passwords.validar_troca` nos três apps Flask.
-        raise ValueError("A nova senha deve ser diferente da senha atual.")
+        raise ValueError(gettext("A nova senha deve ser diferente da senha atual."))
     try:
         validate_password(new_password or "", user=user)
     except ValidationError as exc:

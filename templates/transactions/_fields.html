@@ -1,4 +1,4 @@
-{% load l10n money_filters contas %}
+{% load l10n money_filters contas i18n %}
 {% comment %}
 Campos compartilhados entre o formulário de novo lançamento e as linhas de
 edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
@@ -7,9 +7,9 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
 `system_start_date`, `today`, `new_entry_defaults` (herdados da view).
 {% endcomment %}
 <div>
-    <label>Conta</label>
-    <select name="account_id" aria-label="Conta" required>
-        <option value="">Selecione…</option>
+    <label>{% trans "Conta" %}</label>
+    <select name="account_id" aria-label="{% trans 'Conta' %}" required>
+        <option value="">{% trans "Selecione…" %}</option>
         {% if t %}
         {% for titular, contas in update_accounts|por_titular %}
         <optgroup label="{{ titular }}">
@@ -30,16 +30,16 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
     </select>
 </div>
 <div>
-    <label>Tipo</label>
-    <select name="entry_type" aria-label="Tipo" required>
-        <option value="receita" {% if t and t.entry_type == 'receita' %}selected{% elif not t and new_entry_defaults.entry_type == 'receita' %}selected{% endif %}>Receita</option>
-        <option value="despesa" {% if t and t.entry_type == 'despesa' %}selected{% elif not t and new_entry_defaults.entry_type != 'receita' %}selected{% endif %}>Despesa</option>
+    <label>{% trans "Tipo" %}</label>
+    <select name="entry_type" aria-label="{% trans 'Tipo' %}" required>
+        <option value="receita" {% if t and t.entry_type == 'receita' %}selected{% elif not t and new_entry_defaults.entry_type == 'receita' %}selected{% endif %}>{% trans "Receita" %}</option>
+        <option value="despesa" {% if t and t.entry_type == 'despesa' %}selected{% elif not t and new_entry_defaults.entry_type != 'receita' %}selected{% endif %}>{% trans "Despesa" %}</option>
     </select>
 </div>
 <div>
-    <label>Categoria</label>
-    <select name="category_id" aria-label="Categoria" required class="category-select">
-        <option value="" data-internal="0">Selecione…</option>
+    <label>{% trans "Categoria" %}</label>
+    <select name="category_id" aria-label="{% trans 'Categoria' %}" required class="category-select">
+        <option value="" data-internal="0">{% trans "Selecione…" %}</option>
         {% for cat in categories %}
         {% comment %}
         `data-internal` liga o campo de conta destino, e só a TRANSFERÊNCIA tem
@@ -50,21 +50,21 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
     </select>
 </div>
 <div>
-    <label>Status</label>
-    <select name="status" class="status-select" aria-label="Status">
+    <label>{% trans "Status" %}</label>
+    <select name="status" class="status-select" aria-label="{% trans 'Status' %}">
         {% for status_value, status_label in status_options %}
         <option value="{{ status_value }}" {% if t and t.status == status_value %}selected{% elif not t and new_entry_defaults.status == status_value %}selected{% endif %}>{{ status_label }}</option>
         {% endfor %}
     </select>
 </div>
 <div class="span-2">
-    <label>Descrição</label>
-    <input type="text" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="Descrição" placeholder="Ex: Supermercado, salário…" required>
+    <label>{% trans "Descrição" %}</label>
+    <input type="text" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="{% trans 'Descrição' %}" placeholder="{% trans 'Ex: Supermercado, salário…' %}" required>
 </div>
 <div class="counterparty-field" data-ui="hidden">
-    <label>{% if t %}Conta contraparte{% else %}Conta destino{% endif %}</label>
-    <select name="counterparty_account_id" aria-label="Conta contraparte">
-        <option value="">Selecione…</option>
+    <label>{% if t %}{% trans "Conta contraparte" %}{% else %}{% trans "Conta destino" %}{% endif %}</label>
+    <select name="counterparty_account_id" aria-label="{% trans 'Conta contraparte' %}">
+        <option value="">{% trans "Selecione…" %}</option>
         {% for titular, contas in counterparty_accounts|por_titular %}
         <optgroup label="{{ titular }}">
             {% for acc in contas %}
@@ -75,8 +75,8 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
     </select>
 </div>
 <div>
-    <label>Valor total (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
-    <input type="number" step="0.01" name="entry_amount" value="{% if t %}{{ t.entry_amount|unlocalize }}{% endif %}" aria-label="Valor total" required>
+    <label>{% trans "Valor total" %} (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
+    <input type="number" step="0.01" name="entry_amount" value="{% if t %}{{ t.entry_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor total' %}" required>
 </div>
 {% comment %}
 Só aparece quando a conta de origem e a conta destino estão em moedas
@@ -86,49 +86,49 @@ desabilitado não é enviado -- e o serviço recusa este valor quando as moedas
 são iguais (`counterparty_amount_for_transfer`).
 {% endcomment %}
 <div class="counterparty-amount-field" data-ui="hidden">
-    <label>Valor creditado no destino (<span data-currency-for="counterparty">US$</span>)</label>
-    <input type="number" step="0.01" name="counterparty_amount" value="{% if t and t.counterparty_entry_amount != None %}{{ t.counterparty_entry_amount|unlocalize }}{% endif %}" aria-label="Valor creditado no destino" disabled>
+    <label>{% trans "Valor creditado no destino" %} (<span data-currency-for="counterparty">US$</span>)</label>
+    <input type="number" step="0.01" name="counterparty_amount" value="{% if t and t.counterparty_entry_amount != None %}{{ t.counterparty_entry_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor creditado no destino' %}" disabled>
 </div>
 <div>
-    <label>Vencimento</label>
-    <input type="date" name="due_date" value="{% if t and t.due_date %}{{ t.due_date|date:'Y-m-d' }}{% else %}{{ new_entry_defaults.due_date }}{% endif %}" aria-label="Vencimento" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
+    <label>{% trans "Vencimento" %}</label>
+    <input type="date" name="due_date" value="{% if t and t.due_date %}{{ t.due_date|date:'Y-m-d' }}{% else %}{{ new_entry_defaults.due_date }}{% endif %}" aria-label="{% trans 'Vencimento' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
 </div>
 <div>
-    <label>Parcelas</label>
-    <input type="number" name="installments" min="1" max="48" value="{% if t %}{{ t.installments }}{% else %}1{% endif %}" aria-label="Parcelas">
+    <label>{% trans "Parcelas" %}</label>
+    <input type="number" name="installments" min="1" max="48" value="{% if t %}{{ t.installments }}{% else %}1{% endif %}" aria-label="{% trans 'Parcelas' %}">
 </div>
 <div>
-    <label>Modo de cálculo</label>
-    <select name="calc_mode" aria-label="Modo de cálculo">
-        <option value="repeat" selected>Repetir valor</option>
-        <option value="divide">Dividir valor</option>
+    <label>{% trans "Modo de cálculo" %}</label>
+    <select name="calc_mode" aria-label="{% trans 'Modo de cálculo' %}">
+        <option value="repeat" selected>{% trans "Repetir valor" %}</option>
+        <option value="divide">{% trans "Dividir valor" %}</option>
     </select>
 </div>
 <div class="check-line">
     <input type="checkbox" name="is_recurring" id="recurring-{{ form_id }}" {% if t and t.is_recurring %}checked{% endif %}>
-    <label for="recurring-{{ form_id }}" data-ui="m-0">Recorrente mensal</label>
+    <label for="recurring-{{ form_id }}" data-ui="m-0">{% trans "Recorrente mensal" %}</label>
 </div>
 <div class="realized-field" data-ui="hidden">
-    <label>Data de realização</label>
-    <input type="date" name="realized_date" value="{% if t and t.realized_date %}{{ t.realized_date|date:'Y-m-d' }}{% endif %}" aria-label="Data de realização" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
+    <label>{% trans "Data de realização" %}</label>
+    <input type="date" name="realized_date" value="{% if t and t.realized_date %}{{ t.realized_date|date:'Y-m-d' }}{% endif %}" aria-label="{% trans 'Data de realização' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
 </div>
 <div class="realized-field" data-ui="hidden">
-    <label>Valor realizado (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
-    <input type="number" step="0.01" name="realized_amount" value="{% if t and t.realized_amount != None %}{{ t.realized_amount|unlocalize }}{% endif %}" aria-label="Valor realizado">
+    <label>{% trans "Valor realizado" %} (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
+    <input type="number" step="0.01" name="realized_amount" value="{% if t and t.realized_amount != None %}{{ t.realized_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor realizado' %}">
 </div>
 {% if t and t.supports_scope %}
 <div class="span-2">
-    <label>Aplicar alteração</label>
-    <select name="operation_scope" aria-label="Aplicar alteração" required
+    <label>{% trans "Aplicar alteração" %}</label>
+    <select name="operation_scope" aria-label="{% trans 'Aplicar alteração' %}" required
         data-current-future-token="{{ t.current_future_confirmation_token }}"
-        {% if t.current_future_attachment_count %}data-current-future-confirm="Este registro e as parcelas seguintes serão recriados ao salvar com esse escopo, o que apaga {{ t.current_future_attachment_count }} comprovante{{ t.current_future_attachment_count|pluralize }} anexado{{ t.current_future_attachment_count|pluralize }} a eles. Deseja continuar?"{% endif %}>
-        <option value="all">Todos os registros do grupo</option>
-        <option value="single" selected>Somente este registro</option>
-        <option value="current_future">Este registro e os próximos</option>
+        {% if t.current_future_attachment_count %}data-current-future-confirm="{% blocktrans trimmed count counter=t.current_future_attachment_count %}Este registro e as parcelas seguintes serão recriados ao salvar com esse escopo, o que apaga {{ counter }} comprovante anexado a eles. Deseja continuar?{% plural %}Este registro e as parcelas seguintes serão recriados ao salvar com esse escopo, o que apaga {{ counter }} comprovantes anexados a eles. Deseja continuar?{% endblocktrans %}"{% endif %}>
+        <option value="all">{% trans "Todos os registros do grupo" %}</option>
+        <option value="single" selected>{% trans "Somente este registro" %}</option>
+        <option value="current_future">{% trans "Este registro e os próximos" %}</option>
     </select>
     <input type="hidden" name="current_future_confirmation_token" value="">
     <p class="form-error" data-current-future-confirmation-error hidden>
-        A confirmação visual é necessária para aplicar a alteração neste registro e nos próximos.
+        {% trans "A confirmação visual é necessária para aplicar a alteração neste registro e nos próximos." %}
     </p>
 </div>
 {% endif %}

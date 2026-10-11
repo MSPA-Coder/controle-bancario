@@ -1,10 +1,10 @@
-{% load static regional_filters %}
+{% load i18n static regional_filters %}
 {% load icons %}
 {% load money_filters %}
 {% if rendimentos_agrupados %}
 <div class="table-container u-mb-1">
-    <h3 class="u-mb-075">Rendimentos pendentes, por conta e mês</h3>
-    <p class="help-text">Cada linha do extrato continua existindo (é o que faz o saldo do arquivo bater), mas não precisa de uma decisão por linha: aplique o grupo de uma vez.</p>
+    <h3 class="u-mb-075">{% trans "Rendimentos pendentes, por conta e mês" %}</h3>
+    <p class="help-text">{% trans "Cada linha do extrato continua existindo (é o que faz o saldo do arquivo bater), mas não precisa de uma decisão por linha: aplique o grupo de uma vez." %}</p>
     {% for grupo in rendimentos_agrupados %}
     <form method="post" action="{% url 'bank_statements:bulk_action_lines' %}"
           hx-post="{% url 'bank_statements:bulk_action_lines' %}"
@@ -14,12 +14,12 @@
         <input type="hidden" name="bulk_action" value="apply_plan">
         {% for line_id in grupo.line_ids %}<input type="hidden" name="line_ids" value="{{ line_id }}">{% endfor %}
         <span>{{ grupo.mes|umonth }} · {{ grupo.conta.owner.name }} / {{ grupo.conta.institution.institution_name }} / {{ grupo.conta.account_name }}
-            · {{ grupo.quantidade }} linha{{ grupo.quantidade|pluralize }} · <strong class="amount amount-positive">{{ grupo.total|money:grupo.conta.currency }}</strong></span>
+            · {% blocktrans trimmed count counter=grupo.quantidade %}{{ counter }} linha{% plural %}{{ counter }} linhas{% endblocktrans %} · <strong class="amount amount-positive">{{ grupo.total|money:grupo.conta.currency }}</strong></span>
         <button type="submit" class="btn-sm btn-primary"
-                data-sa-confirmar="Criar os {{ grupo.quantidade }} lançamentos de rendimento deste mês?"
-                data-sa-titulo="Aplicar rendimentos do mês"
+                data-sa-confirmar="{% blocktrans trimmed count counter=grupo.quantidade %}Criar {{ counter }} lançamento de rendimento deste mês?{% plural %}Criar os {{ counter }} lançamentos de rendimento deste mês?{% endblocktrans %}"
+                data-sa-titulo="{% trans 'Aplicar rendimentos do mês' %}"
                 data-sa-severidade="info"
-                data-sa-ok="Aplicar">Aplicar o mês</button>
+                data-sa-ok="{% trans 'Aplicar' %}">{% trans "Aplicar o mês" %}</button>
     </form>
     {% endfor %}
 </div>
@@ -31,49 +31,49 @@
           hx-swap="innerHTML">
         {% csrf_token %}
         <div class="u-d-flex u-items-center u-gap-05 u-mb-075">
-            <h3 class="u-mb-0">Linhas de extrato pendentes de conciliação</h3>
+            <h3 class="u-mb-0">{% trans "Linhas de extrato pendentes de conciliação" %}</h3>
             <button type="submit" name="bulk_action" value="apply_plan" class="btn-sm btn-primary"
-                    data-sa-confirmar="Aplicar a sugestão mostrada em cada linha selecionada? Concilia, cria lançamentos e pareia transferências entre contas suas; linhas que pedem decisão ficam pendentes."
-                    data-sa-titulo="Aplicar sugestões"
+                    data-sa-confirmar="{% trans 'Aplicar a sugestão mostrada em cada linha selecionada? Concilia, cria lançamentos e pareia transferências entre contas suas; linhas que pedem decisão ficam pendentes.' %}"
+                    data-sa-titulo="{% trans 'Aplicar sugestões' %}"
                     data-sa-severidade="warning"
-                    data-sa-ok="Aplicar">
-                Aplicar sugestões
+                    data-sa-ok="{% trans 'Aplicar' %}">
+                {% trans "Aplicar sugestões" %}
             </button>
             <button type="submit" name="bulk_action" value="reconcile" class="btn-sm btn-primary"
-                    data-sa-confirmar="Conciliar todas as linhas selecionadas? Cada lançamento será marcado como realizado."
-                    data-sa-titulo="Confirmar conciliação em lote"
+                    data-sa-confirmar="{% trans 'Conciliar todas as linhas selecionadas? Cada lançamento será marcado como realizado.' %}"
+                    data-sa-titulo="{% trans 'Confirmar conciliação em lote' %}"
                     data-sa-severidade="warning"
-                    data-sa-ok="Conciliar">
-                Conciliar selecionadas
+                    data-sa-ok="{% trans 'Conciliar' %}">
+                {% trans "Conciliar selecionadas" %}
             </button>
             <button type="submit" name="bulk_action" value="create" class="btn-sm btn-action-edit"
-                    data-sa-confirmar="Criar lançamentos realizados para todas as linhas selecionadas?"
-                    data-sa-titulo="Confirmar criação em lote"
+                    data-sa-confirmar="{% trans 'Criar lançamentos realizados para todas as linhas selecionadas?' %}"
+                    data-sa-titulo="{% trans 'Confirmar criação em lote' %}"
                     data-sa-severidade="warning"
-                    data-sa-ok="Criar">
-                Criar selecionadas
+                    data-sa-ok="{% trans 'Criar' %}">
+                {% trans "Criar selecionadas" %}
             </button>
             <button type="submit" name="bulk_action" value="ignore" class="btn-sm btn-action-delete"
-                    data-sa-confirmar="Ignorar todas as linhas selecionadas?"
-                    data-sa-titulo="Ignorar linhas"
+                    data-sa-confirmar="{% trans 'Ignorar todas as linhas selecionadas?' %}"
+                    data-sa-titulo="{% trans 'Ignorar linhas' %}"
                     data-sa-severidade="warning"
-                    data-sa-ok="Ignorar">
-                Ignorar selecionadas
+                    data-sa-ok="{% trans 'Ignorar' %}">
+                {% trans "Ignorar selecionadas" %}
             </button>
         </div>
     </form>
     <table class="tx-table">
         <thead>
             <tr>
-                <th><input type="checkbox" data-select-all="line_ids" aria-label="Selecionar todas"></th>
-                <th>Data</th>
-                <th>Conta</th>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Sugestão</th>
-                <th>Conciliar com lançamento</th>
-                <th>Ou criar lançamento</th>
-                <th>Ações</th>
+                <th><input type="checkbox" data-select-all="line_ids" aria-label="{% trans 'Selecionar todas' %}"></th>
+                <th>{% trans "Data" %}</th>
+                <th>{% trans "Conta" %}</th>
+                <th>{% trans "Descrição" %}</th>
+                <th>{% trans "Valor" %}</th>
+                <th>{% trans "Sugestão" %}</th>
+                <th>{% trans "Conciliar com lançamento" %}</th>
+                <th>{% trans "Ou criar lançamento" %}</th>
+                <th>{% trans "Ações" %}</th>
             </tr>
         </thead>
         <tbody>
@@ -81,7 +81,7 @@
             <tr id="statement-line-{{ line.id }}" {% if target_line_id == line.id %}class="edit-row is-editing"{% endif %}>
                 <td>
                     {% if line.status == "novo" %}
-                    <input type="checkbox" name="line_ids" value="{{ line.id }}" form="bulkPendingLinesForm" aria-label="Selecionar linha">
+                    <input type="checkbox" name="line_ids" value="{{ line.id }}" form="bulkPendingLinesForm" aria-label="{% trans 'Selecionar linha' %}">
                     {% endif %}
                 </td>
                 <td>{{ line.statement_date|udate }}</td>
@@ -101,23 +101,23 @@
                             <input type="hidden" name="line_id" value="{{ line.id }}">
                             <select name="entry_id" required>
                                 {% if line.reconcile_candidates|length > 1 %}
-                                <option value="">Selecione…</option>
+                                <option value="">{% trans "Selecione…" %}</option>
                                 {% endif %}
                                 {% for entry in line.reconcile_candidates %}
                                 <option value="{{ entry.id }}" data-sensitive-value="true" {% if line.reconcile_candidates|length == 1 %}selected{% endif %}>#{{ entry.id }} - {{ entry.due_date|udate }} - {{ entry.description|default:"-" }} - {{ entry.entry_amount|money:entry.account.currency }}</option>
                                 {% endfor %}
                             </select>
                             <button type="submit" class="btn-sm btn-primary"
-                                    data-sa-confirmar="Conciliar esta linha do extrato e marcar o lançamento como realizado?"
-                                    data-sa-titulo="Confirmar conciliação"
+                                    data-sa-confirmar="{% trans 'Conciliar esta linha do extrato e marcar o lançamento como realizado?' %}"
+                                    data-sa-titulo="{% trans 'Confirmar conciliação' %}"
                                     data-sa-severidade="warning"
-                                    data-sa-ok="Conciliar">Conciliar</button>
+                                    data-sa-ok="{% trans 'Conciliar' %}">{% trans "Conciliar" %}</button>
                         </form>
                         {% else %}
-                        <span class="empty-state">Sem candidato — use “Criar”.</span>
+                        <span class="empty-state">{% trans "Sem candidato — use “Criar”." %}</span>
                         {% endif %}
                     {% else %}
-                    <span class="empty-state">Status: {{ line.get_status_display }}</span>
+                    <span class="empty-state">{% blocktrans trimmed with status=line.get_status_display %}Status: {{ status }}{% endblocktrans %}</span>
                     {% endif %}
                 </td>
                 <td>
@@ -130,16 +130,16 @@
                         {% csrf_token %}
                         <input type="hidden" name="line_id" value="{{ line.id }}">
                         <select name="category_id" required>
-                            <option value="">Categoria…</option>
+                            <option value="">{% trans "Categoria…" %}</option>
                             {% for category in categories %}
                             <option value="{{ category.id }}" {% if category.id == line.suggested_category_id %}selected{% endif %}>{{ category.category_name }}</option>
                             {% endfor %}
                         </select>
                         <button type="submit" class="btn-sm btn-action-edit"
-                                data-sa-confirmar="Criar um lançamento realizado a partir desta linha do extrato?"
-                                data-sa-titulo="Criar lançamento"
+                                data-sa-confirmar="{% trans 'Criar um lançamento realizado a partir desta linha do extrato?' %}"
+                                data-sa-titulo="{% trans 'Criar lançamento' %}"
                                 data-sa-severidade="info"
-                                data-sa-ok="Criar">Criar</button>
+                                data-sa-ok="{% trans 'Criar' %}">{% trans "Criar" %}</button>
                     </form>
                     {% else %}
                     <span class="empty-state">-</span>
@@ -154,41 +154,41 @@
                         {% csrf_token %}
                         <input type="hidden" name="line_id" value="{{ line.id }}">
                         <button type="submit" class="btn-sm btn-action-delete"
-                                data-sa-confirmar="Ignorar esta linha do extrato?"
-                                data-sa-titulo="Ignorar linha"
+                                data-sa-confirmar="{% trans 'Ignorar esta linha do extrato?' %}"
+                                data-sa-titulo="{% trans 'Ignorar linha' %}"
                                 data-sa-severidade="warning"
-                                data-sa-ok="Ignorar">Ignorar</button>
+                                data-sa-ok="{% trans 'Ignorar' %}">{% trans "Ignorar" %}</button>
                     </form>
                     {% else %}
-                    <span class="empty-state">Sem ação</span>
+                    <span class="empty-state">{% trans "Sem ação" %}</span>
                     {% endif %}
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="9" class="empty-state">Nenhuma linha pendente.</td></tr>
+            <tr><td colspan="9" class="empty-state">{% trans "Nenhuma linha pendente." %}</td></tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
 
 <div class="table-container">
-    <h3 class="u-mb-075">Últimas conciliações</h3>
+    <h3 class="u-mb-075">{% trans "Últimas conciliações" %}</h3>
     {% for batch in reconciled_batches %}
     <details class="reconciled-batch" {% if batch.id == target_batch_id %}open{% endif %}>
         <summary>
             <strong>{{ batch.created_at|udatetime }}</strong>
             — {{ batch.account.owner.name }} / {{ batch.account.institution.institution_name }} / {{ batch.account.account_name }}
             — {{ batch.source_filename }}
-            — {{ batch.reconciled_lines|length }} linha{{ batch.reconciled_lines|length|pluralize }} conciliada{{ batch.reconciled_lines|length|pluralize }}
+            — {% blocktrans trimmed count counter=batch.reconciled_lines|length %}{{ counter }} linha conciliada{% plural %}{{ counter }} linhas conciliadas{% endblocktrans %}
         </summary>
         <table class="tx-table">
             <thead>
                 <tr>
-                    <th>Data</th>
-                    <th>Descrição do extrato</th>
-                    <th>Valor</th>
-                    <th>Lançamento</th>
-                    <th>Ações</th>
+                    <th>{% trans "Data" %}</th>
+                    <th>{% trans "Descrição do extrato" %}</th>
+                    <th>{% trans "Valor" %}</th>
+                    <th>{% trans "Lançamento" %}</th>
+                    <th>{% trans "Ações" %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -197,7 +197,7 @@
                     <td>{{ line.statement_date|udate }}</td>
                     <td>{{ line.description }}</td>
                     <td class="amount {{ line.amount|amount_class }}">{{ line.amount|money_signed:line.account.currency }}</td>
-                    <td>{% if line.matched_entry %}#{{ line.matched_entry.id }} - {{ line.matched_entry.description|default:"-" }}{% else %}Lançamento não encontrado.{% endif %}</td>
+                    <td>{% if line.matched_entry %}#{{ line.matched_entry.id }} - {{ line.matched_entry.description|default:"-" }}{% else %}{% trans "Lançamento não encontrado." %}{% endif %}</td>
                     <td class="actions">
                         <form method="post" action="{% url 'bank_statements:undo_reconciliation' %}"
                               hx-post="{% url 'bank_statements:undo_reconciliation' %}"
@@ -206,10 +206,10 @@
                             {% csrf_token %}
                             <input type="hidden" name="line_id" value="{{ line.id }}">
                             <button type="submit" class="btn-sm btn-action-edit"
-                                    data-sa-confirmar="Desfazer esta conciliação?"
-                                    data-sa-titulo="Desfazer conciliação"
+                                    data-sa-confirmar="{% trans 'Desfazer esta conciliação?' %}"
+                                    data-sa-titulo="{% trans 'Desfazer conciliação' %}"
                                     data-sa-severidade="info"
-                                    data-sa-ok="Desfazer">{% icon 'undo' %} Desfazer</button>
+                                    data-sa-ok="{% trans 'Desfazer' %}">{% icon 'undo' %} {% trans "Desfazer" %}</button>
                         </form>
                     </td>
                 </tr>
@@ -218,6 +218,6 @@
         </table>
     </details>
     {% empty %}
-    <p class="empty-state">Nenhuma conciliação recente.</p>
+    <p class="empty-state">{% trans "Nenhuma conciliação recente." %}</p>
     {% endfor %}
 </div>

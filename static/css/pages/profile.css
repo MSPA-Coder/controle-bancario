@@ -21,5 +21,9 @@
     .preview-soft_dark { background:linear-gradient(135deg, #1f2933 50%, #7dd3fc 50%); }
     .preview-corporate_blue { background:linear-gradient(135deg, #eef2ff 50%, #1d4ed8 50%); }
     .preview-emerald { background:linear-gradient(135deg, #ecfdf5 50%, #10b981 50%); }
+    .locale-group { border:0; padding:0; margin:0 0 1rem; min-width:0; }
+    .locale-group legend { font-weight:600; margin-bottom:0.5rem; padding:0; }
+    .locale-hint { margin:0.75rem 0 0; font-size:0.8rem; color:var(--muted); }
+    .locale-preview { margin:0.75rem 0 0; color:var(--muted); font-variant-numeric:tabular-nums; }
     .theme-name { font-weight:600; font-size:0.9rem; display:block; }
     .theme-desc { font-size:0.75rem; color:var(--muted); display:block; margin-top:0.2rem; }

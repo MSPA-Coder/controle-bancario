@@ -31,6 +31,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db.models import Max, Q
+from django.utils.translation import gettext, gettext_lazy, ngettext
 
 from banking.models import FinancialAccount
 from banking.services import accessible_account_ids, can_access_account
@@ -57,11 +58,20 @@ DESTINO_PERDA = "perda"
 DESTINO_AJUSTE = "ajuste"
 
 # destino -> (rótulo, nome da categoria, tipo do lançamento, exige motivo)
+# O nome da categoria é chave de busca no banco: não se traduz.
 DESTINOS = {
-    DESTINO_RENDIMENTOS: ("Rendimentos", "Rendimentos", ENTRY_TYPE_INCOME, False),
-    DESTINO_IR_IOF: ("IR / IOF", "Impostos e Tributos", ENTRY_TYPE_EXPENSE, False),
-    DESTINO_PERDA: ("Perda", CATEGORIA_DE_AJUSTE, ENTRY_TYPE_EXPENSE, True),
-    DESTINO_AJUSTE: ("Ajuste assumido", CATEGORIA_DE_AJUSTE, None, True),
+    DESTINO_RENDIMENTOS: (gettext_lazy("Rendimentos"), "Rendimentos", ENTRY_TYPE_INCOME, False),
+    DESTINO_IR_IOF: (gettext_lazy("IR / IOF"), "Impostos e Tributos", ENTRY_TYPE_EXPENSE, False),
+    DESTINO_PERDA: (gettext_lazy("Perda"), CATEGORIA_DE_AJUSTE, ENTRY_TYPE_EXPENSE, True),
+    DESTINO_AJUSTE: (gettext_lazy("Ajuste assumido"), CATEGORIA_DE_AJUSTE, None, True),
+}
+# O que vai para a descrição gravada do lançamento (e que a Situação reconhece):
+# fica em português, como o resto do que é gravado, qualquer que seja o idioma da tela.
+_ROTULO_NA_DESCRICAO = {
+    DESTINO_RENDIMENTOS: "rendimentos",
+    DESTINO_IR_IOF: "ir / iof",
+    DESTINO_PERDA: "perda",
+    DESTINO_AJUSTE: "ajuste assumido",
 }
 _QUANTO = Decimal("0.01")
 
@@ -90,7 +100,7 @@ class Previa:
     def destinos(self) -> list[tuple[str, str]]:
         """Os destinos que servem ao sentido da diferença, como `(chave, rótulo)`."""
         return [
-            (chave, rotulo)
+            (chave, str(rotulo))
             for chave, (rotulo, _, tipo, _) in DESTINOS.items()
             if tipo is None or tipo == self.tipo
         ]
@@ -100,11 +110,11 @@ def _conta(user, account_id, acao: str) -> FinancialAccount:
     try:
         conta = FinancialAccount.objects.select_related("owner", "institution", "movement_account__institution").get(id=int(account_id))
     except (FinancialAccount.DoesNotExist, ValueError, TypeError) as exc:
-        raise ValueError("Conta não encontrada.") from exc
+        raise ValueError(gettext("Conta não encontrada.")) from exc
     if not can_access_account(user, conta.id, acao):
-        raise ValueError("Acesso negado: você não tem permissão para acessar esta conta.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar esta conta."))
     if conta.is_credit_card:
-        raise ValueError("Cartão de crédito não tem saldo para atualizar: use a fatura.")
+        raise ValueError(gettext("Cartão de crédito não tem saldo para atualizar: use a fatura."))
     return conta
 
 
@@ -115,7 +125,7 @@ def _decimal(valor, rotulo: str) -> Decimal:
     try:
         return Decimal(texto)
     except InvalidOperation as exc:
-        raise ValueError(f"{rotulo} inválido.") from exc
+        raise ValueError(gettext("%(rotulo)s inválido.") % {"rotulo": rotulo}) from exc
 
 
 def pendencia_da_movimentacao(conta: FinancialAccount, data: date) -> str:
@@ -131,26 +141,29 @@ def pendencia_da_movimentacao(conta: FinancialAccount, data: date) -> str:
         account=movimento, status=LINE_STATUS_NEW, statement_date__lte=data
     ).count()
     if pendentes:
-        return (
-            f"A conta de movimento {rotulo} tem {pendentes} linha(s) de extrato pendente(s) até "
-            f"{regional.formatar_data(data)}: concilie antes, ou uma transferência que falta vira rendimento."
-        )
+        return ngettext(
+            "A conta de movimento %(conta)s tem %(n)s linha de extrato pendente até %(data)s: "
+            "concilie antes, ou uma transferência que falta vira rendimento.",
+            "A conta de movimento %(conta)s tem %(n)s linhas de extrato pendentes até %(data)s: "
+            "concilie antes, ou uma transferência que falta vira rendimento.",
+            pendentes,
+        ) % {"conta": rotulo, "n": pendentes, "data": regional.formatar_data(data)}
     ultima_linha = BankStatementLine.objects.filter(account=movimento).aggregate(d=Max("statement_date"))["d"]
     lotes = BankStatementImport.objects.filter(account=movimento).aggregate(
         saldo=Max("statement_balance_date"), periodo=Max("statement_period_end")
     )
     coberto = max((d for d in (ultima_linha, lotes["saldo"], lotes["periodo"]) if d is not None), default=None)
     if coberto is None or coberto < data.replace(day=1):
-        return (
-            f"O extrato de {data:%m/%Y} da conta de movimento {rotulo} ainda não foi importado: "
+        return gettext(
+            "O extrato de %(mes)s da conta de movimento %(conta)s ainda não foi importado: "
             "importe e concilie antes de informar o saldo."
-        )
+        ) % {"mes": regional.formatar_mes(data), "conta": rotulo}
     return ""
 
 
 def previa(user, *, account_id, data: date, saldo_informado) -> Previa:
     conta = _conta(user, account_id, "view")
-    informado = _decimal(saldo_informado, "Saldo").quantize(_QUANTO)
+    informado = _decimal(saldo_informado, gettext("Saldo")).quantize(_QUANTO)
     saldos = decimal_balances_before_by_account([conta.id], data + timedelta(days=1), VIEW_REALIZED)
     return Previa(
         conta=conta, data=data, saldo_informado=informado, saldo_no_cb=saldos.get(conta.id, Decimal("0.00")),
@@ -161,7 +174,7 @@ def previa(user, *, account_id, data: date, saldo_informado) -> Previa:
 def _categoria(nome: str) -> CashFlowCategory:
     categoria = CashFlowCategory.objects.filter(category_name__iexact=nome).first()
     if categoria is None:
-        raise ValueError(f"Cadastre a categoria “{nome}” antes de lançar esta diferença.")
+        raise ValueError(gettext("Cadastre a categoria “%(nome)s” antes de lançar esta diferença.") % {"nome": nome})
     return categoria
 
 
@@ -174,24 +187,24 @@ def aplicar(
     `diferenca_esperada` é a que a prévia mostrou: se o saldo do CB mudou desde
     então (outra importação, outro usuário), nada é gravado e a prévia é refeita."""
     if destino not in DESTINOS:
-        raise ValueError("Escolha o destino da diferença.")
+        raise ValueError(gettext("Escolha o destino da diferença."))
     rotulo, nome_da_categoria, tipo_fixo, exige_motivo = DESTINOS[destino]
     motivo = (motivo or "").strip()
     if exige_motivo and not motivo:
-        raise ValueError(f"“{rotulo}” exige um motivo.")
+        raise ValueError(gettext("“%(rotulo)s” exige um motivo.") % {"rotulo": rotulo})
 
     atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado)
     conta = _conta(user, account_id, "create")
     if atual.pendencia:
         raise ValueError(atual.pendencia)
-    if atual.diferenca != _decimal(diferenca_esperada, "Diferença").quantize(_QUANTO):
-        raise ValueError("O saldo do CB mudou desde a prévia. Confira a nova diferença.")
+    if atual.diferenca != _decimal(diferenca_esperada, gettext("Diferença")).quantize(_QUANTO):
+        raise ValueError(gettext("O saldo do CB mudou desde a prévia. Confira a nova diferença."))
     if atual.tipo is None:
-        raise ValueError("O saldo informado já bate com o do CB: não há o que lançar.")
+        raise ValueError(gettext("O saldo informado já bate com o do CB: não há o que lançar."))
     if tipo_fixo is not None and tipo_fixo != atual.tipo:
-        raise ValueError(f"“{rotulo}” não serve ao sentido desta diferença.")
+        raise ValueError(gettext("“%(rotulo)s” não serve ao sentido desta diferença.") % {"rotulo": rotulo})
 
-    descricao = f"{PREFIXO_DA_DESCRICAO}: {rotulo.lower()}"
+    descricao = f"{PREFIXO_DA_DESCRICAO}: {_ROTULO_NA_DESCRICAO[destino]}"
     if motivo:
         descricao = f"{descricao} ({motivo})"
     valor = abs(atual.diferenca)

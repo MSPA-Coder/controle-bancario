@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.db import connection
+from django.utils.translation import gettext, ngettext
 
 from core import regional
 from core.domain.settings import (
@@ -25,6 +26,7 @@ from core.domain.settings import (
     APP_SETTING_PROJECTION_HORIZON_MONTHS,
     APP_SETTING_PROJECTION_RUN_DAY,
     APP_SETTING_SYSTEM_START_DATE,
+    normalize_language,
     normalize_regional_format,
     normalize_table_scroll_rows,
     normalize_ui_theme,
@@ -54,7 +56,7 @@ def parse_system_start_date(value: object) -> date | None:
     try:
         return date.fromisoformat(str(value))
     except ValueError as exc:
-        raise ValueError("Data inicial do sistema inválida.") from exc
+        raise ValueError(gettext("Data inicial do sistema inválida.")) from exc
 
 
 def system_start_date() -> date | None:
@@ -81,12 +83,19 @@ def update_user_ui_theme(user, theme: str) -> str:
     return normalized
 
 
-def update_user_regional_format(user, regional_format: str) -> str:
-    """Formato de datas e números na tela. Só apresentação: nada gravado muda."""
-    normalized = normalize_regional_format(regional_format)
-    user.regional_format = normalized
-    user.save(update_fields=["regional_format", "updated_at"])
-    return normalized
+def update_user_locale(user, language: str | None, regional_format: str | None) -> tuple[str, str]:
+    """Idioma e formato regional na tela. Só apresentação: nada gravado muda.
+
+    Valor fora da lista cai no padrão em vez de gerar erro: a escolha vem de um
+    seletor fechado, e um POST forjado não ganha nada com a recusa. Campo ausente
+    (`None`) mantém o que o usuário já tem.
+    """
+    if language is not None:
+        user.language = normalize_language(language)
+    if regional_format is not None:
+        user.regional_format = normalize_regional_format(regional_format)
+    user.save(update_fields=["language", "regional_format", "updated_at"])
+    return user.language, user.regional_format
 
 
 def update_user_table_scroll_rows(user, rows: object) -> int:
@@ -296,11 +305,11 @@ def _parse_bounded_int(value, *, default: int, minimum: int, maximum: int) -> in
     try:
         parsed = int(value)
     except (TypeError, ValueError) as exc:
-        raise ValueError("Valor deve ser um número inteiro.") from exc
+        raise ValueError(gettext("Valor deve ser um número inteiro.")) from exc
     if parsed < minimum:
-        raise ValueError(f"Valor deve ser pelo menos {minimum}.")
+        raise ValueError(gettext("Valor deve ser pelo menos %(minimo)s.") % {"minimo": minimum})
     if parsed > maximum:
-        raise ValueError(f"Valor deve ser no máximo {maximum}.")
+        raise ValueError(gettext("Valor deve ser no máximo %(maximo)s.") % {"maximo": maximum})
     return parsed
 
 
@@ -424,7 +433,7 @@ def update_recurring_projection_settings(*, horizon_months, run_day) -> Recurrin
 
 def format_last_projection_run(setting_value: str | None) -> str:
     if not setting_value:
-        return "Nenhuma execução registrada"
+        return gettext("Nenhuma execução registrada")
     try:
         return regional.formatar_data_hora(datetime.fromisoformat(setting_value), segundos=True)
     except ValueError:
@@ -470,11 +479,20 @@ def run_database_health_check() -> DatabaseHealthResult:
 
     total_orphans = sum(count for _label, count in orphan_checks)
     ok = total_orphans == 0
-    summary = (
-        f"{sum(table_counts.values())} registro(s) em {len(table_counts)} tabela(s) verificada(s), 0 inconsistência(s)."
-        if ok
-        else f"{total_orphans} inconsistência(s) encontrada(s) — veja os detalhes."
-    )
+    if ok:
+        registros = sum(table_counts.values())
+        tabelas = len(table_counts)
+        summary = gettext("%(registros)s em %(tabelas)s, %(inconsistencias)s.") % {
+            "registros": ngettext("%(n)s registro", "%(n)s registros", registros) % {"n": registros},
+            "tabelas": ngettext("%(n)s tabela verificada", "%(n)s tabelas verificadas", tabelas) % {"n": tabelas},
+            "inconsistencias": ngettext("%(n)s inconsistência", "%(n)s inconsistências", total_orphans) % {"n": total_orphans},
+        }
+    else:
+        summary = ngettext(
+            "%(n)s inconsistência encontrada — veja os detalhes.",
+            "%(n)s inconsistências encontradas — veja os detalhes.",
+            total_orphans,
+        ) % {"n": total_orphans}
     return DatabaseHealthResult(ok=ok, summary=summary, table_counts=table_counts, orphan_checks=orphan_checks)
 
 
@@ -491,22 +509,33 @@ def optimize_database() -> str:
                 cursor.execute(f"VACUUM ANALYZE {table}")  # noqa: S608 - nomes fixos, não vêm de entrada do usuário
         finally:
             connection.set_autocommit(previous_autocommit)
-    summary = f"VACUUM ANALYZE executado em {len(_HEALTH_CHECK_TABLES)} tabela(s)."
+    total = len(_HEALTH_CHECK_TABLES)
+    # Grava a contagem, não a frase: o texto sai na leitura, no idioma de quem lê.
     upsert_app_setting(
         APP_SETTING_LAST_OPTIMIZE_INFO,
-        f"{datetime.now().isoformat(timespec='seconds')}|{summary}",
+        f"{datetime.now().isoformat(timespec='seconds')}|{total}",
     )
-    return summary
+    return _resumo_da_otimizacao(total)
+
+
+def _resumo_da_otimizacao(tabelas: int) -> str:
+    return ngettext(
+        "VACUUM ANALYZE executado em %(n)s tabela.",
+        "VACUUM ANALYZE executado em %(n)s tabelas.",
+        tabelas,
+    ) % {"n": tabelas}
 
 
 def format_last_optimize_info(setting_value: str | None) -> str:
     if not setting_value:
-        return "Nenhuma otimização registrada"
+        return gettext("Nenhuma otimização registrada")
     timestamp, _, summary = setting_value.partition("|")
     try:
         formatted = regional.formatar_data_hora(datetime.fromisoformat(timestamp), segundos=True)
     except ValueError:
         return setting_value
+    if summary.isdigit():
+        summary = _resumo_da_otimizacao(int(summary))
     return f"{formatted} — {summary}" if summary else formatted
 
 

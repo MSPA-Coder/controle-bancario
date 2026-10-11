@@ -42,6 +42,7 @@ from datetime import date, timedelta
 
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
+from django.utils.translation import gettext, gettext_lazy, ngettext
 
 from banking.models import FinancialAccount
 from banking.services import accessible_account_ids
@@ -61,12 +62,12 @@ FECHADO = "fechado"
 
 #: estado -> (ícone, rótulo). O ícone vai junto da cor: o estado não depende dela.
 ROTULOS = {
-    SEM_IMPORTACAO: ("✖", "Sem importação"),
-    COM_PENDENCIAS: ("⚠", "Com pendências"),
-    CONCILIADO: ("✔", "Conciliado"),
-    SALDO_INFORMADO: ("✔", "Saldo informado"),
-    FECHADO: ("✔", "Mês fechado"),
-    NAO_SE_APLICA: ("—", "Não se aplica"),
+    SEM_IMPORTACAO: ("✖", gettext_lazy("Sem importação")),
+    COM_PENDENCIAS: ("⚠", gettext_lazy("Com pendências")),
+    CONCILIADO: ("✔", gettext_lazy("Conciliado")),
+    SALDO_INFORMADO: ("✔", gettext_lazy("Saldo informado")),
+    FECHADO: ("✔", gettext_lazy("Mês fechado")),
+    NAO_SE_APLICA: ("—", gettext_lazy("Não se aplica")),
 }
 ESTADOS_EM_ORDEM = (CONCILIADO, SALDO_INFORMADO, FECHADO, COM_PENDENCIAS, SEM_IMPORTACAO, NAO_SE_APLICA)
 #: Estados que contam como "em dia" no resumo.
@@ -116,6 +117,7 @@ class Celula:
     lote_id: int | None = None  # o lote mais recente com linhas no mês
     url: str = ""  # para onde a célula leva; quem monta a tela preenche
     motivo: str = ""  # aplicação vinculada: o que a deixa neste estado
+    saldo_pendente: bool = False  # aplicação vinculada à espera do saldo do fim do mês
 
     @property
     def icone(self) -> str:
@@ -130,9 +132,11 @@ class Celula:
         if self.motivo:
             return self.motivo
         if self.estado == COM_PENDENCIAS:
-            return f"{self.linhas - self.novas} de {self.linhas} conciliadas"
+            return gettext("%(conciliadas)s de %(linhas)s conciliadas") % {
+                "conciliadas": self.linhas - self.novas, "linhas": self.linhas,
+            }
         if self.estado == CONCILIADO:
-            return f"{self.linhas} linha{'s' if self.linhas != 1 else ''}"
+            return ngettext("%(n)s linha", "%(n)s linhas", self.linhas) % {"n": self.linhas}
         return ""
 
     @property
@@ -274,13 +278,19 @@ def _celula_da_aplicacao(conta, mes: date, movimento: Celula, *, informado_no_fi
     rotulo = f"{conta.movement_account.institution.institution_name} / {conta.movement_account.account_name}"
     if movimento.estado == CONCILIADO:
         if informado_no_fim:
-            return Celula(mes=mes, estado=CONCILIADO, motivo=f"{rotulo} conciliada; saldo de {regional.formatar_dia_mes(_ultimo_dia(mes))} informado")
+            return Celula(mes=mes, estado=CONCILIADO, motivo=gettext("%(rotulo)s conciliada; saldo de %(dia)s informado") % {"rotulo": rotulo, "dia": regional.formatar_dia_mes(_ultimo_dia(mes))})
         if zerada:
-            return Celula(mes=mes, estado=CONCILIADO, motivo=f"{rotulo} conciliada; aplicação zerada e sem movimento")
-        return Celula(mes=mes, estado=COM_PENDENCIAS, motivo=f"falta informar o saldo de {regional.formatar_dia_mes(_ultimo_dia(mes))}")
+            return Celula(mes=mes, estado=CONCILIADO, motivo=gettext("%(rotulo)s conciliada; aplicação zerada e sem movimento") % {"rotulo": rotulo})
+        return Celula(
+            mes=mes,
+            estado=COM_PENDENCIAS,
+            motivo=gettext("falta informar o saldo de %(dia)s")
+            % {"dia": regional.formatar_dia_mes(_ultimo_dia(mes))},
+            saldo_pendente=True,
+        )
     if movimento.estado == COM_PENDENCIAS:
-        return Celula(mes=mes, estado=COM_PENDENCIAS, motivo=f"falta conciliar {rotulo}")
-    return Celula(mes=mes, estado=SEM_IMPORTACAO, motivo=f"sem extrato de {rotulo}")
+        return Celula(mes=mes, estado=COM_PENDENCIAS, motivo=gettext("falta conciliar %(rotulo)s") % {"rotulo": rotulo})
+    return Celula(mes=mes, estado=SEM_IMPORTACAO, motivo=gettext("sem extrato de %(rotulo)s") % {"rotulo": rotulo})
 
 
 def estados(contas: list[FinancialAccount], meses: list[date]) -> dict[tuple[int, date], Celula]:
@@ -317,7 +327,7 @@ def estados(contas: list[FinancialAccount], meses: list[date]) -> dict[tuple[int
         )
         if not dados and estado == CONCILIADO:
             lote_id, dia = saldo_do_extrato
-            return Celula(mes=mes, estado=estado, lote_id=lote_id, motivo=f"extrato sem movimento; saldo de {regional.formatar_dia_mes(dia)}")
+            return Celula(mes=mes, estado=estado, lote_id=lote_id, motivo=gettext("extrato sem movimento; saldo de %(dia)s") % {"dia": regional.formatar_dia_mes(dia)})
         return Celula(
             mes=mes, estado=estado,
             linhas=dados["linhas"] if dados else 0,
@@ -350,10 +360,10 @@ def estados(contas: list[FinancialAccount], meses: list[date]) -> dict[tuple[int
 def _motivo_do_fechado(celula: Celula) -> str:
     """O que faltava ao mês, que o fechamento deu por conferido."""
     if celula.estado == SEM_IMPORTACAO:
-        return "fechado sem extrato importado"
-    if celula.motivo.startswith("falta informar"):
-        return "fechado sem o saldo do fim do mês informado"
-    return "fechado"
+        return gettext("fechado sem extrato importado")
+    if celula.saldo_pendente:
+        return gettext("fechado sem o saldo do fim do mês informado")
+    return gettext("fechado")
 
 
 def montar(user, *, quantos: int = MESES_PADRAO, referencia: date | None = None, hoje: date | None = None) -> Matriz:

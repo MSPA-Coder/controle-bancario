@@ -35,6 +35,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 from django.db import transaction as db_transaction
+from django.utils.translation import gettext, gettext_lazy, ngettext
 
 from accounts.models import AccountOwner
 from accounts.services import can_use_transfer_destination
@@ -89,29 +90,44 @@ EXECUTAVEIS = (
 )
 
 ROTULOS = {
-    CONCILIA: "Concilia com o lançamento existente",
-    CONCILIA_APROXIMADA: "Concilia com a recorrência prevista (valor diferente)",
-    CRIA: "Cria lançamento",
-    TRANSFERENCIA_PAR: "Transferência entre contas suas (pareia as duas linhas)",
-    TRANSFERENCIA_REGRA: "Transferência para a conta",
-    TRANSFERENCIA_COM_LANCAMENTO: "Transferência entre contas suas: aproveita o lançamento já gravado na outra conta",
-    TRANSFERENCIA_SEM_PAR: "Parece transferência sua; falta importar a outra ponta",
-    IGNORA: "Ignora (regra)",
-    AMBIGUA: "Mais de um lançamento candidato: escolha",
-    MANUAL: "Decida manualmente",
+    CONCILIA: gettext_lazy("Concilia com o lançamento existente"),
+    CONCILIA_APROXIMADA: gettext_lazy("Concilia com a recorrência prevista (valor diferente)"),
+    CRIA: gettext_lazy("Cria lançamento"),
+    TRANSFERENCIA_PAR: gettext_lazy("Transferência entre contas suas (pareia as duas linhas)"),
+    TRANSFERENCIA_REGRA: gettext_lazy("Transferência para a conta"),
+    TRANSFERENCIA_COM_LANCAMENTO: gettext_lazy(
+        "Transferência entre contas suas: aproveita o lançamento já gravado na outra conta"
+    ),
+    TRANSFERENCIA_SEM_PAR: gettext_lazy("Parece transferência sua; falta importar a outra ponta"),
+    IGNORA: gettext_lazy("Ignora (regra)"),
+    AMBIGUA: gettext_lazy("Mais de um lançamento candidato: escolha"),
+    MANUAL: gettext_lazy("Decida manualmente"),
 }
 
+# Cada rótulo recebe a quantidade e devolve "<quantidade> <descrição>" já no plural certo.
 ROTULOS_CURTOS = {
-    CONCILIA: "conciliada(s)",
-    CONCILIA_APROXIMADA: "recorrência(s) conciliada(s) com valor diferente",
-    CRIA: "lançamento(s) criado(s)",
-    TRANSFERENCIA_PAR: "transferência(s) pareada(s)",
-    TRANSFERENCIA_REGRA: "transferência(s) por regra",
-    TRANSFERENCIA_COM_LANCAMENTO: "transferência(s) com lançamento já gravado",
-    IGNORA: "ignorada(s)",
+    CONCILIA: lambda n: ngettext("%(n)s conciliada", "%(n)s conciliadas", n) % {"n": n},
+    CONCILIA_APROXIMADA: lambda n: ngettext(
+        "%(n)s recorrência conciliada com valor diferente",
+        "%(n)s recorrências conciliadas com valor diferente",
+        n,
+    )
+    % {"n": n},
+    CRIA: lambda n: ngettext("%(n)s lançamento criado", "%(n)s lançamentos criados", n) % {"n": n},
+    TRANSFERENCIA_PAR: lambda n: ngettext("%(n)s transferência pareada", "%(n)s transferências pareadas", n)
+    % {"n": n},
+    TRANSFERENCIA_REGRA: lambda n: ngettext("%(n)s transferência por regra", "%(n)s transferências por regra", n)
+    % {"n": n},
+    TRANSFERENCIA_COM_LANCAMENTO: lambda n: ngettext(
+        "%(n)s transferência com lançamento já gravado",
+        "%(n)s transferências com lançamento já gravado",
+        n,
+    )
+    % {"n": n},
+    IGNORA: lambda n: ngettext("%(n)s ignorada", "%(n)s ignoradas", n) % {"n": n},
 }
 
-_SEM_DESTINO = "Acesso negado: você não tem permissão para receber transferência em {conta}."
+_SEM_DESTINO = gettext_lazy("Acesso negado: você não tem permissão para receber transferência em %(conta)s.")
 _JANELA_DO_PAR = timedelta(days=2)
 _LIMITE_DO_POOL = 3000
 # Palavras que dão cara de transferência a uma linha de extrato.
@@ -138,7 +154,7 @@ class Plano:
 
     @property
     def rotulo(self) -> str:
-        texto = ROTULOS.get(self.acao, self.acao)
+        texto = str(ROTULOS.get(self.acao, self.acao))
         if self.acao == CRIA and self.sugestao is not None and self.sugestao.categoria is not None:
             return f"{texto}: {self.sugestao.categoria.category_name} ({self.sugestao.rotulo})"
         if self.acao == CONCILIA and self.lancamento is not None:
@@ -151,13 +167,17 @@ class Plano:
                     line=self.linha,
                 )
                 if correcao:
-                    return f"{texto} #{self.lancamento.id}; corrige a realização: {correcao}"
+                    return gettext("%(texto)s #%(id)s; corrige a realização: %(correcao)s") % {
+                        "texto": texto, "id": self.lancamento.id, "correcao": correcao,
+                    }
             return f"{texto} #{self.lancamento.id}"
         if self.acao == CONCILIA_APROXIMADA and self.lancamento is not None:
-            return (
-                f"{texto} #{self.lancamento.id}: previsto {self.lancamento.entry_amount}, "
-                f"no extrato {abs(self.linha.amount)}"
-            )
+            return gettext("%(texto)s #%(id)s: previsto %(previsto)s, no extrato %(extrato)s") % {
+                "texto": texto,
+                "id": self.lancamento.id,
+                "previsto": self.lancamento.entry_amount,
+                "extrato": abs(self.linha.amount),
+            }
         if self.acao == TRANSFERENCIA_PAR and self.par is not None:
             return f"{texto}: {_rotulo_da_conta(self.par.account)}"
         if self.acao == TRANSFERENCIA_COM_LANCAMENTO and self.lancamento is not None:
@@ -364,7 +384,7 @@ def planejar(user, linhas) -> list[Plano]:
     planos: list[Plano] = []
     for linha in sorted(linhas, key=lambda item: (item.statement_date, item.id)):
         if linha.account.is_credit_card:
-            planos.append(Plano(linha, MANUAL, motivo="Linha de cartão: use a tela de Faturas."))
+            planos.append(Plano(linha, MANUAL, motivo=gettext("Linha de cartão: use a tela de Faturas.")))
             continue
         regra = regras.da_linha(linha)
         if regra is not None and regra.action == RULE_ACTION_IGNORE:
@@ -381,8 +401,8 @@ def planejar(user, linhas) -> list[Plano]:
         if par is not None:
             quem_recebe = linha if linha.amount > 0 else par
             if not can_use_transfer_destination(user, quem_recebe.account_id):
-                planos.append(Plano(linha, MANUAL, par=par, regra=regra, motivo=_SEM_DESTINO.format(
-                    conta=_rotulo_da_conta(quem_recebe.account))))
+                planos.append(Plano(linha, MANUAL, par=par, regra=regra, motivo=str(_SEM_DESTINO) % {
+                    "conta": _rotulo_da_conta(quem_recebe.account)}))
             else:
                 planos.append(Plano(linha, TRANSFERENCIA_PAR, par=par, regra=regra))
             continue
@@ -390,17 +410,20 @@ def planejar(user, linhas) -> list[Plano]:
             destino = conta_de_destino(regra, linha.account)
             if destino is None:
                 motivo = (
-                    f"A regra “{regra.name}” pede a aplicação vinculada a esta conta, e não há "
-                    "exatamente uma: confira a conta de movimento das aplicações."
+                    gettext(
+                        "A regra “%(regra)s” pede a aplicação vinculada a esta conta, e não há "
+                        "exatamente uma: confira a conta de movimento das aplicações."
+                    ) % {"regra": regra.name}
                     if regra.action == RULE_ACTION_LINKED else
-                    f"A conta “{regra.destination_account_name}” da regra “{regra.name}” não existe para este titular."
+                    gettext("A conta “%(conta)s” da regra “%(regra)s” não existe para este titular.")
+                    % {"conta": regra.destination_account_name, "regra": regra.name}
                 )
                 planos.append(Plano(linha, MANUAL, regra=regra, motivo=motivo))
                 continue
             quem_recebe = destino if linha.amount < 0 else linha.account
             if not can_use_transfer_destination(user, quem_recebe.id):
-                planos.append(Plano(linha, MANUAL, regra=regra, motivo=_SEM_DESTINO.format(
-                    conta=_rotulo_da_conta(quem_recebe))))
+                planos.append(Plano(linha, MANUAL, regra=regra, motivo=str(_SEM_DESTINO) % {
+                    "conta": _rotulo_da_conta(quem_recebe)}))
                 continue
             planos.append(Plano(linha, TRANSFERENCIA_REGRA, conta_destino=destino, regra=regra))
             continue
@@ -408,8 +431,8 @@ def planejar(user, linhas) -> list[Plano]:
         if existente is not None:
             quem_recebe = linha.account if linha.amount > 0 else existente.account
             if not can_use_transfer_destination(user, quem_recebe.id):
-                planos.append(Plano(linha, MANUAL, lancamento=existente, regra=regra, motivo=_SEM_DESTINO.format(
-                    conta=_rotulo_da_conta(quem_recebe))))
+                planos.append(Plano(linha, MANUAL, lancamento=existente, regra=regra, motivo=str(_SEM_DESTINO) % {
+                    "conta": _rotulo_da_conta(quem_recebe)}))
             else:
                 planos.append(Plano(linha, TRANSFERENCIA_COM_LANCAMENTO, lancamento=existente, regra=regra))
             continue
@@ -427,7 +450,7 @@ def planejar(user, linhas) -> list[Plano]:
         sugestao = sugerir_categoria(linha.description, linha.bank_category, regra=regra_de_categoria)
         if sugestao.categoria is None:
             planos.append(
-                Plano(linha, MANUAL, motivo="Sem categoria: cadastre “Outros” ou escolha uma.", regra=regra)
+                Plano(linha, MANUAL, motivo=gettext("Sem categoria: cadastre “Outros” ou escolha uma."), regra=regra)
             )
         else:
             planos.append(Plano(linha, CRIA, sugestao=sugestao, regra=regra))
@@ -437,14 +460,14 @@ def planejar(user, linhas) -> list[Plano]:
 def _categoria_de_transferencia() -> CashFlowCategory:
     categoria = CashFlowCategory.objects.filter(kind=CATEGORY_KIND_TRANSFER).order_by("id").first()
     if categoria is None:
-        raise ValueError("Não há categoria de transferência cadastrada.")
+        raise ValueError(gettext("Não há categoria de transferência cadastrada."))
     return categoria
 
 
 def _criar_transferencia(user, *, origem, destino, valor, data_origem, data_destino, audit_context):
     """As duas pontas de uma transferência já realizada, cada uma na sua data."""
     if origem.currency != destino.currency:
-        raise ValueError("Transferência entre moedas diferentes é lançada à mão.")
+        raise ValueError(gettext("Transferência entre moedas diferentes é lançada à mão."))
     categoria = _categoria_de_transferencia()
     criadas = create_transaction_batch(
         TransactionRequest(
@@ -486,9 +509,9 @@ def _linha_travada(user, linha_id, acao: str = "update") -> BankStatementLine:
         .get(id=linha_id)
     )
     if not can_access_account(user, linha.account_id, acao):
-        raise ValueError("Acesso negado: você não tem permissão para acessar esta linha de extrato.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para acessar esta linha de extrato."))
     if linha.status != LINE_STATUS_NEW or linha.matched_entry_id is not None:
-        raise ValueError("Linha de extrato já conciliada ou ignorada.")
+        raise ValueError(gettext("Linha de extrato já conciliada ou ignorada."))
     return linha
 
 
@@ -497,7 +520,7 @@ def _aplicar_par(user, plano: Plano, audit_context) -> None:
     segunda = _linha_travada(user, plano.par.id)
     saida, entrada = (primeira, segunda) if primeira.amount < 0 else (segunda, primeira)
     if saida.amount + entrada.amount != 0:
-        raise ValueError("As duas linhas não têm o mesmo valor.")
+        raise ValueError(gettext("As duas linhas não têm o mesmo valor."))
     lancamento_saida, lancamento_entrada = _criar_transferencia(
         user,
         origem=saida.account,
@@ -554,13 +577,17 @@ def _aplicar_com_lancamento(user, plano: Plano, audit_context, autorizar_meses: 
         or existente.category.kind != CATEGORY_KIND_MANAGERIAL
         or existente.realized_amount != abs(linha.amount)
     ):
-        raise ValueError("O lançamento da outra conta mudou desde a prévia.")
+        raise ValueError(gettext("O lançamento da outra conta mudou desde a prévia."))
     if existente.account.currency != linha.account.currency:
-        raise ValueError("Transferência entre moedas diferentes é lançada à mão.")
+        raise ValueError(gettext("Transferência entre moedas diferentes é lançada à mão."))
     if is_month_closed(linha.account, linha.statement_date.year, linha.statement_date.month):
         raise ValueError(
-            f"Não é possível lançar a ponta nova: mês {linha.statement_date.month:02d}/"
-            f"{linha.statement_date.year} fechado para a conta {linha.account}."
+            gettext("Não é possível lançar a ponta nova: mês %(mes)02d/%(ano)s fechado para a conta %(conta)s.")
+            % {
+                "mes": linha.statement_date.month,
+                "ano": linha.statement_date.year,
+                "conta": linha.account,
+            }
         )
     categoria = _categoria_de_transferencia()
     saida_da_linha = linha.amount < 0
@@ -664,5 +691,5 @@ def aplicar(
                     _aplicar_com_lancamento(user, plano, audit_context, autorizar_meses)
             feitas[plano.acao] += 1
         except (ValueError, BankStatementLine.DoesNotExist) as exc:
-            erros.append((linha.description, str(exc) or "Linha não encontrada."))
+            erros.append((linha.description, str(exc) or gettext("Linha não encontrada.")))
     return feitas, erros

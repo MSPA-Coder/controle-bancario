@@ -9,6 +9,7 @@ from django.core.signing import BadSignature, SignatureExpired, dumps, loads
 from django.db import transaction as db_transaction
 from django.db.models import Count
 from django.utils import timezone
+from django.utils.translation import gettext
 
 from accounts.services import can_use_transfer_destination, transfer_destination_access_ids
 from banking.models import FinancialAccount
@@ -56,7 +57,7 @@ def is_month_closed(account: FinancialAccount, year: int, month: int) -> bool:
 def validate_month_not_closed(account: FinancialAccount, due_date: date) -> None:
     """Valida que o mês da data de vencimento não está fechado."""
     if is_month_closed(account, due_date.year, due_date.month):
-        raise ValueError(f"Mês {due_date.month}/{due_date.year} está fechado para a conta {account}.")
+        raise ValueError(gettext("Mês %(mes)s/%(ano)s está fechado para a conta %(conta)s.") % {"mes": due_date.month, "ano": due_date.year, "conta": account})
 
 
 def assert_entry_period_open(entry: CashFlowEntry, action_label: str = "alterar") -> None:
@@ -94,9 +95,9 @@ def assert_transfer_destination_authorized(user, entry: CashFlowEntry, action: s
     """Revalida origem e grant do destino em toda mutação de um par interno."""
     origin, destination = transfer_origin_and_destination(entry)
     if origin is None or destination is None or not can_access_account(user, origin.account_id, action):
-        raise ValueError("Acesso negado: você não tem permissão para usar a conta de origem.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para usar a conta de origem."))
     if not can_use_transfer_destination(user, destination.account_id):
-        raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para usar a conta destino."))
 
 
 def assert_transfer_entries_authorized(user, entries: list[CashFlowEntry], action: str) -> None:
@@ -131,7 +132,7 @@ def _lock_accounts(account_ids) -> dict[int, FinancialAccount]:
     found = {account.id for account in accounts}
     missing = [account_id for account_id in ids if account_id not in found]
     if missing:
-        raise ValueError("Conta inválida.")
+        raise ValueError(gettext("Conta inválida."))
     return {account.id: account for account in accounts}
 
 
@@ -236,7 +237,7 @@ def realize_transaction(
         entry, locked_entries = _lock_entry_graph(entry)
 
     if entry.status == STATUS_REALIZED:
-        raise ValueError("Lançamento já está realizado.")
+        raise ValueError(gettext("Lançamento já está realizado."))
     if getattr(entry, "operation_type", None) == OPERATION_INTERNAL_TRANSFER:
         assert_transfer_destination_authorized(user, entry, "update")
 
@@ -259,7 +260,7 @@ def realize_transaction(
 
     final_amount = entry.entry_amount if realized_amount is None else realized_amount
     if final_amount <= 0:
-        raise ValueError("O valor realizado deve ser positivo.")
+        raise ValueError(gettext("O valor realizado deve ser positivo."))
 
     # Espelhar o valor só vale enquanto as duas pontas estão na mesma moeda. Numa
     # compra de dólar as pontas nunca foram iguais, e o valor realizado aqui não
@@ -317,7 +318,7 @@ def unrealize_transaction(entry: CashFlowEntry, audit_context=None, user=None) -
         entry, locked_entries = _lock_entry_graph(entry)
 
     if entry.status != STATUS_REALIZED:
-        raise ValueError("Lançamento não está realizado.")
+        raise ValueError(gettext("Lançamento não está realizado."))
     if getattr(entry, "operation_type", None) == OPERATION_INTERNAL_TRANSFER:
         assert_transfer_destination_authorized(user, entry, "update")
 
@@ -387,7 +388,7 @@ def close_month(
     calculou dentro da própria transação.
     """
     if not can_access_account(user, account.id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para fechar este mês.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para fechar este mês."))
 
     # O registro é único mesmo depois de uma reabertura. Trancar a conta
     # serializa dois fechamentos concorrentes do mesmo período e permite
@@ -416,7 +417,7 @@ def close_month(
         )
     else:
         if month_close.active:
-            raise ValueError(f"Mês {month}/{year} já está fechado para esta conta.")
+            raise ValueError(gettext("Mês %(mes)s/%(ano)s já está fechado para esta conta.") % {"mes": month, "ano": year})
         month_close.active = True
         month_close.closing_balance = closing_balance
         month_close.closed_at = timezone.now()
@@ -449,10 +450,10 @@ def reopen_month(
 ) -> AccountMonthClose:
     """Reabre um mês fechado."""
     if not can_access_account(user, account.id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para reabrir este mês.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para reabrir este mês."))
     reason = (reason or "").strip()
     if not reason:
-        raise ValueError("O motivo da reabertura é obrigatório.")
+        raise ValueError(gettext("O motivo da reabertura é obrigatório."))
     account = _lock_accounts([account.pk])[account.pk]
     try:
         month_close = AccountMonthClose.objects.select_for_update().get(
@@ -462,7 +463,7 @@ def reopen_month(
             active=True,
         )
     except AccountMonthClose.DoesNotExist as err:
-        raise ValueError(f"Mês {month}/{year} não está fechado para esta conta.") from err
+        raise ValueError(gettext("Mês %(mes)s/%(ano)s não está fechado para esta conta.") % {"mes": month, "ano": year}) from err
 
     month_close.active = False
     month_close.reopened_at = timezone.now()
@@ -497,18 +498,18 @@ def list_categories(type_filter: str | None = None):
 def _clean_category_name(name: str) -> str:
     name = (name or "").strip()
     if not name:
-        raise ValueError("Nome da categoria é obrigatório.")
+        raise ValueError(gettext("Nome da categoria é obrigatório."))
     if len(name) > _MAX_CATEGORY_NAME_LENGTH:
-        raise ValueError(f"Nome da categoria não pode exceder {_MAX_CATEGORY_NAME_LENGTH} caracteres.")
+        raise ValueError(gettext("Nome da categoria não pode exceder %(maximo)s caracteres.") % {"maximo": _MAX_CATEGORY_NAME_LENGTH})
     return name
 
 
 def _clean_category_kind(raw_value: str | None) -> str:
     kind = (raw_value or "").strip().lower()
     if not kind:
-        raise ValueError("Tipo da categoria é obrigatório.")
+        raise ValueError(gettext("Tipo da categoria é obrigatório."))
     if kind not in VALID_CATEGORY_KINDS:
-        raise ValueError(f"Tipo de categoria inválido: {kind}.")
+        raise ValueError(gettext("Tipo de categoria inválido: %(tipo)s.") % {"tipo": kind})
     return kind
 
 
@@ -523,7 +524,7 @@ def _clean_category_group(raw_value) -> CashFlowCategoryGroup | None:
     try:
         return CashFlowCategoryGroup.objects.get(id=int(texto))
     except (CashFlowCategoryGroup.DoesNotExist, ValueError) as exc:
-        raise ValueError("Grupo de categoria inválido.") from exc
+        raise ValueError(gettext("Grupo de categoria inválido.")) from exc
 
 
 def create_category(name: str, kind: str, group_id=None) -> CashFlowCategory:
@@ -535,7 +536,7 @@ def create_category(name: str, kind: str, group_id=None) -> CashFlowCategory:
     try:
         return CashFlowCategory.objects.create(category_name=clean_name, kind=clean_kind, group=group)
     except IntegrityError as exc:
-        raise ValueError("Já existe uma categoria com este nome.") from exc
+        raise ValueError(gettext("Já existe uma categoria com este nome.")) from exc
 
 
 def update_category(
@@ -550,11 +551,11 @@ def update_category(
     # vez, inclusive nos fechados. É uma reclassificação, e reclassificação tem
     # relatório -- por isso ela é a U04c, e não um campo que se mexe na tela.
     if clean_kind != category.kind and CashFlowEntry.objects.filter(category=category).exists():
-        raise ValueError(
+        raise ValueError(gettext(
             "Esta categoria já tem lançamentos e não pode mudar de tipo por aqui: "
             "mudar o tipo reclassifica todo o passado dela de uma vez, inclusive "
             "meses fechados. Use a reclassificação, que registra o que mudou."
-        )
+        ))
     campos = ["category_name", "kind", "updated_at"]
     category.category_name = clean_name
     category.kind = clean_kind
@@ -564,7 +565,7 @@ def update_category(
     try:
         category.save(update_fields=campos)
     except IntegrityError as exc:
-        raise ValueError("Já existe uma categoria com este nome.") from exc
+        raise ValueError(gettext("Já existe uma categoria com este nome.")) from exc
     return category
 
 
@@ -578,9 +579,9 @@ def list_category_groups():
 def _clean_group_name(name: str) -> str:
     name = (name or "").strip()
     if not name:
-        raise ValueError("Nome do grupo é obrigatório.")
+        raise ValueError(gettext("Nome do grupo é obrigatório."))
     if len(name) > _MAX_CATEGORY_NAME_LENGTH:
-        raise ValueError(f"Nome do grupo não pode exceder {_MAX_CATEGORY_NAME_LENGTH} caracteres.")
+        raise ValueError(gettext("Nome do grupo não pode exceder %(maximo)s caracteres.") % {"maximo": _MAX_CATEGORY_NAME_LENGTH})
     return name
 
 
@@ -591,9 +592,9 @@ def _clean_group_position(raw_value) -> int:
     try:
         posicao = int(texto)
     except ValueError as exc:
-        raise ValueError("Posição do grupo inválida.") from exc
+        raise ValueError(gettext("Posição do grupo inválida.")) from exc
     if not 0 <= posicao <= 32000:
-        raise ValueError("Posição do grupo deve estar entre 0 e 32000.")
+        raise ValueError(gettext("Posição do grupo deve estar entre 0 e 32000."))
     return posicao
 
 
@@ -607,7 +608,7 @@ def create_category_group(name: str, position=None, in_charts: bool = True) -> C
             in_charts=in_charts,
         )
     except IntegrityError as exc:
-        raise ValueError("Já existe um grupo com este nome.") from exc
+        raise ValueError(gettext("Já existe um grupo com este nome.")) from exc
 
 
 def update_category_group(
@@ -627,16 +628,16 @@ def update_category_group(
             # snapshot, em vez de ficar com o nome antigo.
             CashFlowCategory.objects.filter(group=group).update(updated_at=timezone.now())
     except IntegrityError as exc:
-        raise ValueError("Já existe um grupo com este nome.") from exc
+        raise ValueError(gettext("Já existe um grupo com este nome.")) from exc
     return group
 
 
 def delete_category_group(group: CashFlowCategoryGroup) -> None:
     """Só grupo vazio: apagar com categorias dentro as deixaria sem grupo em silêncio."""
     if group.categories.exists():
-        raise ValueError(
+        raise ValueError(gettext(
             "Não é possível excluir este grupo: ainda há categorias nele. Mova-as para outro grupo antes."
-        )
+        ))
     group.delete()
 
 
@@ -646,9 +647,9 @@ def delete_category(category: CashFlowCategory) -> None:
     try:
         category.delete()
     except ProtectedError as exc:
-        raise ValueError(
+        raise ValueError(gettext(
             "Não é possível excluir esta categoria: existem lançamentos vinculados a ela."
-        ) from exc
+        )) from exc
 
 
 # ============================================================================
@@ -767,25 +768,27 @@ def counterparty_amount_for_transfer(
     """
     if account.currency == counterparty_account.currency:
         if req.counterparty_amount is not None:
-            raise ValueError(
+            raise ValueError(gettext(
                 "As duas contas estão na mesma moeda e a transferência tem um valor só: "
                 "o valor creditado no destino só existe quando as moedas são diferentes."
-            )
+            ))
         return None
 
     # Cada compra de moeda tem a taxa do dia em que aconteceu. Repetir o mesmo
     # par de valores por 12 meses registraria doze taxas idênticas que nunca
     # existiram -- recusar é mais honesto do que gravar ficção.
     if installments > 1 or req.is_recurring:
-        raise ValueError(
+        raise ValueError(gettext(
             "Transferência entre moedas diferentes não aceita parcelamento nem recorrência: "
             "cada ocorrência tem a taxa do seu dia. Lance uma transferência por operação."
-        )
+        ))
     if req.counterparty_amount is None:
         raise ValueError(
-            f"Esta transferência sai em {account.currency} e entra em "
-            f"{counterparty_account.currency}: informe também quanto foi creditado na conta "
-            "destino. Este sistema não converte moeda — quem diz quanto entrou é o extrato."
+            gettext(
+                "Esta transferência sai em %(moeda_origem)s e entra em "
+                "%(moeda_destino)s: informe também quanto foi creditado na conta "
+                "destino. Este sistema não converte moeda — quem diz quanto entrou é o extrato."
+            ) % {"moeda_origem": account.currency, "moeda_destino": counterparty_account.currency}
         )
 
     amount = req.counterparty_amount
@@ -793,7 +796,7 @@ def counterparty_amount_for_transfer(
         amount = Decimal(str(amount))
     amount = amount.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
     if amount <= 0:
-        raise ValueError("O valor creditado na conta destino deve ser positivo.")
+        raise ValueError(gettext("O valor creditado na conta destino deve ser positivo."))
     return amount
 
 
@@ -891,7 +894,7 @@ def operation_entries(entry: CashFlowEntry) -> list[CashFlowEntry]:
 def scoped_entries(tx: CashFlowEntry, entries: list[CashFlowEntry], scope: str) -> list[CashFlowEntry]:
     """Filtra `entries` conforme o escopo escolhido (all/single/current_future)."""
     if scope not in (OPERATION_SCOPE_ALL, OPERATION_SCOPE_SINGLE, OPERATION_SCOPE_CURRENT_FUTURE):
-        raise ValueError("Escopo de operação inválido.")
+        raise ValueError(gettext("Escopo de operação inválido."))
     if scope == OPERATION_SCOPE_ALL or not supports_operation_scope(tx):
         return list(entries)
     operation_type = tx.operation_type or OPERATION_SINGLE
@@ -925,7 +928,7 @@ def _origin_counterparty_pairs(entries: list[CashFlowEntry]) -> list[tuple[CashF
         origin = next((e for e in group if e.source_entry_id is None), group[0])
         counterparty = next((e for e in group if e.id != origin.id), None)
         if counterparty is None:
-            raise ValueError("Transferência interna sem contraparte.")
+            raise ValueError(gettext("Transferência interna sem contraparte."))
         pairs.append((origin, counterparty))
     return sorted(pairs, key=lambda p: (p[0].current_installment or 1, p[0].due_date, p[0].id))
 
@@ -1071,21 +1074,21 @@ def _apply_fields(
 
 def _validate_common_payload(req: TransactionRequest, monthly_amount: Decimal, installments: int) -> None:
     if monthly_amount <= 0:
-        raise ValueError("O valor do lançamento deve ser positivo.")
+        raise ValueError(gettext("O valor do lançamento deve ser positivo."))
     # O saldo realizado é filtrado pela data de realização: sem ela, o
     # lançamento não entra em saldo realizado nenhum, e nada avisa. Foi assim
     # que o #1236 sumiu das telas em produção.
     if req.status == STATUS_REALIZED and req.realized_date is None:
-        raise ValueError(
+        raise ValueError(gettext(
             "Informe a data de realização: sem ela o lançamento realizado "
             "não aparece no saldo realizado."
-        )
+        ))
     if req.realized_amount is not None and req.realized_amount <= 0:
-        raise ValueError("O valor realizado deve ser positivo.")
+        raise ValueError(gettext("O valor realizado deve ser positivo."))
     if not 1 <= installments <= MAX_TRANSACTION_INSTALLMENTS:
-        raise ValueError(f"Número de parcelas deve estar entre 1 e {MAX_TRANSACTION_INSTALLMENTS}.")
+        raise ValueError(gettext("Número de parcelas deve estar entre 1 e %(maximo)s.") % {"maximo": MAX_TRANSACTION_INSTALLMENTS})
     if len(req.description or "") > MAX_TRANSACTION_DESCRIPTION_LENGTH:
-        raise ValueError(f"Descrição não pode exceder {MAX_TRANSACTION_DESCRIPTION_LENGTH} caracteres.")
+        raise ValueError(gettext("Descrição não pode exceder %(maximo)s caracteres.") % {"maximo": MAX_TRANSACTION_DESCRIPTION_LENGTH})
 
 
 # --- Criação --------------------------------------------------------------
@@ -1106,30 +1109,30 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
     try:
         category = CashFlowCategory.objects.get(id=req.category_id)
     except CashFlowCategory.DoesNotExist as exc:
-        raise ValueError("Categoria inválida.") from exc
+        raise ValueError(gettext("Categoria inválida.")) from exc
     eh_transferencia = category.requires_counterparty
 
     counterparty_account = None
     if eh_transferencia:
         if not req.counterparty_account_id:
-            raise ValueError("Conta destino é obrigatória para transferência interna.")
+            raise ValueError(gettext("Conta destino é obrigatória para transferência interna."))
         if req.counterparty_account_id == req.account_id:
-            raise ValueError("Conta destino deve ser diferente da conta de origem.")
+            raise ValueError(gettext("Conta destino deve ser diferente da conta de origem."))
         try:
             counterparty_account = FinancialAccount.objects.select_related("owner", "institution").get(
                 id=req.counterparty_account_id
             )
         except FinancialAccount.DoesNotExist as exc:
-            raise ValueError("Conta destino inválida.") from exc
+            raise ValueError(gettext("Conta destino inválida.")) from exc
         if not can_use_transfer_destination(user, counterparty_account.id):
-            raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
+            raise ValueError(gettext("Acesso negado: você não tem permissão para usar a conta destino."))
 
     try:
         account = FinancialAccount.objects.select_related("owner", "institution").get(id=req.account_id)
     except FinancialAccount.DoesNotExist as exc:
-        raise ValueError("Conta inválida.") from exc
+        raise ValueError(gettext("Conta inválida.")) from exc
     if not can_access_account(user, account.id, "create"):
-        raise ValueError("Acesso negado: você não tem permissão para usar esta conta.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para usar esta conta."))
 
     locked_accounts = _lock_accounts(
         [account.id, counterparty_account.id if counterparty_account is not None else None]
@@ -1140,7 +1143,7 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
 
     installments, monthly_amount = _parcelas_e_valor(req)
     if not 1 <= req.first_installment <= installments:
-        raise ValueError("Parcela inicial fora do parcelamento.")
+        raise ValueError(gettext("Parcela inicial fora do parcelamento."))
 
     counterparty_amount = None
     if eh_transferencia:
@@ -1426,20 +1429,20 @@ def _update_single(tx: CashFlowEntry, req: TransactionRequest, user=None) -> lis
 
 def _convert_single_to_internal_transfer(tx: CashFlowEntry, req: TransactionRequest, user=None) -> list[CashFlowEntry]:
     if not req.counterparty_account_id:
-        raise ValueError("Conta destino é obrigatória para transferência interna.")
+        raise ValueError(gettext("Conta destino é obrigatória para transferência interna."))
     if req.counterparty_account_id == req.account_id:
-        raise ValueError("Conta destino deve ser diferente da conta de origem.")
+        raise ValueError(gettext("Conta destino deve ser diferente da conta de origem."))
     try:
         counterparty_account = FinancialAccount.objects.select_related("owner", "institution").get(
             id=req.counterparty_account_id
         )
     except FinancialAccount.DoesNotExist as exc:
-        raise ValueError("Conta destino inválida.") from exc
+        raise ValueError(gettext("Conta destino inválida.")) from exc
     if not can_use_transfer_destination(user, counterparty_account.id):
-        raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para usar a conta destino."))
     account = FinancialAccount.objects.select_related("owner", "institution").get(id=req.account_id)
     if not can_access_account(user, account.id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para usar a conta de origem.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para usar a conta de origem."))
 
     installments, monthly_amount = _parcelas_e_valor(req)
     counterparty_amount = counterparty_amount_for_transfer(
@@ -1513,7 +1516,7 @@ def _replace_current_future_block(
 
     start_installment = entries[0].current_installment or 1
     if operation_type == OPERATION_INSTALLMENT and start_installment + len(entries) - 1 > installments:
-        raise ValueError("A quantidade de parcelas é menor que o bloco atual/futuro selecionado.")
+        raise ValueError(gettext("A quantidade de parcelas é menor que o bloco atual/futuro selecionado."))
 
     account = FinancialAccount.objects.get(id=req.account_id)
     bank_operation = tx.bank_operation
@@ -1579,9 +1582,9 @@ def current_future_confirmation_token(entry_id: int) -> str:
 
 def _assert_current_future_confirmation(entry_id: int, token: str | None) -> None:
     if not token:
-        raise ValueError(
+        raise ValueError(gettext(
             "Confirme explicitamente a alteração deste registro e dos próximos."
-        )
+        ))
     try:
         payload = loads(
             token,
@@ -1589,9 +1592,9 @@ def _assert_current_future_confirmation(entry_id: int, token: str | None) -> Non
             max_age=_CURRENT_FUTURE_CONFIRMATION_MAX_AGE,
         )
     except (BadSignature, SignatureExpired) as exc:
-        raise ValueError("A confirmação da alteração expirou. Reabra o formulário e confirme novamente.") from exc
+        raise ValueError(gettext("A confirmação da alteração expirou. Reabra o formulário e confirme novamente.")) from exc
     if payload.get("entry_id") != entry_id or payload.get("scope") != OPERATION_SCOPE_CURRENT_FUTURE:
-        raise ValueError("A confirmação não corresponde ao lançamento selecionado.")
+        raise ValueError(gettext("A confirmação não corresponde ao lançamento selecionado."))
 
 
 def _update_installment_or_recurring(
@@ -1640,13 +1643,13 @@ def _update_internal_transfer(
 ) -> list[CashFlowEntry]:
     category = CashFlowCategory.objects.get(id=req.category_id)
     if not category.requires_counterparty:
-        raise ValueError("Transferência interna exige categoria do tipo transferência.")
+        raise ValueError(gettext("Transferência interna exige categoria do tipo transferência."))
 
     counterparty_account_id = req.counterparty_account_id or _get_counterparty_account_id(tx)
     if not counterparty_account_id:
-        raise ValueError("Conta destino é obrigatória para transferência interna.")
+        raise ValueError(gettext("Conta destino é obrigatória para transferência interna."))
     if counterparty_account_id == req.account_id:
-        raise ValueError("Conta destino deve ser diferente da conta de origem.")
+        raise ValueError(gettext("Conta destino deve ser diferente da conta de origem."))
 
     installments, monthly_amount = _parcelas_e_valor(req)
 
@@ -1655,7 +1658,7 @@ def _update_internal_transfer(
         id=counterparty_account_id
     )
     if not can_use_transfer_destination(user, counterparty_account.id):
-        raise ValueError("Acesso negado: você não tem permissão para usar a conta destino.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para usar a conta destino."))
     counterparty_amount = counterparty_amount_for_transfer(
         req, account, counterparty_account, installments=installments
     )
@@ -1865,10 +1868,10 @@ def delete_transaction_or_operation(
         # Defesa de segunda linha: se outra FK PROTECT alem de matched_entry
         # aparecer um dia, a exclusao recusa com mensagem em vez de subir
         # como erro 500 sem nenhum retorno visivel no modal.
-        raise ValueError(
+        raise ValueError(gettext(
             "Não é possível excluir: ao menos um lançamento ainda está protegido por um "
             "vínculo que não foi possível desfazer automaticamente."
-        ) from exc
+        )) from exc
 
     for entry in scoped:
         log_audit_event(
@@ -2113,9 +2116,9 @@ def resolve_statement_request(user, get_params, session, *, request=None) -> Sta
     year_value = _parse_int(year_param) if year_param else session.get("tx_sel_year", today.year)
     month_value = _parse_int(month_param) if month_param else session.get("tx_sel_month", today.month)
     if year_param and year_value is None:
-        raise ValueError("Ano informado é inválido.")
+        raise ValueError(gettext("Ano informado é inválido."))
     if month_param and month_value is None:
-        raise ValueError("Mês informado é inválido.")
+        raise ValueError(gettext("Mês informado é inválido."))
     year, month = report_services.resolve_month_period(get_params.get("period"), year_value, month_value, today)
     session["tx_sel_year"] = year
     session["tx_sel_month"] = month

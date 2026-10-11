@@ -13,6 +13,7 @@ from collections.abc import Mapping
 
 from django.core.exceptions import SuspiciousOperation
 from django.db.models import Q
+from django.utils.translation import gettext
 
 from core.domain.finance import CURRENCY_OPTIONS, VALID_CURRENCIES
 
@@ -35,7 +36,7 @@ def parse_currency_filter(params: Mapping[str, str]) -> str:
     if ALL in parts or parts == frozenset(VALID_CURRENCIES):
         return ALL
     if len(parts) != 1 or not parts <= VALID_FILTERS:
-        raise SuspiciousOperation("Filtro de moeda inválido.")
+        raise SuspiciousOperation(gettext("Filtro de moeda inválido."))
     return next(iter(parts))
 
 

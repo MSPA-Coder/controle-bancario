@@ -17,6 +17,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import Count
+from django.utils.translation import gettext
 
 from banking.models import FinancialAccount
 from banking.services import accessible_account_ids, can_access_account
@@ -148,11 +149,11 @@ def extrato_do_lote(user, batch_id) -> ExtratoImportado:
     try:
         lote = BankStatementImport.objects.select_related("account__owner", "account__institution").get(id=batch_id)
     except (BankStatementImport.DoesNotExist, ValueError, TypeError) as exc:
-        raise ValueError("Importação não encontrada.") from exc
+        raise ValueError(gettext("Importação não encontrada.")) from exc
     if not can_access_account(user, lote.account_id, "view"):
-        raise ValueError("Importação não encontrada.")
+        raise ValueError(gettext("Importação não encontrada."))
     if lote.account.is_credit_card:
-        raise ValueError("Esta importação é de um cartão de crédito: veja em Faturas.")
+        raise ValueError(gettext("Esta importação é de um cartão de crédito: veja em Faturas."))
     return _importados([lote])[lote.id]
 
 

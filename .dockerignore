@@ -1,6 +1,7 @@
 .git
 .idea
 .agents
+.claude
 .venv
 .vscode
 __pycache__

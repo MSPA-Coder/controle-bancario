@@ -1,17 +1,17 @@
-{% load icons regional_filters %}
+{% load i18n icons regional_filters %}
 {% load money_filters %}
 <div class="table-container">
-    <h3 class="u-mb-075">Últimas importações</h3>
+    <h3 class="u-mb-075">{% trans "Últimas importações" %}</h3>
     <table class="tx-table">
         <thead>
             <tr>
-                <th>Data</th>
-                <th>Conta</th>
-                <th>Arquivo</th>
-                <th>Linhas novas</th>
-                <th>Saldo do extrato × CB</th>
-                <th>Status</th>
-                <th>Ações</th>
+                <th>{% trans "Data" %}</th>
+                <th>{% trans "Conta" %}</th>
+                <th>{% trans "Arquivo" %}</th>
+                <th>{% trans "Linhas novas" %}</th>
+                <th>{% trans "Saldo do extrato × CB" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Ações" %}</th>
             </tr>
         </thead>
         <tbody>
@@ -24,16 +24,16 @@
                 <td>
                     {% if batch.conferencia %}
                         {% if batch.conferencia.bate %}
-                        <span class="amount amount-positive">Bate em {{ batch.conferencia.data|udate }}: {{ batch.conferencia.saldo_do_extrato|money:batch.account.currency }}</span>
+                        <span class="amount amount-positive">{% blocktrans trimmed with data_ref=batch.conferencia.data|udate saldo=batch.conferencia.saldo_do_extrato|money:batch.account.currency %}Bate em {{ data_ref }}: {{ saldo }}{% endblocktrans %}</span>
                         {% else %}
-                        <span class="amount amount-negative">Extrato {{ batch.conferencia.saldo_do_extrato|money:batch.account.currency }} · CB {{ batch.conferencia.saldo_no_cb|money:batch.account.currency }} em {{ batch.conferencia.data|udate }} · diferença {{ batch.conferencia.diferenca|money:batch.account.currency }}</span>
+                        <span class="amount amount-negative">{% blocktrans trimmed with saldo_extrato=batch.conferencia.saldo_do_extrato|money:batch.account.currency saldo_cb=batch.conferencia.saldo_no_cb|money:batch.account.currency data_ref=batch.conferencia.data|udate diferenca=batch.conferencia.diferenca|money:batch.account.currency %}Extrato {{ saldo_extrato }} · CB {{ saldo_cb }} em {{ data_ref }} · diferença {{ diferenca }}{% endblocktrans %}</span>
                         {% endif %}
                     {% else %}
-                    <span class="empty-state">O arquivo não informa saldo.</span>
+                    <span class="empty-state">{% trans "O arquivo não informa saldo." %}</span>
                     {% endif %}
                 </td>
                 <td>{{ batch.get_status_display }}
-                    {% if batch.account.is_credit_card %}· <a href="{% url 'bank_statements:fatura' batch.id %}">{% if batch.status == "importado" %}Revisar fatura{% else %}Ver fatura{% endif %}</a>{% endif %}
+                    {% if batch.account.is_credit_card %}· <a href="{% url 'bank_statements:fatura' batch.id %}">{% if batch.status == "importado" %}{% trans "Revisar fatura" %}{% else %}{% trans "Ver fatura" %}{% endif %}</a>{% endif %}
                 </td>
                 <td class="actions">
                     {% if pode_desfazer_importacao and not batch.account.is_credit_card %}
@@ -43,17 +43,17 @@
                           hx-swap="innerHTML" class="u-d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn-sm btn-action-edit"
-                                data-sa-confirmar="Desfazer esta importação inteira? Os lançamentos conciliados voltam a ficar em aberto, conforme o vencimento (sem serem apagados) e o lote é removido. Se a conta estiver errada, é melhor reimportar na conta certa depois."
-                                data-sa-titulo="Desfazer importação"
+                                data-sa-confirmar="{% trans 'Desfazer esta importação inteira? Os lançamentos conciliados voltam a ficar em aberto, conforme o vencimento (sem serem apagados) e o lote é removido. Se a conta estiver errada, é melhor reimportar na conta certa depois.' %}"
+                                data-sa-titulo="{% trans 'Desfazer importação' %}"
                                 data-sa-severidade="warning"
-                                data-sa-ok="Desfazer">{% icon 'undo' %} Desfazer</button>
+                                data-sa-ok="{% trans 'Desfazer' %}">{% icon 'undo' %} {% trans "Desfazer" %}</button>
                     </form>
                     {% endif %}
                 </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7" class="empty-state">Nenhuma importação encontrada.</td>
+                <td colspan="7" class="empty-state">{% trans "Nenhuma importação encontrada." %}</td>
             </tr>
         {% endfor %}
         </tbody>

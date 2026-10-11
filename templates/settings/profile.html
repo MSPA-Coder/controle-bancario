@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static icons dict_filters %}
+{% load static icons dict_filters i18n %}
 
-{% block title %}Configurações • Perfil{% endblock %}
+{% block title %}{% trans "Configurações • Perfil" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/profile.css' %}">
@@ -10,22 +10,22 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Configurações • Perfil</h1>
-        <p>Aparência e preferências pessoais de grade.</p>
+        <h1>{% trans "Configurações • Perfil" %}</h1>
+        <p>{% trans "Aparência, idioma, formatos e preferências pessoais de grade." %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="section-card">
-    <h3>Aparência</h3>
-    <p>Escolha o tema visual padrão do aplicativo:</p>
+    <h3>{% trans "Aparência" %}</h3>
+    <p>{% trans "Escolha o tema visual padrão do aplicativo:" %}</p>
     <form method="post" action="{% url 'core:settings_update_theme' %}" id="theme-form">
         {% csrf_token %}
         <div class="theme-grid">
             {% for theme_value, theme_label in theme_options.items %}
             <label class="theme-option">
-                <input type="radio" name="theme" value="{{ theme_value }}" aria-label="Tema {{ theme_label }}" {% if current_theme == theme_value %}checked{% endif %}>
+                <input type="radio" name="theme" value="{{ theme_value }}" aria-label="{% blocktrans trimmed with tema=theme_label %}Tema {{ tema }}{% endblocktrans %}" {% if current_theme == theme_value %}checked{% endif %}>
                 <div class="theme-preview preview-{{ theme_value }}"></div>
                 <span class="theme-name">{{ theme_label }}</span>
                 <span class="theme-desc">{{ theme_descriptions|get_item:theme_value }}</span>
@@ -36,33 +36,52 @@
 </div>
 
 <div class="section-card">
-    <h3>Formato de datas e números</h3>
-    <p>Como datas e valores aparecem e são digitados nas telas. Não altera o que já está gravado, nem importações e exportações.</p>
-    <form method="post" action="{% url 'core:settings_update_regional_format' %}" id="regional-form">
+    <h3>{% trans "Idioma e região" %}</h3>
+    <p>{% trans "Idioma dos textos e formato de datas e números nas telas. Não altera o que já está gravado, nem importações e exportações." %}</p>
+    {% trans "Salvar idioma e formato como sua preferência?" as texto_confirmacao %}
+    {% trans "Confirmar idioma e região" as titulo_confirmacao %}
+    {% trans "Salvar" as texto_salvar %}
+    <form method="post" action="{% url 'core:settings_update_locale' %}" id="locale-form">
         {% csrf_token %}
-        <div class="theme-grid">
-            {% for value, label, example in regional_options %}
-            <label class="theme-option">
-                <input type="radio" name="regional_format" value="{{ value }}" aria-label="Formato {{ label }}" {% if current_regional_format == value %}checked{% endif %}>
-                <span class="theme-name">{{ label }}</span>
-                <span class="theme-desc">{{ example }}</span>
-            </label>
-            {% endfor %}
-        </div>
-        <button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar este formato como sua preferência?" data-sa-titulo="Confirmar formato" data-sa-severidade="info" data-sa-ok="Salvar">{% icon 'save' %}<span>Salvar</span></button>
+        <fieldset class="locale-group">
+            <legend>{% trans "Idioma" %}</legend>
+            <div class="theme-grid">
+                {% for value, label, locale_tag in language_options %}
+                <label class="theme-option">
+                    <input type="radio" name="language" value="{{ value }}" {% if current_language == value %}checked{% endif %}>
+                    <span class="theme-name">{{ label }}</span>
+                    <span class="theme-desc">{{ locale_tag }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </fieldset>
+        <fieldset class="locale-group">
+            <legend>{% trans "Região e formatos" %}</legend>
+            <div class="theme-grid">
+                {% for option in regional_options %}
+                <label class="theme-option">
+                    <input type="radio" name="regional_format" value="{{ option.value }}" data-preview="{{ option.preview }}"{% for lang, texto in option.by_language %} data-preview-{{ lang }}="{{ texto }}"{% endfor %} {% if current_regional_format == option.value %}checked{% endif %}>
+                    <span class="theme-name">{{ option.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="locale-hint">{% trans "O símbolo da moeda é o da conta; a região só muda os separadores." %}</p>
+            <p class="locale-preview" id="locale-preview" aria-live="polite">{% for option in regional_options %}{% if current_regional_format == option.value %}{{ option.preview }}{% endif %}{% endfor %}</p>
+        </fieldset>
+        <button type="submit" class="btn btn-primary" data-sa-confirmar="{{ texto_confirmacao }}" data-sa-titulo="{{ titulo_confirmacao }}" data-sa-severidade="info" data-sa-ok="{{ texto_salvar }}">{% icon 'save' %}<span>{{ texto_salvar }}</span></button>
     </form>
 </div>
 
 <div class="section-card">
-    <h3>Grades</h3>
-    <p>Quantidade de registros exibidos antes da barra de rolagem vertical.</p>
+    <h3>{% trans "Grades" %}</h3>
+    <p>{% trans "Quantidade de registros exibidos antes da barra de rolagem vertical." %}</p>
     <form method="post" action="{% url 'core:settings_update_table_scroll' %}" class="btn-group" data-ui="items-end">
         {% csrf_token %}
         <div class="form-group" data-ui="field-220">
-            <label>Registros antes do scroll</label>
+            <label>{% trans "Registros antes do scroll" %}</label>
             <input type="number" name="table_scroll_rows" class="form-control" min="5" max="200" value="{{ current_table_scroll_rows }}" required>
         </div>
-        <button type="submit" class="btn btn-primary" data-sa-confirmar="Salvar a quantidade de registros da grade?" data-sa-titulo="Confirmar preferência" data-sa-severidade="info" data-sa-ok="Salvar">{% icon 'save' %}<span>Salvar</span></button>
+        <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar a quantidade de registros da grade?' %}" data-sa-titulo="{% trans 'Confirmar preferência' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
     </form>
 </div>
 {% endblock %}

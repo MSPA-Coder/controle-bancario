@@ -41,6 +41,7 @@ from decimal import Decimal
 
 from django.db import transaction as db_transaction
 from django.db.models import Q
+from django.utils.translation import gettext
 
 from banking.models import FinancialAccount
 from banking.services import can_access_account
@@ -119,27 +120,31 @@ class Plano:
         linha = self.linha
         if self.acao == SALDO_INICIAL:
             if self.futuras_a_partir_de:
-                return (
-                    f"Já está no saldo inicial; cria as parcelas {self.futuras_a_partir_de} "
-                    f"a {linha.installment_total} a vencer"
-                )
-            return "Já está no saldo inicial"
+                return gettext(
+                    "Já está no saldo inicial; cria as parcelas %(primeira)s a %(total)s a vencer"
+                ) % {"primeira": self.futuras_a_partir_de, "total": linha.installment_total}
+            return gettext("Já está no saldo inicial")
         if self.acao == PAGAMENTO:
-            return f"Pagamento: concilia com a transferência de {regional.formatar_data(self.lancamento.due_date)}"
+            return gettext("Pagamento: concilia com a transferência de %(data)s") % {
+                "data": regional.formatar_data(self.lancamento.due_date),
+            }
         if self.acao == PAGAMENTO_SEM_PAR:
-            return "Pagamento sem transferência correspondente: fica pendente em Conciliação"
+            return gettext("Pagamento sem transferência correspondente: fica pendente em Conciliação")
         if self.acao == PARCELA_LANCADA:
-            return f"Parcela já lançada (vencimento {regional.formatar_data(self.lancamento.due_date)})"
+            return gettext("Parcela já lançada (vencimento %(data)s)") % {
+                "data": regional.formatar_data(self.lancamento.due_date),
+            }
         if self.acao == PARCELADO_NOVO:
-            return (
-                f"Compra parcelada nova: cria as parcelas {linha.installment_current} "
-                f"a {linha.installment_total}"
-            )
+            return gettext("Compra parcelada nova: cria as parcelas %(atual)s a %(total)s") % {
+                "atual": linha.installment_current, "total": linha.installment_total,
+            }
         if self.acao == COMPRA_LANCADA:
-            return f"Compra já lançada em {regional.formatar_data(self.lancamento.due_date)}: concilia"
+            return gettext("Compra já lançada em %(data)s: concilia") % {
+                "data": regional.formatar_data(self.lancamento.due_date),
+            }
         if self.acao == ESTORNO:
-            return "Estorno ou crédito"
-        return "Compra"
+            return gettext("Estorno ou crédito")
+        return gettext("Compra")
 
 
 def eh_pagamento(linha: BankStatementLine) -> bool:
@@ -290,11 +295,11 @@ def lote_de_fatura(user, batch_id, action: str = "view") -> BankStatementImport:
     try:
         lote = BankStatementImport.objects.select_related("account__owner", "account__institution").get(id=batch_id)
     except (BankStatementImport.DoesNotExist, ValueError, TypeError) as exc:
-        raise ValueError("Importação não encontrada.") from exc
+        raise ValueError(gettext("Importação não encontrada.")) from exc
     if not can_access_account(user, lote.account_id, action):
-        raise ValueError("Importação não encontrada.")
+        raise ValueError(gettext("Importação não encontrada."))
     if not lote.account.is_credit_card:
-        raise ValueError("Esta importação não é de um cartão de crédito.")
+        raise ValueError(gettext("Esta importação não é de um cartão de crédito."))
     return lote
 
 
@@ -312,10 +317,14 @@ def _categoria_escolhida(plano: Plano, escolhas: dict) -> CashFlowCategory:
         try:
             return CashFlowCategory.objects.get(id=int(escolhida), kind=CATEGORY_KIND_MANAGERIAL)
         except (CashFlowCategory.DoesNotExist, ValueError, TypeError) as exc:
-            raise ValueError(f"Categoria inválida para “{plano.linha.description}”.") from exc
+            raise ValueError(gettext("Categoria inválida para “%(descricao)s”.") % {
+                "descricao": plano.linha.description,
+            }) from exc
     if plano.categoria is None:
         raise ValueError(
-            f"Sem categoria para “{plano.linha.description}”: escolha uma ou cadastre “Outros”."
+            gettext("Sem categoria para “%(descricao)s”: escolha uma ou cadastre “Outros”.") % {
+                "descricao": plano.linha.description,
+            }
         )
     return plano.categoria
 
@@ -367,13 +376,13 @@ def processar(user, batch_id, escolhas: dict, audit_context=None) -> dict[str, i
     lote = lote_de_fatura(user, batch_id, "update")
     conta = lote.account
     if not can_access_account(user, conta.id, "create"):
-        raise ValueError("Acesso negado: você não tem permissão para lançar neste cartão.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para lançar neste cartão."))
 
     contagem: dict[str, int] = {}
     with db_transaction.atomic():
         linhas = list(linhas_novas(lote).select_for_update())
         if not linhas:
-            raise ValueError("Esta fatura não tem linhas pendentes.")
+            raise ValueError(gettext("Esta fatura não tem linhas pendentes."))
         for plano in planejar(conta, linhas):
             linha = plano.linha
             if plano.acao == SALDO_INICIAL:

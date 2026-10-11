@@ -37,6 +37,14 @@ RUN apt-get update \
         "pip==26.2.1" \
         "setuptools==80.9.0"
 
+# GNU gettext (`msgfmt`, `xgettext`): compila o catalogo de traducao (`locale/`) em
+# `.mo` e extrai os textos novos (`makemessages`). So os estagios de build o
+# herdam; a imagem servida recebe apenas os `.mo` compilados, como o `gcc` e o
+# `make`, que tambem ficam de fora dela.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gettext \
+    && rm -rf /var/lib/apt/lists/*
+
 # builder: resolve as dependencias a partir do `uv.lock`, num venv isolado.
 #
 # POR QUE `uv` E NAO `pip install`: o `pip` resolvia as faixas do
@@ -88,6 +96,11 @@ COPY transactions ./transactions
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
 
+# Catalogo de traducao: o `.po` e versionado; o `.mo` nasce aqui, no build, e e o
+# que o runtime copia. Um `.po` com erro de sintaxe derruba o build.
+COPY locale ./locale
+RUN find locale -name '*.po' -exec sh -c 'msgfmt --check-format -o "${1%.po}.mo" "$1"' _ {} \;
+
 
 # quality: Ruff e a suite minima de seguranca, mais o servidor de
 # desenvolvimento montado por compose.dev.yaml. Nunca e o estagio
@@ -110,6 +123,9 @@ RUN apt-get update \
 # O codigo inteiro vem antes da instalacao porque a suite exercita a aplicacao
 # real, e nao so o pacote instalado.
 COPY . .
+
+# O `.mo` e artefato de build; a suite precisa dele para exercitar o idioma `en`.
+RUN find locale -name '*.po' -exec sh -c 'msgfmt --check-format -o "${1%.po}.mo" "$1"' _ {} \;
 
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH="/opt/venv/bin:${PATH}"
@@ -172,6 +188,7 @@ COPY reports ./reports
 COPY transactions ./transactions
 COPY templates ./templates
 COPY static ./static
+COPY --from=builder /workspace/locale ./locale
 
 # Tira `pip` e `setuptools` da imagem SERVIDA.
 #

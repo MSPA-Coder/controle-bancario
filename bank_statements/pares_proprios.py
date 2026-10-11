@@ -23,6 +23,7 @@ from datetime import date, timedelta
 from uuid import uuid4
 
 from django.db import transaction as db_transaction
+from django.utils.translation import gettext
 
 from accounts.services import can_use_transfer_destination
 from banking.services import accessible_account_ids
@@ -182,7 +183,7 @@ def aplicar(user, pares: list[Par], *, autorizar_meses: bool = False, audit_cont
         return 0
     categoria = CashFlowCategory.objects.filter(kind=CATEGORY_KIND_TRANSFER).order_by("id").first()
     if categoria is None:
-        raise ValueError("Não há categoria de transferência cadastrada.")
+        raise ValueError(gettext("Não há categoria de transferência cadastrada."))
     meses = sorted({mes for par in pares for mes in par.meses})
     with db_transaction.atomic(), meses_reabertos(
         user, meses, autorizar=autorizar_meses, motivo=MOTIVO_DA_REABERTURA, audit_context=audit_context

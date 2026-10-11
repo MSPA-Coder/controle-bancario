@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load static %}
+{% load i18n static %}
 
-{% block title %}Movimentação • Conciliação{% endblock %}
+{% block title %}{% trans "Movimentação • Conciliação" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -10,8 +10,8 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>🏦 Conciliação de lançamentos</h1>
-        <p>Concilie linhas de extrato com lançamentos e revise as conciliações recentes.</p>
+        <h1>🏦 {% trans "Conciliação de lançamentos" %}</h1>
+        <p>{% trans "Concilie linhas de extrato com lançamentos e revise as conciliações recentes." %}</p>
     </div>
 </div>
 {% endblock %}

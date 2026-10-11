@@ -7,6 +7,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import IntegrityError
 from django.db.models import Exists, OuterRef, ProtectedError
 from django.utils.timezone import localdate
+from django.utils.translation import gettext
 
 from accounts.services import accessible_owner_ids, can_access_owner
 from core.domain.finance import (
@@ -42,13 +43,13 @@ def list_institutions(institution_type: str | None = None):
 def _clean_institution_fields(name: str, institution_type: str) -> tuple[str, str]:
     name = (name or "").strip()
     if not name:
-        raise ValueError("Nome da instituição é obrigatório.")
+        raise ValueError(gettext("Nome da instituição é obrigatório."))
     if len(name) > _MAX_NAME_LENGTH:
-        raise ValueError(f"Nome da instituição não pode exceder {_MAX_NAME_LENGTH} caracteres.")
+        raise ValueError(gettext("Nome da instituição não pode exceder %(limite)s caracteres.") % {"limite": _MAX_NAME_LENGTH})
 
     institution_type = (institution_type or "Banco").strip().capitalize()
     if institution_type not in _VALID_INSTITUTION_TYPES:
-        raise ValueError("Tipo de instituição inválido.")
+        raise ValueError(gettext("Tipo de instituição inválido."))
 
     return name, institution_type
 
@@ -56,25 +57,25 @@ def _clean_institution_fields(name: str, institution_type: str) -> tuple[str, st
 def create_institution(name: str, institution_type: str) -> FinancialInstitution:
     clean_name, clean_type = _clean_institution_fields(name, institution_type)
     if FinancialInstitution.objects.filter(institution_name__iexact=clean_name).exists():
-        raise ValueError("Já existe uma instituição com esse nome.")
+        raise ValueError(gettext("Já existe uma instituição com esse nome."))
     try:
         return FinancialInstitution.objects.create(
             institution_name=clean_name, institution_type=clean_type
         )
     except IntegrityError as exc:
-        raise ValueError("Já existe uma instituição com esse nome.") from exc
+        raise ValueError(gettext("Já existe uma instituição com esse nome.")) from exc
 
 
 def update_institution(institution: FinancialInstitution, name: str, institution_type: str) -> FinancialInstitution:
     clean_name, clean_type = _clean_institution_fields(name, institution_type)
     if FinancialInstitution.objects.filter(institution_name__iexact=clean_name).exclude(id=institution.id).exists():
-        raise ValueError("Já existe uma instituição com esse nome.")
+        raise ValueError(gettext("Já existe uma instituição com esse nome."))
     institution.institution_name = clean_name
     institution.institution_type = clean_type
     try:
         institution.save(update_fields=["institution_name", "institution_type", "updated_at"])
     except IntegrityError as exc:
-        raise ValueError("Já existe uma instituição com esse nome.") from exc
+        raise ValueError(gettext("Já existe uma instituição com esse nome.")) from exc
     return institution
 
 
@@ -83,7 +84,7 @@ def delete_institution(institution: FinancialInstitution) -> None:
         institution.delete()
     except ProtectedError as exc:
         raise ValueError(
-            "Não é possível excluir esta instituição: existem contas vinculadas a ela."
+            gettext("Não é possível excluir esta instituição: existem contas vinculadas a ela.")
         ) from exc
 
 
@@ -143,7 +144,7 @@ def _parse_initial_balance(raw_value: str | None) -> Decimal:
     try:
         return Decimal(str(raw_value).strip().replace(',', '.'))
     except InvalidOperation as exc:
-        raise ValueError("Saldo inicial inválido.") from exc
+        raise ValueError(gettext("Saldo inicial inválido.")) from exc
 
 
 def currencies_of_accounts(account_ids) -> tuple[str, ...]:
@@ -227,9 +228,9 @@ def currency_blocks(account_ids, currency_filter: str | None = None) -> list[tup
 def _parse_currency(raw_value: str | None) -> str:
     currency = (raw_value or "").strip().upper()
     if not currency:
-        raise ValueError("Moeda é obrigatória.")
+        raise ValueError(gettext("Moeda é obrigatória."))
     if currency not in VALID_CURRENCIES:
-        raise ValueError(f"Moeda inválida: {currency}.")
+        raise ValueError(gettext("Moeda inválida: %(moeda)s.") % {"moeda": currency})
     return currency
 
 
@@ -246,7 +247,7 @@ def _parse_initial_balance_date(raw_value: str | None) -> date:
     try:
         return date.fromisoformat(raw_text)
     except ValueError as exc:
-        raise ValueError("Data do saldo inicial inválida.") from exc
+        raise ValueError(gettext("Data do saldo inicial inválida.")) from exc
 
 
 def _clean_account_fields(owner_id: str, institution_id: str, account_name: str, initial_balance: str):
@@ -255,20 +256,20 @@ def _clean_account_fields(owner_id: str, institution_id: str, account_name: str,
         if owner_id_int <= 0:
             raise ValueError
     except (TypeError, ValueError) as exc:
-        raise ValueError("Titular é obrigatório.") from exc
+        raise ValueError(gettext("Titular é obrigatório.")) from exc
 
     try:
         institution_id_int = int(institution_id)
         if institution_id_int <= 0:
             raise ValueError
     except (TypeError, ValueError) as exc:
-        raise ValueError("Instituição é obrigatória.") from exc
+        raise ValueError(gettext("Instituição é obrigatória.")) from exc
 
     account_name = (account_name or "").strip()
     if not account_name:
-        raise ValueError("Nome da conta é obrigatório.")
+        raise ValueError(gettext("Nome da conta é obrigatório."))
     if len(account_name) > _MAX_NAME_LENGTH:
-        raise ValueError(f"Nome da conta não pode exceder {_MAX_NAME_LENGTH} caracteres.")
+        raise ValueError(gettext("Nome da conta não pode exceder %(limite)s caracteres.") % {"limite": _MAX_NAME_LENGTH})
 
     balance = _parse_initial_balance(initial_balance)
 
@@ -279,9 +280,9 @@ def _parse_card_day(raw_value: str | None, label: str) -> int:
     try:
         day = int((raw_value or "").strip())
     except ValueError as exc:
-        raise ValueError(f"{label} do cartão é obrigatório (1 a 31).") from exc
+        raise ValueError(gettext("%(campo)s do cartão é obrigatório (1 a 31).") % {"campo": label}) from exc
     if not CARD_DAY_MIN <= day <= CARD_DAY_MAX:
-        raise ValueError(f"{label} do cartão deve estar entre 1 e 31.")
+        raise ValueError(gettext("%(campo)s do cartão deve estar entre 1 e 31.") % {"campo": label})
     return day
 
 
@@ -295,9 +296,9 @@ def _parse_estimated_spend(raw_value: str | None) -> Decimal | None:
     try:
         valor = Decimal(raw_text).quantize(Decimal("0.01"))
     except InvalidOperation as exc:
-        raise ValueError("Gasto mensal estimado do cartão inválido.") from exc
+        raise ValueError(gettext("Gasto mensal estimado do cartão inválido.")) from exc
     if valor < 0:
-        raise ValueError("Gasto mensal estimado do cartão não pode ser negativo.")
+        raise ValueError(gettext("Gasto mensal estimado do cartão não pode ser negativo."))
     return valor
 
 
@@ -321,7 +322,7 @@ def _clean_card_fields(
     """
     kind = (account_kind or ACCOUNT_KIND_REGULAR).strip()
     if kind not in VALID_ACCOUNT_KINDS:
-        raise ValueError("Tipo de conta inválido.")
+        raise ValueError(gettext("Tipo de conta inválido."))
     if kind in NON_CARD_ACCOUNT_KINDS:
         return {
             "account_kind": kind,
@@ -336,20 +337,20 @@ def _clean_card_fields(
         try:
             payment_id = int(raw_payment)
         except ValueError as exc:
-            raise ValueError("Conta de pagamento inválida.") from exc
+            raise ValueError(gettext("Conta de pagamento inválida.")) from exc
         payment = FinancialAccount.objects.filter(id=payment_id).first()
         if payment is None or not can_access_account(user, payment_id):
-            raise ValueError("Conta de pagamento não encontrada.")
+            raise ValueError(gettext("Conta de pagamento não encontrada."))
         if payment.id == account_id:
-            raise ValueError("O cartão não pode pagar a própria fatura.")
+            raise ValueError(gettext("O cartão não pode pagar a própria fatura."))
         if payment.account_kind == ACCOUNT_KIND_CREDIT_CARD:
-            raise ValueError("A conta de pagamento deve ser uma conta comum, não outro cartão.")
+            raise ValueError(gettext("A conta de pagamento deve ser uma conta comum, não outro cartão."))
         if payment.currency != currency:
-            raise ValueError("A conta de pagamento deve estar na mesma moeda do cartão.")
+            raise ValueError(gettext("A conta de pagamento deve estar na mesma moeda do cartão."))
     return {
         "account_kind": kind,
-        "card_closing_day": _parse_card_day(card_closing_day, "Dia de fechamento"),
-        "card_due_day": _parse_card_day(card_due_day, "Dia de vencimento"),
+        "card_closing_day": _parse_card_day(card_closing_day, gettext("Dia de fechamento")),
+        "card_due_day": _parse_card_day(card_due_day, gettext("Dia de vencimento")),
         "card_payment_account": payment,
         "card_estimated_spend": _parse_estimated_spend(card_estimated_spend),
     }
@@ -368,25 +369,25 @@ def _clean_movement_account(
     try:
         movement_id = int(raw)
     except ValueError as exc:
-        raise ValueError("Conta de movimento inválida.") from exc
+        raise ValueError(gettext("Conta de movimento inválida.")) from exc
     movement = FinancialAccount.objects.filter(id=movement_id).first()
     if movement is None or not can_access_account(user, movement_id):
-        raise ValueError("Conta de movimento não encontrada.")
+        raise ValueError(gettext("Conta de movimento não encontrada."))
     if movement.id == account_id:
-        raise ValueError("A aplicação não pode ser a própria conta de movimento.")
+        raise ValueError(gettext("A aplicação não pode ser a própria conta de movimento."))
     if movement.account_kind != ACCOUNT_KIND_REGULAR:
-        raise ValueError("A conta de movimento deve ser uma conta comum, não cartão nem outra aplicação.")
+        raise ValueError(gettext("A conta de movimento deve ser uma conta comum, não cartão nem outra aplicação."))
     if movement.owner_id != int(owner_id):
-        raise ValueError("A conta de movimento deve ser do mesmo titular da aplicação.")
+        raise ValueError(gettext("A conta de movimento deve ser do mesmo titular da aplicação."))
     if movement.currency != currency:
-        raise ValueError("A conta de movimento deve estar na mesma moeda da aplicação.")
+        raise ValueError(gettext("A conta de movimento deve estar na mesma moeda da aplicação."))
     return movement
 
 
 def _clean_purpose(raw: str | None) -> str:
     purpose = (raw or ACCOUNT_PURPOSE_PERSONAL).strip()
     if purpose not in VALID_ACCOUNT_PURPOSES:
-        raise ValueError("Finalidade da conta inválida.")
+        raise ValueError(gettext("Finalidade da conta inválida."))
     return purpose
 
 
@@ -414,9 +415,9 @@ def create_account(
     clean_currency = _parse_currency(currency)
     clean_balance_date = _parse_initial_balance_date(initial_balance_date)
     if not can_access_owner(user, clean_owner_id, "create"):
-        raise ValueError("Acesso negado: você não tem permissão para criar contas para este titular.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para criar contas para este titular."))
     if not FinancialInstitution.objects.filter(id=clean_institution_id).exists():
-        raise ValueError("Instituição não encontrada.")
+        raise ValueError(gettext("Instituição não encontrada."))
     card = _clean_card_fields(
         user,
         account_kind=account_kind,
@@ -470,20 +471,22 @@ def update_account(
     clean_currency = _parse_currency(currency)
     clean_balance_date = _parse_initial_balance_date(initial_balance_date)
     if not can_access_owner(user, account.owner_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para alterar contas deste titular.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para alterar contas deste titular."))
     if not can_access_owner(user, clean_owner_id, "update"):
-        raise ValueError("Acesso negado: você não tem permissão para transferir a conta para este titular.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para transferir a conta para este titular."))
     if not FinancialInstitution.objects.filter(id=clean_institution_id).exists():
-        raise ValueError("Instituição não encontrada.")
+        raise ValueError(gettext("Instituição não encontrada."))
     # Trocar a moeda de uma conta com lançamento reescreveria em silêncio o
     # significado de todo o passado dela: os mesmos valores passariam a valer
     # em outra moeda, sem nenhum registro de conversão. Conta com histórico não
     # muda de moeda -- se a moeda estiver errada, a saída é outra conta.
     if clean_currency != account.currency and account.transactions.exists():
         raise ValueError(
-            "Esta conta já tem lançamentos e não pode mudar de moeda: os valores "
-            "já registrados continuariam iguais, valendo outra coisa. Crie uma "
-            "conta na moeda correta e transfira o saldo."
+            gettext(
+                "Esta conta já tem lançamentos e não pode mudar de moeda: os valores "
+                "já registrados continuariam iguais, valendo outra coisa. Crie uma "
+                "conta na moeda correta e transfira o saldo."
+            )
         )
 
     card = _clean_card_fields(
@@ -500,14 +503,18 @@ def update_account(
     # passaria a ter outro cartão como conta de pagamento.
     if card["account_kind"] == ACCOUNT_KIND_CREDIT_CARD and account.cards_paid.exists():
         raise ValueError(
-            "Esta conta é a conta de pagamento de um cartão e não pode virar cartão. "
-            "Troque antes a conta de pagamento desse cartão."
+            gettext(
+                "Esta conta é a conta de pagamento de um cartão e não pode virar cartão. "
+                "Troque antes a conta de pagamento desse cartão."
+            )
         )
     # Idem para a conta de movimento de uma aplicação: ela tem de continuar conta comum.
     if card["account_kind"] != ACCOUNT_KIND_REGULAR and account.linked_investments.exists():
         raise ValueError(
-            "Esta conta é a conta de movimento de uma aplicação e deve continuar conta comum. "
-            "Troque antes a conta de movimento dessa aplicação."
+            gettext(
+                "Esta conta é a conta de movimento de uma aplicação e deve continuar conta comum. "
+                "Troque antes a conta de movimento dessa aplicação."
+            )
         )
     movement = _clean_movement_account(
         user, account_kind=card["account_kind"], movement_account_id=movement_account_id,
@@ -534,10 +541,10 @@ def update_account(
 
 def delete_account(user, account: FinancialAccount) -> None:
     if not can_access_owner(user, account.owner_id, "delete"):
-        raise ValueError("Acesso negado: você não tem permissão para excluir contas deste titular.")
+        raise ValueError(gettext("Acesso negado: você não tem permissão para excluir contas deste titular."))
     try:
         account.delete()
     except ProtectedError as exc:
         raise ValueError(
-            "Não é possível excluir esta conta: existem lançamentos vinculados a ela."
+            gettext("Não é possível excluir esta conta: existem lançamentos vinculados a ela.")
         ) from exc

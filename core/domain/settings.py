@@ -1,7 +1,10 @@
 """Chaves e valores permitidos para configurações da aplicação."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Final
+
+from django.utils.translation import gettext_noop
 
 # Tema e densidade de tabela sao preferencias por usuario e ficam em
 # `AppUser.ui_theme` / `AppUser.table_scroll_rows`, nao em app_setting.
@@ -58,18 +61,18 @@ UI_THEME_LABELS: Final = {
     UI_THEME_EMERALD: "Emerald",
 }
 UI_THEME_DESCRIPTIONS: Final = {
-    UI_THEME_LIGHT: "Claro e neutro",
-    UI_THEME_DARK: "Escuro e focado",
-    UI_THEME_SOLARIZED_LIGHT: "Claro suave",
-    UI_THEME_SOLARIZED_DARK: "Escuro suave",
-    UI_THEME_DRACULA: "Alto contraste",
-    UI_THEME_NORD: "Azul frio",
-    UI_THEME_MONOKAI: "Técnico vibrante",
-    UI_THEME_GRAY: "Neutro analítico",
-    UI_THEME_SOFT_LIGHT: "Claro confortável",
-    UI_THEME_SOFT_DARK: "Escuro confortável",
-    UI_THEME_CORPORATE_BLUE: "Azul corporativo",
-    UI_THEME_EMERALD: "Verde financeiro",
+    UI_THEME_LIGHT: gettext_noop("Claro e neutro"),
+    UI_THEME_DARK: gettext_noop("Escuro e focado"),
+    UI_THEME_SOLARIZED_LIGHT: gettext_noop("Claro suave"),
+    UI_THEME_SOLARIZED_DARK: gettext_noop("Escuro suave"),
+    UI_THEME_DRACULA: gettext_noop("Alto contraste"),
+    UI_THEME_NORD: gettext_noop("Azul frio"),
+    UI_THEME_MONOKAI: gettext_noop("Técnico vibrante"),
+    UI_THEME_GRAY: gettext_noop("Neutro analítico"),
+    UI_THEME_SOFT_LIGHT: gettext_noop("Claro confortável"),
+    UI_THEME_SOFT_DARK: gettext_noop("Escuro confortável"),
+    UI_THEME_CORPORATE_BLUE: gettext_noop("Azul corporativo"),
+    UI_THEME_EMERALD: gettext_noop("Verde financeiro"),
 }
 
 
@@ -77,23 +80,98 @@ def normalize_ui_theme(value: str | None) -> str:
     return value if value in VALID_UI_THEMES else UI_THEME_LIGHT
 
 
+# Idioma da interface (`AppUser.language`). Só os textos que o usuário lê: dados
+# gravados, logs, importação e exportação não mudam com ele. O português é a
+# língua-fonte dos textos; o inglês vem do catálogo em `locale/` (que só passa a
+# existir na etapa de tradução: até lá o `en` cai no português).
+LANGUAGE_PT_BR: Final = "pt-br"
+LANGUAGE_EN: Final = "en"
+VALID_LANGUAGES: Final = (LANGUAGE_PT_BR, LANGUAGE_EN)
+DEFAULT_LANGUAGE: Final = LANGUAGE_PT_BR
+# Cada idioma aparece no próprio idioma: quem não lê o atual ainda acha o seu.
+LANGUAGE_LABELS: Final = {
+    LANGUAGE_PT_BR: "Português (Brasil)",
+    LANGUAGE_EN: "English (US)",
+}
+LANGUAGE_LOCALES: Final = {LANGUAGE_PT_BR: "pt-BR", LANGUAGE_EN: "en-US"}
+
+
+def normalize_language(value: str | None) -> str:
+    return value if value in VALID_LANGUAGES else DEFAULT_LANGUAGE
+
+
 # Formato regional de datas e números na tela (`AppUser.regional_format`).
 # Só apresentação e digitação: o que é gravado, exportado ou importado não muda.
+# `auto` acompanha o idioma; `br` e `us` fixam a região. As chaves `br` e `us`
+# já estavam gravadas, por isso não foram trocadas por tags de locale.
+REGIONAL_FORMAT_AUTO: Final = "auto"
 REGIONAL_FORMAT_BR: Final = "br"
 REGIONAL_FORMAT_US: Final = "us"
-VALID_REGIONAL_FORMATS: Final = (REGIONAL_FORMAT_BR, REGIONAL_FORMAT_US)
-REGIONAL_FORMAT_LABELS: Final = {
-    REGIONAL_FORMAT_BR: "Brasil",
-    REGIONAL_FORMAT_US: "EUA",
+VALID_REGIONAL_FORMATS: Final = (REGIONAL_FORMAT_AUTO, REGIONAL_FORMAT_BR, REGIONAL_FORMAT_US)
+DEFAULT_REGIONAL_FORMAT: Final = REGIONAL_FORMAT_AUTO
+
+# Região que `auto` escolhe para cada idioma.
+REGIONAL_FORMAT_FOR_LANGUAGE: Final = {
+    LANGUAGE_PT_BR: REGIONAL_FORMAT_BR,
+    LANGUAGE_EN: REGIONAL_FORMAT_US,
 }
-REGIONAL_FORMAT_EXAMPLES: Final = {
-    REGIONAL_FORMAT_BR: "Data 31/12/2026 · Valor 1.234,56",
-    REGIONAL_FORMAT_US: "Data 12/31/2026 · Valor 1,234.56",
+
+
+@dataclass(frozen=True)
+class RegionalSpec:
+    """Como uma região escreve datas e números. Incluir região = uma linha na tabela."""
+
+    code: str
+    locale: str  # tag BCP 47, para `Intl`/`toLocaleString` no navegador
+    date_order: str  # "dmy", "mdy" ou "ymd"
+    date_sep: str
+    decimal_sep: str
+    thousands_sep: str
+
+    @property
+    def date_pattern(self) -> str:
+        """Padrão `strftime` da data completa."""
+        partes = {"d": "%d", "m": "%m", "y": "%Y"}
+        return self.date_sep.join(partes[letra] for letra in self.date_order)
+
+    @property
+    def month_pattern(self) -> str:
+        """Padrão `strftime` de mês e ano."""
+        return self.date_sep.join(("%Y", "%m") if self.date_order == "ymd" else ("%m", "%Y"))
+
+    @property
+    def day_month_pattern(self) -> str:
+        """Padrão `strftime` de dia e mês, sem o ano."""
+        return self.date_sep.join(("%m", "%d") if self.date_order in ("mdy", "ymd") else ("%d", "%m"))
+
+    def as_dict(self) -> dict[str, str]:
+        """O que o navegador precisa para ler e escrever datas e números."""
+        return {
+            "code": self.code,
+            "locale": self.locale,
+            "dateOrder": self.date_order,
+            "dateSep": self.date_sep,
+            "decimal": self.decimal_sep,
+            "thousands": self.thousands_sep,
+        }
+
+
+REGIONAL_SPECS: Final = {
+    REGIONAL_FORMAT_BR: RegionalSpec(REGIONAL_FORMAT_BR, "pt-BR", "dmy", "/", ",", "."),
+    REGIONAL_FORMAT_US: RegionalSpec(REGIONAL_FORMAT_US, "en-US", "mdy", "/", ".", ","),
 }
 
 
 def normalize_regional_format(value: str | None) -> str:
-    return value if value in VALID_REGIONAL_FORMATS else REGIONAL_FORMAT_BR
+    return value if value in VALID_REGIONAL_FORMATS else DEFAULT_REGIONAL_FORMAT
+
+
+def resolve_regional_format(value: str | None, language: str | None) -> str:
+    """Região efetiva (`br` ou `us`): `auto` segue o idioma."""
+    normalizado = normalize_regional_format(value)
+    if normalizado != REGIONAL_FORMAT_AUTO:
+        return normalizado
+    return REGIONAL_FORMAT_FOR_LANGUAGE.get(normalize_language(language), REGIONAL_FORMAT_BR)
 
 
 TABLE_SCROLL_ROWS_MIN: Final = 5

@@ -58,6 +58,32 @@ Revise toda migration gerada. Uma mudança de schema só está pronta depois de
 validar `manage.py migrate` em PostgreSQL vazio e no caminho de atualização
 aplicável.
 
+## Textos da interface (idioma)
+
+O português é a língua-fonte: o texto em português é o `msgid`, e o inglês fica em
+`locale/en/LC_MESSAGES/django.po`. O `.mo` compilado **não é versionado**: o
+`Dockerfile` o gera no build (`msgfmt --check-format`, que reprova o build se um
+marcador estiver quebrado).
+
+Depois de marcar um texto novo, extraia e traduza:
+
+```powershell
+.\scripts\mensagens.ps1            # atualiza o .po; o texto novo entra com msgstr vazio
+.\scripts\mensagens.ps1 -Conferir  # só confere se o .po está em dia (sai com 1 se não estiver)
+```
+
+O script roda no contêiner `quality` (que tem o GNU gettext) e só devolve o `.po`.
+No Windows PowerShell 5.1 o `docker` escreve progresso em stderr e o PowerShell o
+mostra como erro: o que vale é o código de saída. Entrada nova vem vazia, ou
+`fuzzy` quando o gettext a achou parecida com outra; **`fuzzy` é chute, nunca fica**
+(o Django o ignora): traduza e tire a marca. `tests/test_catalogo_en.py` reprova
+texto sem tradução, `fuzzy`, marcador de formatação diferente do original, português
+vazando na tradução e catálogo fora de dia com o código.
+
+`tests/test_varredura_de_idioma.py` renderiza as telas principais com usuário em inglês
+e dados em ASCII e reprova se sobrar letra acentuada ou palavra de interface em
+português. Tela nova entra na lista `TELAS` dele.
+
 ## Validação proporcional
 
 - documentação: `git diff --check`, links/caminhos e comandos documentados;

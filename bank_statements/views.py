@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.translation import gettext, ngettext
 from django.views.decorators.http import require_http_methods, require_POST
 
 from accounts.services import has_function_permission
@@ -72,7 +73,7 @@ def stage_imports_view(request):
     """
     files = request.FILES.getlist('statement_files')
     if not files:
-        messages.warning(request, "Selecione ao menos um arquivo para importar.")
+        messages.warning(request, gettext("Selecione ao menos um arquivo para importar."))
         if quer_fragmento(request):
             return render(request, 'banking/_import_table.html', _import_table_context(request))
         return redirect('bank_statements:imports_view')
@@ -93,7 +94,7 @@ def confirm_imports_view(request):
     """Prévia dos arquivos enviados: confirma ou corrige a conta de cada um antes de gravar."""
     uploads = list(pending_imports.pending_uploads_for_user(request.user))
     if not uploads:
-        messages.info(request, "Nenhuma importação pendente de confirmação.")
+        messages.info(request, gettext("Nenhuma importação pendente de confirmação."))
         return redirect('bank_statements:imports_view')
     context = {
         "uploads": uploads,
@@ -112,11 +113,13 @@ def process_imports_view(request):
     resultados, erros, lotes = pending_imports.resolve_pending_uploads(request.user, choices)
 
     for nome, inserted, skipped in resultados:
-        messages.success(request, f"{nome}: linhas novas {inserted}, duplicadas ignoradas {skipped}.")
+        messages.success(request, gettext(
+            "%(nome)s: linhas novas %(novas)s, duplicadas ignoradas %(duplicadas)s."
+        ) % {"nome": nome, "novas": inserted, "duplicadas": skipped})
     for nome, erro in erros:
-        messages.error(request, f"{nome}: {erro}")
+        messages.error(request, gettext("%(nome)s: %(erro)s") % {"nome": nome, "erro": erro})
     if not resultados and not erros:
-        messages.warning(request, "Nenhum arquivo foi confirmado para importação.")
+        messages.warning(request, gettext("Nenhum arquivo foi confirmado para importação."))
 
     # A fatura não para nas linhas: segue para a prévia do processamento. Mais
     # de um cartão no mesmo lote não tem como abrir duas prévias de uma vez -
@@ -125,7 +128,11 @@ def process_imports_view(request):
     if faturas:
         if len(faturas) > 1:
             outras = ", ".join(lote.source_filename for lote in faturas[1:])
-            messages.info(request, f"Outras faturas aguardando processamento: {outras}.")
+            messages.info(request, ngettext(
+                "Outra fatura aguardando processamento: %(outras)s.",
+                "Outras faturas aguardando processamento: %(outras)s.",
+                len(faturas) - 1,
+            ) % {"outras": outras})
         destino = reverse('bank_statements:fatura', args=[faturas[0].id])
         if quer_fragmento(request):
             resposta = HttpResponse(status=204)
@@ -146,14 +153,23 @@ def undo_import_view(request, batch_id):
     """Desfaz um lote de importação inteiro (lançamento, não fatura de cartão)."""
     try:
         line_count, reconciled_count = reconciliation.undo_statement_import(request.user, batch_id=batch_id)
-        texto = f"Importação desfeita: {line_count} linha(s) de extrato removida(s)"
+        linhas = ngettext(
+            "Importação desfeita: %(n)s linha de extrato removida",
+            "Importação desfeita: %(n)s linhas de extrato removidas",
+            line_count,
+        ) % {"n": line_count}
         if reconciled_count:
-            texto += (
-                f", {reconciled_count} conciliação(ões) revertida(s) — os lançamentos "
+            conciliacoes = ngettext(
+                "%(n)s conciliação revertida",
+                "%(n)s conciliações revertidas",
+                reconciled_count,
+            ) % {"n": reconciled_count}
+            texto = gettext(
+                "%(linhas)s, %(conciliacoes)s — os lançamentos "
                 "voltaram a ficar em aberto, conforme o vencimento, sem serem apagados."
-            )
+            ) % {"linhas": linhas, "conciliacoes": conciliacoes}
         else:
-            texto += "."
+            texto = gettext("%(linhas)s.") % {"linhas": linhas}
         messages.success(request, texto)
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -169,7 +185,7 @@ def import_status_view(request, batch_id):
     """Status resumido de um lote de importação, em JSON."""
     status = statement_import_status(request.user, batch_id)
     if status is None:
-        return JsonResponse({"error": "Lote não encontrado."}, status=404)
+        return JsonResponse({"error": gettext("Lote não encontrado.")}, status=404)
     return JsonResponse(status)
 
 
@@ -241,7 +257,7 @@ def _mes_do_get(valor) -> date | None:
 
 def _destino_da_celula(conta, celula) -> str:
     """Onde resolver a célula: importar o que falta, conciliar o pendente, ver o que já está feito."""
-    if conta.movement_account_id and celula.motivo.startswith("falta informar"):
+    if conta.movement_account_id and celula.saldo_pendente:
         return reverse('bank_statements:atualizar_saldo')
     if celula.estado == situacao.SEM_IMPORTACAO:
         return reverse('bank_statements:imports_view')
@@ -291,9 +307,17 @@ def processar_fatura_view(request, batch_id):
         )
         pendentes = contagem.get(fatura.PAGAMENTO_SEM_PAR, 0)
         feitas = sum(contagem.values()) - pendentes
-        texto = f"Fatura processada: {feitas} linha(s)."
+        texto = ngettext(
+            "Fatura processada: %(n)s linha.",
+            "Fatura processada: %(n)s linhas.",
+            feitas,
+        ) % {"n": feitas}
         if pendentes:
-            texto += f" {pendentes} pagamento(s) sem transferência ficaram em Conciliação."
+            texto += " " + ngettext(
+                "%(n)s pagamento sem transferência ficou em Conciliação.",
+                "%(n)s pagamentos sem transferência ficaram em Conciliação.",
+                pendentes,
+            ) % {"n": pendentes}
         messages.success(request, texto)
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -329,7 +353,11 @@ def reclassificacao_view(request):
                     audit_context=audit_request_context(request),
                     **escolhas,
                 )
-                messages.success(request, f"{alterados} lançamento(s) reclassificado(s).")
+                messages.success(request, ngettext(
+                    "%(n)s lançamento reclassificado.",
+                    "%(n)s lançamentos reclassificados.",
+                    alterados,
+                ) % {"n": alterados})
                 destino = reverse('bank_statements:reclassificacao')
                 return redirect(f"{destino}?{voltar}" if voltar else destino)
             plano = reclassificacao.planejar(request.user, **escolhas)
@@ -365,7 +393,7 @@ def atualizar_saldo_view(request):
         data = date.fromisoformat(data_informada) if data_informada else date.today()
     except ValueError:
         data = date.today()
-        messages.error(request, "Data inválida.")
+        messages.error(request, gettext("Data inválida."))
     if request.method == 'POST':
         try:
             if request.POST.get('acao') == 'aplicar':
@@ -379,9 +407,10 @@ def atualizar_saldo_view(request):
                     motivo=request.POST.get('motivo', ''),
                     audit_context=audit_request_context(request),
                 )
-                messages.success(
-                    request, f"Diferença lançada: {lancamento.description} ({lancamento.entry_amount})."
-                )
+                messages.success(request, gettext("Diferença lançada: %(descricao)s (%(valor)s).") % {
+                    "descricao": lancamento.description,
+                    "valor": lancamento.entry_amount,
+                })
                 return redirect('bank_statements:atualizar_saldo')
             previa = saldo.previa(
                 request.user, account_id=request.POST.get('conta'), data=data,
@@ -450,9 +479,11 @@ def reconcile_view(request):
         )
         correcao = getattr(linha, "correcao", "")
         if correcao:
-            messages.success(request, f"Linha conciliada; realização corrigida pelo extrato ({correcao}).")
+            messages.success(request, gettext(
+                "Linha conciliada; realização corrigida pelo extrato (%(correcao)s)."
+            ) % {"correcao": correcao})
         else:
-            messages.success(request, "Linha conciliada e lançamento marcado como realizado.")
+            messages.success(request, gettext("Linha conciliada e lançamento marcado como realizado."))
     except ValueError as exc:
         messages.error(request, str(exc))
 
@@ -474,7 +505,7 @@ def create_entry_from_line_view(request):
             category_id=request.POST.get('category_id'),
             audit_context=audit_request_context(request),
         )
-        messages.success(request, "Lançamento criado e conciliado com a linha do extrato.")
+        messages.success(request, gettext("Lançamento criado e conciliado com a linha do extrato."))
     except ValueError as exc:
         messages.error(request, str(exc))
 
@@ -491,7 +522,7 @@ def bulk_action_lines_view(request):
     action = request.POST.get('bulk_action')
     line_ids = request.POST.getlist('line_ids')
     if not line_ids:
-        messages.warning(request, "Selecione ao menos uma linha do extrato.")
+        messages.warning(request, gettext("Selecione ao menos uma linha do extrato."))
     elif action == 'reconcile':
         reconciled, errors = reconciliation.bulk_reconcile_lines(
             request.user,
@@ -499,9 +530,17 @@ def bulk_action_lines_view(request):
             audit_context=audit_request_context(request),
         )
         if reconciled:
-            messages.success(request, f"{reconciled} linha(s) conciliada(s).")
+            messages.success(request, ngettext(
+                "%(n)s linha conciliada.",
+                "%(n)s linhas conciliadas.",
+                reconciled,
+            ) % {"n": reconciled})
         if errors:
-            messages.error(request, f"{len(errors)} linha(s) não puderam ser conciliadas: {errors[0][1]}")
+            messages.error(request, ngettext(
+                "%(n)s linha não pôde ser conciliada: %(erro)s",
+                "%(n)s linhas não puderam ser conciliadas: %(erro)s",
+                len(errors),
+            ) % {"n": len(errors), "erro": errors[0][1]})
     elif action == 'apply_plan':
         linhas = list(
             BankStatementLine.objects.filter(
@@ -514,14 +553,15 @@ def bulk_action_lines_view(request):
         )
         if feitas:
             detalhe = ", ".join(
-                f"{quantidade} {extrato.ROTULOS_CURTOS[acao]}" for acao, quantidade in feitas.items()
+                extrato.ROTULOS_CURTOS[acao](quantidade) for acao, quantidade in feitas.items()
             )
-            messages.success(request, f"Sugestões aplicadas: {detalhe}.")
+            messages.success(request, gettext("Sugestões aplicadas: %(detalhe)s.") % {"detalhe": detalhe})
         if errors:
-            messages.warning(
-                request,
-                f"{len(errors)} linha(s) esperam decisão sua. Primeira: {errors[0][0]} — {errors[0][1]}",
-            )
+            messages.warning(request, ngettext(
+                "%(n)s linha espera decisão sua. Primeira: %(chave)s — %(erro)s",
+                "%(n)s linhas esperam decisão sua. Primeira: %(chave)s — %(erro)s",
+                len(errors),
+            ) % {"n": len(errors), "chave": errors[0][0], "erro": errors[0][1]})
     elif action == 'create':
         created, errors = reconciliation.bulk_create_entries_from_lines(
             request.user,
@@ -529,17 +569,33 @@ def bulk_action_lines_view(request):
             audit_context=audit_request_context(request),
         )
         if created:
-            messages.success(request, f"{created} lançamento(s) criado(s) e conciliado(s).")
+            messages.success(request, ngettext(
+                "%(n)s lançamento criado e conciliado.",
+                "%(n)s lançamentos criados e conciliados.",
+                created,
+            ) % {"n": created})
         if errors:
-            messages.error(request, f"{len(errors)} linha(s) não puderam ser processadas: {errors[0][1]}")
+            messages.error(request, ngettext(
+                "%(n)s linha não pôde ser processada: %(erro)s",
+                "%(n)s linhas não puderam ser processadas: %(erro)s",
+                len(errors),
+            ) % {"n": len(errors), "erro": errors[0][1]})
     elif action == 'ignore':
         ignored, errors = reconciliation.bulk_ignore_lines(request.user, line_ids=line_ids)
         if ignored:
-            messages.success(request, f"{ignored} linha(s) ignorada(s).")
+            messages.success(request, ngettext(
+                "%(n)s linha ignorada.",
+                "%(n)s linhas ignoradas.",
+                ignored,
+            ) % {"n": ignored})
         if errors:
-            messages.error(request, f"{len(errors)} linha(s) não puderam ser ignoradas: {errors[0][1]}")
+            messages.error(request, ngettext(
+                "%(n)s linha não pôde ser ignorada: %(erro)s",
+                "%(n)s linhas não puderam ser ignoradas: %(erro)s",
+                len(errors),
+            ) % {"n": len(errors), "erro": errors[0][1]})
     else:
-        messages.warning(request, "Ação em lote inválida.")
+        messages.warning(request, gettext("Ação em lote inválida."))
 
     if quer_fragmento(request):
         return render(request, 'banking/_reconciliation_tables.html', _reconciliation_context(request))
@@ -556,8 +612,10 @@ def undo_reconciliation_view(request):
         reconciliation.undo_reconciliation(request.user, line_id=line_id)
         messages.success(
             request,
-            "Conciliação desfeita. A linha voltou a pendente e o lançamento "
-            "voltou a ficar em aberto, conforme o vencimento.",
+            gettext(
+                "Conciliação desfeita. A linha voltou a pendente e o lançamento "
+                "voltou a ficar em aberto, conforme o vencimento."
+            ),
         )
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -596,7 +654,7 @@ def create_attachment_view(request):
             request.POST.get('entry_id'),
             request.FILES.get('attachment_file'),
         )
-        messages.success(request, f"Anexo salvo: {attachment.original_filename}.")
+        messages.success(request, gettext("Anexo salvo: %(nome)s.") % {"nome": attachment.original_filename})
     except ValueError as exc:
         messages.error(request, str(exc))
 
@@ -611,7 +669,7 @@ def attachment_download_view(request, attachment_id):
     """Baixa o arquivo de um comprovante."""
     attachment = attachment_for_download(request.user, attachment_id)
     if attachment is None:
-        messages.warning(request, "Anexo não encontrado.")
+        messages.warning(request, gettext("Anexo não encontrado."))
         return redirect('bank_statements:attachments_view')
     try:
         path = attachment_download_path(attachment)
@@ -633,7 +691,7 @@ def delete_attachment_view(request, attachment_id):
     """Exclui o metadado e o arquivo físico de um comprovante autorizado."""
     try:
         delete_entry_attachment(request.user, attachment_id=attachment_id)
-        messages.success(request, "Comprovante excluído.")
+        messages.success(request, gettext("Comprovante excluído."))
     except ValueError as exc:
         messages.error(request, str(exc))
 
@@ -650,7 +708,7 @@ def ignore_line_view(request):
     line_id = request.POST.get('line_id')
     try:
         reconciliation.ignore_statement_line(request.user, line_id=line_id)
-        messages.success(request, "Linha do extrato marcada como ignorada.")
+        messages.success(request, gettext("Linha do extrato marcada como ignorada."))
     except ValueError as exc:
         messages.error(request, str(exc))
 

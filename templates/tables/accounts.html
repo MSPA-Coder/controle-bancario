@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static navegacao %}
-{% load icons contas %}
+{% load icons contas i18n %}
 
-{% block title %}Cadastros • Contas{% endblock %}
+{% block title %}{% trans "Cadastros • Contas" %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/accounts.css' %}">
@@ -11,53 +11,53 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Cadastros • Contas</h1>
+        <h1>{% trans "Cadastros • Contas" %}</h1>
     </div>
-    {% include "tables/_cadastro_acoes.html" with confirmar="Cadastrar esta conta financeira?" %}
+    {% trans "Cadastrar esta conta financeira?" as t_confirmar %}{% include "tables/_cadastro_acoes.html" with confirmar=t_confirmar %}
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="chart-card">
     <div id="cadastro-novo" class="cadastro-novo" hidden>
-    <div class="section-header"><h4>Nova conta</h4></div>
+    <div class="section-header"><h4>{% trans "Nova conta" %}</h4></div>
     <form method="post" data-cadastro-htmx="#accountsTableBody" id="cadastro-form" action="{% url 'banking:create_account' %}" class="add-form">
         {% csrf_token %}
-        <select name="owner_id" aria-label="Titular" required data-ui="flex-1">
-            <option value="">Selecione o titular</option>
+        <select name="owner_id" aria-label="{% trans 'Titular' %}" required data-ui="flex-1">
+            <option value="">{% trans "Selecione o titular" %}</option>
             {% for owner in owners %}
                 <option value="{{ owner.id }}">{{ owner.name }}</option>
             {% endfor %}
         </select>
-        <select name="institution_id" aria-label="Instituição" required data-ui="flex-1">
-            <option value="">Selecione a instituição</option>
+        <select name="institution_id" aria-label="{% trans 'Instituição' %}" required data-ui="flex-1">
+            <option value="">{% trans "Selecione a instituição" %}</option>
             {% for institution in institutions %}
                 <option value="{{ institution.id }}">{{ institution.institution_name }}</option>
             {% endfor %}
         </select>
-        <input type="text" name="account_name" aria-label="Nome da conta" placeholder="Nome da conta…" maxlength="100" required data-ui="flex-1">
-        <select name="currency" aria-label="Moeda" required data-ui="w-120">
+        <input type="text" name="account_name" aria-label="{% trans 'Nome da conta' %}" placeholder="{% trans 'Nome da conta…' %}" maxlength="100" required data-ui="flex-1">
+        <select name="currency" aria-label="{% trans 'Moeda' %}" required data-ui="w-120">
             {% for code, label in currencies %}
                 <option value="{{ code }}">{{ label }}</option>
             {% endfor %}
         </select>
-        <input type="text" name="initial_balance" data-regional-kind="decimal" aria-label="Saldo inicial" placeholder="Saldo inicial" data-ui="w-120">
-        <input type="date" name="initial_balance_date" aria-label="Data do saldo inicial" title="Data a que o saldo inicial se refere" data-ui="w-120">
-        <select name="account_kind" aria-label="Tipo de conta" data-ui="w-120">
+        <input type="text" name="initial_balance" data-regional-kind="decimal" aria-label="{% trans 'Saldo inicial' %}" placeholder="{% trans 'Saldo inicial' %}" data-ui="w-120">
+        <input type="date" name="initial_balance_date" aria-label="{% trans 'Data do saldo inicial' %}" title="{% trans 'Data a que o saldo inicial se refere' %}" data-ui="w-120">
+        <select name="account_kind" aria-label="{% trans 'Tipo de conta' %}" data-ui="w-120">
             {% for code, label in account_kinds %}
                 <option value="{{ code }}">{{ label }}</option>
             {% endfor %}
         </select>
-        <select name="purpose" aria-label="Finalidade da conta" title="Administrada: dinheiro de terceiros que você só gere. Fica fora do fluxo pessoal por padrão." data-ui="w-120">
+        <select name="purpose" aria-label="{% trans 'Finalidade da conta' %}" title="{% trans 'Administrada: dinheiro de terceiros que você só gere. Fica fora do fluxo pessoal por padrão.' %}" data-ui="w-120">
             {% for code, label in account_purposes %}
                 <option value="{{ code }}">{{ label }}</option>
             {% endfor %}
         </select>
-        <input type="number" name="card_closing_day" min="1" max="31" aria-label="Dia de fechamento do cartão" placeholder="Fecha dia" title="Só para cartão de crédito" data-ui="w-100">
-        <input type="number" name="card_due_day" min="1" max="31" aria-label="Dia de vencimento do cartão" placeholder="Vence dia" title="Só para cartão de crédito" data-ui="w-100">
-        <input type="text" name="card_estimated_spend" data-regional-kind="decimal" inputmode="decimal" aria-label="Gasto mensal estimado do cartão" placeholder="Gasto/mês (auto)" title="Só para cartão de crédito: gasto novo por fatura. Vazio, o sistema usa a mediana das últimas 6 faturas importadas." data-ui="w-120">
-        <select name="card_payment_account_id" aria-label="Conta de pagamento padrão do cartão" title="Só para cartão de crédito: de onde sai a fatura projetada. O pagamento real pode ser dividido entre contas." data-ui="flex-1">
-            <option value="">Conta de pagamento (opcional)</option>
+        <input type="number" name="card_closing_day" min="1" max="31" aria-label="{% trans 'Dia de fechamento do cartão' %}" placeholder="{% trans 'Fecha dia' %}" title="{% trans 'Só para cartão de crédito' %}" data-ui="w-100">
+        <input type="number" name="card_due_day" min="1" max="31" aria-label="{% trans 'Dia de vencimento do cartão' %}" placeholder="{% trans 'Vence dia' %}" title="{% trans 'Só para cartão de crédito' %}" data-ui="w-100">
+        <input type="text" name="card_estimated_spend" data-regional-kind="decimal" inputmode="decimal" aria-label="{% trans 'Gasto mensal estimado do cartão' %}" placeholder="{% trans 'Gasto/mês (auto)' %}" title="{% trans 'Só para cartão de crédito: gasto novo por fatura. Vazio, o sistema usa a mediana das últimas 6 faturas importadas.' %}" data-ui="w-120">
+        <select name="card_payment_account_id" aria-label="{% trans 'Conta de pagamento padrão do cartão' %}" title="{% trans 'Só para cartão de crédito: de onde sai a fatura projetada. O pagamento real pode ser dividido entre contas.' %}" data-ui="flex-1">
+            <option value="">{% trans "Conta de pagamento (opcional)" %}</option>
             {% for titular, contas in payment_accounts|por_titular %}
             <optgroup label="{{ titular }}">
                 {% for payment in contas %}
@@ -66,8 +66,8 @@
             </optgroup>
             {% endfor %}
         </select>
-        <select name="movement_account_id" aria-label="Conta de movimento da aplicação" title="Só para aplicação (cofrinho, CDB, Tesouro): a conta corrente do mesmo titular por onde o dinheiro entra e sai. O extrato dela traz as transferências." data-ui="flex-1">
-            <option value="">Conta de movimento (aplicação)</option>
+        <select name="movement_account_id" aria-label="{% trans 'Conta de movimento da aplicação' %}" title="{% trans 'Só para aplicação (cofrinho, CDB, Tesouro): a conta corrente do mesmo titular por onde o dinheiro entra e sai. O extrato dela traz as transferências.' %}" data-ui="flex-1">
+            <option value="">{% trans "Conta de movimento (aplicação)" %}</option>
             {% for titular, contas in movement_accounts|por_titular %}
             <optgroup label="{{ titular }}">
                 {% for movimento in contas %}
@@ -76,12 +76,12 @@
             </optgroup>
             {% endfor %}
         </select>
-        <input type="text" name="statement_identifier" aria-label="Identificador no extrato" placeholder="Nº da conta no extrato (opcional)" maxlength="40" title="Número da conta como aparece no extrato do banco. Usado para reconhecer a conta ao importar vários extratos de uma vez." data-ui="w-120">
+        <input type="text" name="statement_identifier" aria-label="{% trans 'Identificador no extrato' %}" placeholder="{% trans 'Nº da conta no extrato (opcional)' %}" maxlength="40" title="{% trans 'Número da conta como aparece no extrato do banco. Usado para reconhecer a conta ao importar vários extratos de uma vez.' %}" data-ui="w-120">
     </form>
     </div>
 
     {% if not owners %}
-    <p class="empty-state">Nenhum titular disponível para você. Cadastre um titular ou solicite acesso antes de criar contas.</p>
+    <p class="empty-state">{% trans "Nenhum titular disponível para você. Cadastre um titular ou solicite acesso antes de criar contas." %}</p>
     {% endif %}
 
     <div class="table-container" data-ui="table-plain-flex">
@@ -89,22 +89,22 @@
             <thead>
                 <tr>
                     <th>
-                        <select data-table-filter name="filter_owner_id" aria-label="Filtrar por titular" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#accountsTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
-                            <option value="">Todos os titulares</option>
+                        <select data-table-filter name="filter_owner_id" aria-label="{% trans 'Filtrar por titular' %}" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#accountsTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
+                            <option value="">{% trans "Todos os titulares" %}</option>
                             {% for owner in owners %}<option value="{{ owner.id }}" {% if owner.id == current_filter_owner_id %}selected{% endif %}>{{ owner.name }}</option>{% endfor %}
                         </select>
                     </th>
                     <th>
-                        <select data-table-filter name="filter_institution_id" aria-label="Filtrar por instituição" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#accountsTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
-                            <option value="">Todas as instituições</option>
+                        <select data-table-filter name="filter_institution_id" aria-label="{% trans 'Filtrar por instituição' %}" data-filter="true" hx-get="{{ request.path }}" hx-trigger="change" hx-include="[data-table-filter]" hx-target="#accountsTableBody" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#ajaxLoadingBar">
+                            <option value="">{% trans "Todas as instituições" %}</option>
                             {% for institution in institutions %}<option value="{{ institution.id }}" {% if institution.id == current_filter_institution_id %}selected{% endif %}>{{ institution.institution_name }}</option>{% endfor %}
                         </select>
                     </th>
-                    <th>Nome</th>
-                    <th>Moeda</th>
-                    <th>Saldo inicial</th>
-                    <th>Data do saldo</th>
-                    <th data-ui="w-100">Ações</th>
+                    <th>{% trans "Nome" %}</th>
+                    <th>{% trans "Moeda" %}</th>
+                    <th>{% trans "Saldo inicial" %}</th>
+                    <th>{% trans "Data do saldo" %}</th>
+                    <th data-ui="w-100">{% trans "Ações" %}</th>
                 </tr>
             </thead>
             {% include "tables/_accounts_table.html" %}

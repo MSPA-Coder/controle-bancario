@@ -211,7 +211,7 @@ def test_tela_lista_previa_e_aplica(cenario):
         "acao": "previa", "entry_ids": [entrada.id], "categoria": cenario["saude"].id, "iguais": "1",
         "voltar": "texto=DROGA",
     })
-    assert "Prévia: 1 lançamento(s) passam para Saúde r" in previa.content.decode()
+    assert "Prévia: 1 lançamento passa para Saúde r" in previa.content.decode()
 
     aplicada = client.post("/banking/reclassification/", {
         "acao": "aplicar", "entry_ids": [entrada.id], "categoria": cenario["saude"].id, "iguais": "1",

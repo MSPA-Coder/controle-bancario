@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Movimentação • Comprovantes{% endblock %}
+{% block title %}{% trans "Movimentação • Comprovantes" %}{% endblock %}
 
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>🏦 Anexar comprovantes</h1>
-        <p>Vincule comprovantes a lançamentos existentes.</p>
+        <h1>🏦 {% trans "Anexar comprovantes" %}</h1>
+        <p>{% trans "Vincule comprovantes a lançamentos existentes." %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="chart-card u-mb-1">
-    <h3>Anexar comprovante a lançamento</h3>
+    <h3>{% trans "Anexar comprovante a lançamento" %}</h3>
     <form method="post" action="{% url 'bank_statements:create_attachment' %}" enctype="multipart/form-data" class="top-filter-row"
           hx-post="{% url 'bank_statements:create_attachment' %}"
           hx-encoding="multipart/form-data"
@@ -21,23 +22,23 @@
           hx-swap="innerHTML">
         {% csrf_token %}
         <label class="top-filter-field compact">
-            ID do lançamento
+            {% trans "ID do lançamento" %}
             <input type="number" name="entry_id" min="1" required>
         </label>
         <label class="top-filter-field" data-ui="min-w-18">
-            Arquivo
+            {% trans "Arquivo" %}
             <input type="file" name="attachment_file" accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.txt" required>
         </label>
         <div class="top-filter-actions"><button type="submit" class="btn btn-primary"
-                data-sa-confirmar="Salvar este comprovante no banco e no armazenamento?"
-                data-sa-titulo="Confirmar comprovante"
+                data-sa-confirmar="{% trans 'Salvar este comprovante no banco e no armazenamento?' %}"
+                data-sa-titulo="{% trans 'Confirmar comprovante' %}"
                 data-sa-severidade="info"
-                data-sa-ok="Salvar">Anexar</button></div>
+                data-sa-ok="{% trans 'Salvar' %}">{% trans "Anexar" %}</button></div>
     </form>
 </div>
 
 <div class="chart-card">
-    <h3>Comprovantes recentes</h3>
+    <h3>{% trans "Comprovantes recentes" %}</h3>
     <div id="attachment-results">
         {% include "banking/_attachments_table.html" %}
     </div>

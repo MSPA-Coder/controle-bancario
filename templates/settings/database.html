@@ -1,43 +1,43 @@
 {% extends "base.html" %}
-{% load icons navegacao %}
+{% load icons navegacao i18n %}
 
-{% block title %}Configurações • Banco de dados{% endblock %}
+{% block title %}{% trans "Configurações • Banco de dados" %}{% endblock %}
 
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>Banco de dados</h1>
-        <p>Diagnóstico de integridade e otimização (VACUUM ANALYZE).</p>
+        <h1>{% trans "Banco de dados" %}</h1>
+        <p>{% trans "Diagnóstico de integridade e otimização (VACUUM ANALYZE)." %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="section-card">
-    <h3>Manutenção</h3>
-    <p>Backup e restauração são operações administrativas externas à aplicação (fora de escopo desta tela).</p>
+    <h3>{% trans "Manutenção" %}</h3>
+    <p>{% trans "Backup e restauração são operações administrativas externas à aplicação (fora de escopo desta tela)." %}</p>
     <div class="form-group">
-        <label>Última otimização</label>
-        <input type="text" class="form-control" value="{{ last_optimize_info }}" aria-label="Última otimização" readonly>
+        <label>{% trans "Última otimização" %}</label>
+        <input type="text" class="form-control" value="{{ last_optimize_info }}" aria-label="{% trans 'Última otimização' %}" readonly>
     </div>
     <div class="btn-group">
         <form method="post" action="{% url 'core:settings_health_check' %}" class="inline-form">
             {% csrf_token %}
-                <button type="submit" class="btn btn-primary" data-sa-confirmar="Executar o health check do banco?" data-sa-titulo="Confirmar verificação" data-sa-severidade="info" data-sa-ok="Executar">{% icon 'database' %}<span>Health Check</span></button>
+                <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Executar o health check do banco?' %}" data-sa-titulo="{% trans 'Confirmar verificação' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Executar' %}">{% icon 'database' %}<span>{% trans "Health Check" %}</span></button>
         </form>
         <form method="post" action="{% url 'core:settings_optimize' %}" class="inline-form">
             {% csrf_token %}
-                <button type="submit" class="btn btn-success" data-sa-confirmar="Executar VACUUM ANALYZE no banco?" data-sa-titulo="Confirmar otimização" data-sa-severidade="warning" data-sa-ok="Otimizar">{% icon 'refresh' %}<span>Otimizar (VACUUM ANALYZE)</span></button>
+                <button type="submit" class="btn btn-success" data-sa-confirmar="{% trans 'Executar VACUUM ANALYZE no banco?' %}" data-sa-titulo="{% trans 'Confirmar otimização' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Otimizar' %}">{% icon 'refresh' %}<span>{% trans "Otimizar (VACUUM ANALYZE)" %}</span></button>
         </form>
     </div>
 </div>
 
 {% if pode_inspecionar %}
 <div class="section-card">
-    <h3>Inspeção de dados</h3>
+    <h3>{% trans "Inspeção de dados" %}</h3>
     <form method="get" class="btn-group form-spaced" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
-        <select name="table_name" class="form-control form-control-fit" aria-label="Tabela para inspeção">
-            <option value="">Selecione uma tabela…</option>
+        <select name="table_name" class="form-control form-control-fit" aria-label="{% trans 'Tabela para inspeção' %}">
+            <option value="">{% trans "Selecione uma tabela…" %}</option>
             {% for t in available_tables %}
             <option value="{{ t }}" {% if t == selected_table %}selected{% endif %}>{{ t }}</option>
             {% endfor %}
@@ -55,7 +55,7 @@
         </table>
     </div>
     {% elif selected_table %}
-    <p class="text-muted">Tabela vazia.</p>
+    <p class="text-muted">{% trans "Tabela vazia." %}</p>
     {% endif %}
 </div>
 {% endif %}

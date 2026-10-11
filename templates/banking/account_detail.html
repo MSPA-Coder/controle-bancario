@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% load static money_filters icons regional_filters %}
-{% block title %}Conta • {{ account.account_name }}{% endblock %}
+{% load static money_filters icons regional_filters i18n %}
+{% block title %}{% blocktrans trimmed with nome=account.account_name %}Conta • {{ nome }}{% endblocktrans %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/transactions.css' %}">
@@ -13,52 +13,52 @@
         <h1>{{ account.account_name }}</h1>
         <p>{{ account.owner.name }} • {{ account.institution.institution_name }} • {{ account.currency|currency_label }}</p>
     </div>
-    <a class="btn btn-ghost btn-sm" href="{% url 'transactions:transactions_view' %}?account_id={{ account.id }}&amp;period={{ selected_period }}&amp;mode=realizado">{% icon 'list' %}<span>Ver lançamentos</span></a>
+    <a class="btn btn-ghost btn-sm" href="{% url 'transactions:transactions_view' %}?account_id={{ account.id }}&amp;period={{ selected_period }}&amp;mode=realizado">{% icon 'list' %}<span>{% trans "Ver lançamentos" %}</span></a>
 </div>
 {% endblock %}
 
 {% block content %}
 <section class="section-card account-period-card">
     <form method="get" class="account-period-form">
-        <label>Período
+        <label>{% trans "Período" %}
             <input type="month" name="period" value="{{ selected_period }}">
         </label>
-        <button type="submit" class="btn btn-primary btn-sm">Atualizar</button>
+        <button type="submit" class="btn btn-primary btn-sm">{% trans "Atualizar" %}</button>
     </form>
-    <p class="account-reference">Saldo realizado em {{ reference_date|udate }}.</p>
+    <p class="account-reference">{% blocktrans trimmed with data=reference_date|udate %}Saldo realizado em {{ data }}.{% endblocktrans %}</p>
 </section>
 
-<section class="summary-cards account-summary-cards" aria-label="Resumo da conta">
-    <div class="financial-card sa-cartao {{ saldo_atual|card_class }}"><h3>Saldo realizado</h3><p class="sa-metrica {{ saldo_atual|amount_class }}" data-sensitive-value="true">{{ saldo_atual|money_signed:account.currency }}</p></div>
-    <div class="financial-card sa-cartao card-positive"><h3>Receitas no período</h3><p class="sa-metrica amount-positive" data-sensitive-value="true">{{ realizado.total_receitas|money_signed:account.currency }}</p></div>
-    <div class="financial-card sa-cartao card-negative"><h3>Despesas no período</h3><p class="sa-metrica amount-negative" data-sensitive-value="true">{{ realizado.total_despesas|neg|money_signed:account.currency }}</p></div>
-    <div class="financial-card sa-cartao {{ previsto.saldo_final|card_class }}"><h3>Saldo previsto no período</h3><p class="sa-metrica {{ previsto.saldo_final|amount_class }}" data-sensitive-value="true">{{ previsto.saldo_final|money_signed:account.currency }}</p></div>
-    <div class="financial-card sa-cartao {{ realizado.saldo_final|card_class }}"><h3>Saldo realizado no período</h3><p class="sa-metrica {{ realizado.saldo_final|amount_class }}" data-sensitive-value="true">{{ realizado.saldo_final|money_signed:account.currency }}</p></div>
-    <div class="financial-card sa-cartao {{ variacao_previsto_realizado|card_class }}"><h3>Previsão × realizado</h3><p class="sa-metrica {{ variacao_previsto_realizado|amount_class }}" data-sensitive-value="true">{{ variacao_previsto_realizado|money_signed:account.currency }}</p></div>
+<section class="summary-cards account-summary-cards" aria-label="{% trans 'Resumo da conta' %}">
+    <div class="financial-card sa-cartao {{ saldo_atual|card_class }}"><h3>{% trans "Saldo realizado" %}</h3><p class="sa-metrica {{ saldo_atual|amount_class }}" data-sensitive-value="true">{{ saldo_atual|money_signed:account.currency }}</p></div>
+    <div class="financial-card sa-cartao card-positive"><h3>{% trans "Receitas no período" %}</h3><p class="sa-metrica amount-positive" data-sensitive-value="true">{{ realizado.total_receitas|money_signed:account.currency }}</p></div>
+    <div class="financial-card sa-cartao card-negative"><h3>{% trans "Despesas no período" %}</h3><p class="sa-metrica amount-negative" data-sensitive-value="true">{{ realizado.total_despesas|neg|money_signed:account.currency }}</p></div>
+    <div class="financial-card sa-cartao {{ previsto.saldo_final|card_class }}"><h3>{% trans "Saldo previsto no período" %}</h3><p class="sa-metrica {{ previsto.saldo_final|amount_class }}" data-sensitive-value="true">{{ previsto.saldo_final|money_signed:account.currency }}</p></div>
+    <div class="financial-card sa-cartao {{ realizado.saldo_final|card_class }}"><h3>{% trans "Saldo realizado no período" %}</h3><p class="sa-metrica {{ realizado.saldo_final|amount_class }}" data-sensitive-value="true">{{ realizado.saldo_final|money_signed:account.currency }}</p></div>
+    <div class="financial-card sa-cartao {{ variacao_previsto_realizado|card_class }}"><h3>{% trans "Previsão × realizado" %}</h3><p class="sa-metrica {{ variacao_previsto_realizado|amount_class }}" data-sensitive-value="true">{{ variacao_previsto_realizado|money_signed:account.currency }}</p></div>
 </section>
 
 <section class="section-card">
-    <h3>Último fechamento mensal</h3>
+    <h3>{% trans "Último fechamento mensal" %}</h3>
     {% if ultimo_fechamento %}
-    <p class="account-close-summary"><strong>{{ ultimo_fechamento.month|stringformat:"02d" }}/{{ ultimo_fechamento.year }}</strong> · saldo fechado <span data-sensitive-value="true">{{ ultimo_fechamento.closing_balance|money:account.currency }}</span>{% if ultimo_fechamento.closed_by_user %} · por {{ ultimo_fechamento.closed_by_user.username }}{% endif %}</p>
+    <p class="account-close-summary"><strong>{{ ultimo_fechamento.month|stringformat:"02d" }}/{{ ultimo_fechamento.year }}</strong> · {% trans "saldo fechado" %} <span data-sensitive-value="true">{{ ultimo_fechamento.closing_balance|money:account.currency }}</span>{% if ultimo_fechamento.closed_by_user %} · {% trans "por" %} {{ ultimo_fechamento.closed_by_user.username }}{% endif %}</p>
     {% else %}
-    <p class="empty-state">Esta conta ainda não tem fechamento mensal ativo.</p>
+    <p class="empty-state">{% trans "Esta conta ainda não tem fechamento mensal ativo." %}</p>
     {% endif %}
 </section>
 
 <section class="section-card">
-    <h3>Extrato realizado</h3>
+    <h3>{% trans "Extrato realizado" %}</h3>
     <div class="table-container account-extract-table">
         <table class="tx-table">
-            <thead><tr><th>Realização</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th class="amount">Valor</th><th class="amount">Saldo</th></tr></thead>
+            <thead><tr><th>{% trans "Realização" %}</th><th>{% trans "Tipo" %}</th><th>{% trans "Categoria" %}</th><th>{% trans "Descrição" %}</th><th class="amount">{% trans "Valor" %}</th><th class="amount">{% trans "Saldo" %}</th></tr></thead>
             <tbody>
                 {% for t in txs %}
                 <tr>
-                    <td>{{ t.display_date|udate }}</td><td>{{ t.entry_type|capfirst }}</td><td>{{ t.category.category_name }}</td><td>{{ t.description }}</td>
+                    <td>{{ t.display_date|udate }}</td><td>{{ t.get_entry_type_display }}</td><td>{{ t.category.category_name }}</td><td>{{ t.description }}</td>
                     {% if t.entry_type == 'receita' %}<td class="amount amount-positive" data-sensitive-value="true">{{ t.realized_amount|money_signed:account.currency }}</td>{% else %}<td class="amount amount-negative" data-sensitive-value="true">{{ t.realized_amount|neg|money_signed:account.currency }}</td>{% endif %}
                     <td class="amount {{ t.running_balance|amount_class }}" data-sensitive-value="true">{% if t.is_last_of_day %}{{ t.running_balance|money_signed:account.currency }}{% endif %}</td>
                 </tr>
-                {% empty %}<tr><td colspan="6" class="empty-state">Nenhum lançamento realizado neste período.</td></tr>{% endfor %}
+                {% empty %}<tr><td colspan="6" class="empty-state">{% trans "Nenhum lançamento realizado neste período." %}</td></tr>{% endfor %}
             </tbody>
         </table>
     </div>
