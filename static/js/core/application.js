@@ -25,17 +25,17 @@
     function _validationMessagePtBr(field) {
         var validity = field.validity;
         if (validity.valueMissing) {
-            if (field.tagName === 'SELECT') return 'Selecione uma opção.';
-            if (field.type === 'file') return 'Selecione um arquivo.';
-            if (field.type === 'date' || field.type === 'month') return 'Informe uma data.';
-            return 'Preencha este campo.';
+            if (field.tagName === 'SELECT') return t('Selecione uma opção.');
+            if (field.type === 'file') return t('Selecione um arquivo.');
+            if (field.type === 'date' || field.type === 'month') return t('Informe uma data.');
+            return t('Preencha este campo.');
         }
-        if (validity.typeMismatch) return 'Informe um valor válido.';
-        if (validity.rangeUnderflow) return 'Informe um valor igual ou maior que o mínimo permitido.';
-        if (validity.rangeOverflow) return 'Informe um valor igual ou menor que o máximo permitido.';
-        if (validity.stepMismatch) return 'Informe um valor válido para este campo.';
-        if (validity.patternMismatch) return 'Informe um valor no formato solicitado.';
-        return 'Corrija este campo antes de continuar.';
+        if (validity.typeMismatch) return t('Informe um valor válido.');
+        if (validity.rangeUnderflow) return t('Informe um valor igual ou maior que o mínimo permitido.');
+        if (validity.rangeOverflow) return t('Informe um valor igual ou menor que o máximo permitido.');
+        if (validity.stepMismatch) return t('Informe um valor válido para este campo.');
+        if (validity.patternMismatch) return t('Informe um valor no formato solicitado.');
+        return t('Corrija este campo antes de continuar.');
     }
 
     document.addEventListener('invalid', function (event) {
@@ -533,7 +533,7 @@
     function _syncSensitiveLabels(root, hidden) {
         (root || document).querySelectorAll('[data-sensitive-value="true"]').forEach(function (el) {
             if (hidden) {
-                el.setAttribute('aria-label', 'Valor oculto');
+                el.setAttribute('aria-label', t('Valor oculto'));
                 el.dataset.privacyAriaManaged = 'true';
             } else if (el.dataset.privacyAriaManaged === 'true') {
                 el.removeAttribute('aria-label');
@@ -544,8 +544,8 @@
 
     function _updatePrivacyToggle(toggle, hidden) {
         toggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-        toggle.setAttribute('aria-label', hidden ? 'Desativar modo discreto' : 'Ativar modo discreto');
-        toggle.setAttribute('title', hidden ? 'Desativar modo discreto' : 'Ativar modo discreto');
+        toggle.setAttribute('aria-label', hidden ? t('Desativar modo discreto') : t('Ativar modo discreto'));
+        toggle.setAttribute('title', hidden ? t('Desativar modo discreto') : t('Ativar modo discreto'));
 
         var visibleIcon = toggle.querySelector('[data-privacy-icon-visible]');
         var hiddenIcon = toggle.querySelector('[data-privacy-icon-hidden]');
@@ -891,7 +891,7 @@
             try { sessionStorage.setItem('app_sidebar', collapsed ? 'collapsed' : 'expanded'); } catch (_) { /* sem armazenamento: so esta pagina */ }
             var btn = document.querySelector('[data-sidebar-collapse]');
             if (!btn) return;
-            var label = collapsed ? 'Expandir menu' : 'Recolher menu';
+            var label = collapsed ? t('Expandir menu') : t('Recolher menu');
             btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
             btn.setAttribute('aria-label', label);
             btn.setAttribute('title', label);
