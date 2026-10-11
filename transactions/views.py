@@ -73,7 +73,7 @@ def _to_decimal(raw, *, default=None):
     try:
         return Decimal(str(raw).strip().replace(",", "."))
     except (InvalidOperation, ValueError) as exc:
-        raise ValueError(f"Valor monetário inválido: {raw}") from exc
+        raise ValueError(f"Valor monetário inválido: {raw}.") from exc
 
 
 def _parse_date(raw):
@@ -249,7 +249,7 @@ def mark_realized(request, tx_id):
         return _resposta_da_escrita(request, sucesso=False)
     if not access.can_access_entry(request.user, entry, "update"):
         _log_failed_transaction_action(request, entry.id, "realize")
-        messages.warning(request, "Acesso negado: usuário sem permissão para realizar este lançamento.")
+        messages.warning(request, "Acesso negado: você não tem permissão para realizar este lançamento.")
         return _resposta_da_escrita(request, sucesso=False)
 
     realized_date = _parse_date(request.POST.get("realized_date"))
@@ -289,7 +289,7 @@ def mark_unrealized(request, tx_id):
         return _resposta_da_escrita(request, sucesso=False)
     if not access.can_access_entry(request.user, entry, "update"):
         _log_failed_transaction_action(request, entry.id, "unrealize")
-        messages.warning(request, "Acesso negado: usuário sem permissão para alterar este lançamento.")
+        messages.warning(request, "Acesso negado: você não tem permissão para alterar este lançamento.")
         return _resposta_da_escrita(request, sucesso=False)
 
     sucesso = True
@@ -297,7 +297,7 @@ def mark_unrealized(request, tx_id):
         unrealize_transaction(
             entry, audit_context=audit_request_context(request), user=request.user,
         )
-        messages.success(request, "Realização desfeita. O lançamento voltou a ficar em aberto (A vencer ou Vencido, conforme o vencimento).")
+        messages.success(request, "Realização desfeita. O lançamento voltou a ficar em aberto (a vencer ou vencido, conforme o vencimento).")
     except ValueError as exc:
         sucesso = False
         _log_failed_transaction_action(request, entry.id, "unrealize")
@@ -353,20 +353,20 @@ def _transaction_new_post(request):
 
     if not access.can_access_account(request.user, req.account_id, "create"):
         _log_failed_transaction_action(request, None, "create")
-        messages.warning(request, "Acesso negado: usuário sem permissão para criar lançamentos nesta conta.")
+        messages.warning(request, "Acesso negado: você não tem permissão para criar lançamentos nesta conta.")
         return _resposta_da_escrita(request, sucesso=False)
 
     try:
         with db_transaction.atomic():
             _registrar_envio(request.POST.get("submit_token"))
             entries = create_transaction_batch(req, audit_context=audit_request_context(request), user=request.user)
-        messages.success(request, "Lançamento(s) criado(s) com sucesso.")
+        messages.success(request, "Lançamento(s) criado(s).")
         duplicates = possible_duplicates_for_created_entries(req, entries)
         if duplicates:
             ids = ", ".join(f"#{entry.id}" for entry in duplicates[:5])
             messages.warning(
                 request,
-                f"Atenção: existem movimentos semelhantes na mesma conta, data e valor: {ids}.",
+                f"Atenção: existem lançamentos semelhantes na mesma conta, data e valor: {ids}.",
             )
     except _EnvioRepetidoError:
         messages.info(request, "Este lançamento já tinha sido enviado; não foi criado de novo.")
@@ -400,7 +400,7 @@ def transaction_edit(request, tx_id):
         messages.warning(request, "Lançamento não encontrado.")
         return _resposta_da_escrita(request, sucesso=False)
     if not access.can_access_entry(request.user, tx, "update"):
-        messages.warning(request, "Acesso negado: usuário sem permissão para editar lançamentos nesta conta.")
+        messages.warning(request, "Acesso negado: você não tem permissão para editar lançamentos nesta conta.")
         return _resposta_da_escrita(request, sucesso=False)
 
     if request.method == "POST":
@@ -419,7 +419,7 @@ def _transaction_edit_post(request, tx):
 
     if not access.can_access_account(request.user, req.account_id, "update"):
         _log_failed_transaction_action(request, tx.id, "update")
-        messages.warning(request, "Acesso negado: usuário sem permissão para editar lançamentos nesta conta.")
+        messages.warning(request, "Acesso negado: você não tem permissão para editar lançamentos nesta conta.")
         return _resposta_da_escrita(request, sucesso=False)
 
     try:
@@ -435,7 +435,7 @@ def _transaction_edit_post(request, tx):
             request.POST.get("current_future_confirmation_token"),
             audit_context=audit_request_context(request), user=request.user,
         )
-        messages.success(request, "Lançamento(s) atualizado(s) com sucesso.")
+        messages.success(request, "Lançamento(s) atualizado(s).")
     except ValueError as e:
         _log_failed_transaction_action(request, tx.id, "update")
         messages.error(request, str(e))
@@ -456,7 +456,7 @@ def transaction_delete(request, tx_id):
         return _resposta_da_escrita(request, sucesso=False)
     if not access.can_access_entry(request.user, tx, "delete"):
         _log_failed_transaction_action(request, tx.id, "delete")
-        messages.warning(request, "Acesso negado: usuário sem permissão para excluir lançamentos nesta conta.")
+        messages.warning(request, "Acesso negado: você não tem permissão para excluir lançamentos nesta conta.")
         return _resposta_da_escrita(request, sucesso=False)
 
     try:
@@ -472,7 +472,7 @@ def transaction_delete(request, tx_id):
             request.POST.get("current_future_confirmation_token"),
             audit_context=audit_request_context(request), user=request.user,
         )
-        messages.success(request, "Lançamento excluído com sucesso.")
+        messages.success(request, "Lançamento excluído.")
     except ValueError as e:
         sucesso = False
         _log_failed_transaction_action(request, tx.id, "delete")
@@ -535,7 +535,7 @@ def create_category_group_view(request):
             request.POST.get('position', ''),
             in_charts=request.POST.get('in_charts') == '1',
         )
-        messages.success(request, "Grupo cadastrado com sucesso.")
+        messages.success(request, "Grupo cadastrado.")
     except ValueError as e:
         messages.error(request, str(e))
         return _respond_category_groups(request, sucesso=False)
@@ -555,7 +555,7 @@ def update_category_group_view(request, group_id):
             request.POST.get('position', ''),
             in_charts=request.POST.get('in_charts') == '1',
         )
-        messages.success(request, "Grupo atualizado com sucesso.")
+        messages.success(request, "Grupo atualizado.")
     except ValueError as e:
         messages.error(request, str(e))
         return _respond_category_groups(request, sucesso=False)
@@ -570,7 +570,7 @@ def delete_category_group_view(request, group_id):
     group = get_object_or_404(CashFlowCategoryGroup, id=group_id)
     try:
         delete_category_group(group)
-        messages.success(request, "Grupo excluído com sucesso.")
+        messages.success(request, "Grupo excluído.")
     except ValueError as e:
         messages.error(request, str(e))
         return _respond_category_groups(request, sucesso=False)
@@ -586,7 +586,7 @@ def create_category_view(request):
         create_category(
             request.POST.get('category_name', ''), request.POST.get('kind', ''), request.POST.get('group_id', '')
         )
-        messages.success(request, "Categoria cadastrada com sucesso.")
+        messages.success(request, "Categoria cadastrada.")
     except ValueError as e:
         messages.error(request, str(e))
         return _respond_categories(request, sucesso=False)
@@ -607,7 +607,7 @@ def update_category_view(request, category_id):
             )
         else:
             update_category(category, request.POST.get('category_name', ''), request.POST.get('kind', ''))
-        messages.success(request, "Categoria atualizada com sucesso.")
+        messages.success(request, "Categoria atualizada.")
     except ValueError as e:
         messages.error(request, str(e))
         return _respond_categories(request, sucesso=False)
@@ -622,7 +622,7 @@ def delete_category_view(request, category_id):
     category = get_object_or_404(CashFlowCategory, id=category_id)
     try:
         delete_category(category)
-        messages.success(request, "Categoria excluída com sucesso.")
+        messages.success(request, "Categoria excluída.")
     except ValueError as e:
         messages.error(request, str(e))
         return _respond_categories(request, sucesso=False)
