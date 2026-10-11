@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext, ngettext
 
 DEFAULT_MIN_LENGTH = 8
 DEFAULT_MIN_UPPERCASE = 0
@@ -80,27 +81,42 @@ class ConfigurablePasswordPolicyValidator:
 
         if len(password) < policy["min_length"]:
             raise ValidationError(
-                f"A senha deve ter pelo menos {policy['min_length']} caracteres.",
+                gettext("A senha deve ter pelo menos %(minimo)s caracteres.") % {"minimo": policy["min_length"]},
                 code="password_too_short",
             )
         if len(password) > MAX_LENGTH_CEILING:
             raise ValidationError(
-                f"A senha deve ter no máximo {MAX_LENGTH_CEILING} caracteres.",
+                gettext("A senha deve ter no máximo %(maximo)s caracteres.") % {"maximo": MAX_LENGTH_CEILING},
                 code="password_too_long",
             )
         if policy["min_uppercase"] and len(_UPPERCASE_RE.findall(password)) < policy["min_uppercase"]:
+            n = policy["min_uppercase"]
             raise ValidationError(
-                f"A senha deve conter pelo menos {policy['min_uppercase']} letra(s) maiúscula(s).",
+                ngettext(
+                    "A senha deve conter pelo menos %(n)s letra maiúscula.",
+                    "A senha deve conter pelo menos %(n)s letras maiúsculas.",
+                    n,
+                ) % {"n": n},
                 code="password_missing_uppercase",
             )
         if policy["min_numbers"] and len(_NUMBER_RE.findall(password)) < policy["min_numbers"]:
+            n = policy["min_numbers"]
             raise ValidationError(
-                f"A senha deve conter pelo menos {policy['min_numbers']} número(s).",
+                ngettext(
+                    "A senha deve conter pelo menos %(n)s número.",
+                    "A senha deve conter pelo menos %(n)s números.",
+                    n,
+                ) % {"n": n},
                 code="password_missing_number",
             )
         if policy["min_special"] and len(_SPECIAL_CHARS_RE.findall(password)) < policy["min_special"]:
+            n = policy["min_special"]
             raise ValidationError(
-                f"A senha deve conter pelo menos {policy['min_special']} caractere(s) especial(is).",
+                ngettext(
+                    "A senha deve conter pelo menos %(n)s caractere especial.",
+                    "A senha deve conter pelo menos %(n)s caracteres especiais.",
+                    n,
+                ) % {"n": n},
                 code="password_missing_special",
             )
 
@@ -108,12 +124,15 @@ class ConfigurablePasswordPolicyValidator:
         try:
             policy = _current_settings()
         except Exception:
-            return f"Sua senha deve ter pelo menos {DEFAULT_MIN_LENGTH} caracteres."
-        parts = [f"pelo menos {policy['min_length']} caracteres"]
+            return gettext("Sua senha deve ter pelo menos %(minimo)s caracteres.") % {"minimo": DEFAULT_MIN_LENGTH}
+        parts = [gettext("pelo menos %(n)s caracteres") % {"n": policy["min_length"]}]
         if policy["min_uppercase"]:
-            parts.append(f"{policy['min_uppercase']} maiúscula(s)")
+            n = policy["min_uppercase"]
+            parts.append(ngettext("%(n)s maiúscula", "%(n)s maiúsculas", n) % {"n": n})
         if policy["min_numbers"]:
-            parts.append(f"{policy['min_numbers']} número(s)")
+            n = policy["min_numbers"]
+            parts.append(ngettext("%(n)s número", "%(n)s números", n) % {"n": n})
         if policy["min_special"]:
-            parts.append(f"{policy['min_special']} caractere(s) especial(is)")
-        return "Sua senha deve conter " + ", ".join(parts) + "."
+            n = policy["min_special"]
+            parts.append(ngettext("%(n)s caractere especial", "%(n)s caracteres especiais", n) % {"n": n})
+        return gettext("Sua senha deve conter %(requisitos)s.") % {"requisitos": ", ".join(parts)}

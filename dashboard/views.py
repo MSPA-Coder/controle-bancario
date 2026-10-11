@@ -26,6 +26,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.translation import gettext
 
 from banking.services import account_ids_by_currency
 from core import regional
@@ -185,11 +186,11 @@ def _saude(months: list[dict], selected_index: int) -> dict:
 		trend_percent = Decimal("0.0")
 
 	if trend_percent > Decimal("5"):
-		trend = ("amount-positive", "↑", "Melhora consistente")
+		trend = ("amount-positive", "↑", gettext("Melhora consistente"))
 	elif trend_percent < Decimal("-5"):
-		trend = ("amount-negative", "↓", "Queda de geração")
+		trend = ("amount-negative", "↓", gettext("Queda de geração"))
 	else:
-		trend = ("amount-neutral", "→", "Estabilidade")
+		trend = ("amount-neutral", "→", gettext("Estabilidade"))
 
 	return {
 		"income": income,
