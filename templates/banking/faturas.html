@@ -2,7 +2,7 @@
 {% load static regional_filters %}
 {% load money_filters %}
 
-{% block title %}Banking • Faturas e projeção{% endblock %}
+{% block title %}Movimentação • Faturas e projeção{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -57,7 +57,7 @@
 {% empty %}
 <div class="chart-card">
     <p class="empty-state">Nenhum cartão de crédito cadastrado. Um cartão é uma conta do tipo
-        "Cartão de crédito" em Cadastros › Contas.</p>
+        “Cartão de crédito” em Cadastros › Contas.</p>
 </div>
 {% endfor %}
 {% endblock %}

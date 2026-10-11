@@ -34,7 +34,7 @@
     <div class="financial-card sa-cartao card-negative"><h3>Despesas no período</h3><p class="sa-metrica amount-negative" data-sensitive-value="true">{{ realizado.total_despesas|neg|money_signed:account.currency }}</p></div>
     <div class="financial-card sa-cartao {{ previsto.saldo_final|card_class }}"><h3>Saldo previsto no período</h3><p class="sa-metrica {{ previsto.saldo_final|amount_class }}" data-sensitive-value="true">{{ previsto.saldo_final|money_signed:account.currency }}</p></div>
     <div class="financial-card sa-cartao {{ realizado.saldo_final|card_class }}"><h3>Saldo realizado no período</h3><p class="sa-metrica {{ realizado.saldo_final|amount_class }}" data-sensitive-value="true">{{ realizado.saldo_final|money_signed:account.currency }}</p></div>
-    <div class="financial-card sa-cartao {{ variacao_previsto_realizado|card_class }}"><h3>Previsão x realizado</h3><p class="sa-metrica {{ variacao_previsto_realizado|amount_class }}" data-sensitive-value="true">{{ variacao_previsto_realizado|money_signed:account.currency }}</p></div>
+    <div class="financial-card sa-cartao {{ variacao_previsto_realizado|card_class }}"><h3>Previsão × realizado</h3><p class="sa-metrica {{ variacao_previsto_realizado|amount_class }}" data-sensitive-value="true">{{ variacao_previsto_realizado|money_signed:account.currency }}</p></div>
 </section>
 
 <section class="section-card">

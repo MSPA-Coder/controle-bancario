@@ -2,7 +2,7 @@
 {% load static contas regional_filters %}
 {% load money_filters %}
 
-{% block title %}Banking • Saldo Aplicações{% endblock %}
+{% block title %}Movimentação • Saldo aplicações{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
@@ -11,7 +11,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>💰 Saldo Aplicações</h1>
+        <h1>💰 Saldo aplicações</h1>
         <p>Informe o saldo real de uma conta numa data. A diferença para o saldo do CB vira um lançamento realizado,
             com destino explícito (rendimento, IR/IOF, perda ou ajuste assumido), em vez de mexer no saldo inicial.</p>
     </div>
@@ -90,7 +90,7 @@
 
 <div class="table-container">
     <h3 class="u-mb-075">Atualizações de saldo lançadas</h3>
-    <p class="u-mb-075">Rendimentos, IR/IOF, perdas e ajustes assumidos. Assunção ({{ assuncoes|length }}) é o que foi lançado como "{{ categoria_de_ajuste }}": está marcada para revisar.</p>
+    <p class="u-mb-075">Rendimentos, IR/IOF, perdas e ajustes assumidos. Assunção ({{ assuncoes|length }}) é o que foi lançado como “{{ categoria_de_ajuste }}”: está marcada para revisar.</p>
     <table class="tx-table">
         <thead>
             <tr><th>Data</th><th>Conta</th><th>Destino</th><th>Descrição</th><th>Valor</th></tr>
