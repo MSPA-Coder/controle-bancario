@@ -193,7 +193,7 @@
                     plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (ctx) { return t('Cobertura: %(valor)sx', { valor: formatNumber(ctx.raw ? ctx.raw[1] : 0, 2) }); } } } },
                     scales: {
                         x: { grid: { display: false }, ticks: { color: colorMuted } },
-                        y: { min: yMin, max: yMax, ticks: { color: colorMuted, callback: function (value) { return value === 1 ? '1,0' : ''; } }, grid: { color: function (ctx) { return ctx.tick.value === 1 ? colorMuted : 'transparent'; }, borderDash: [5, 5] } }
+                        y: { min: yMin, max: yMax, ticks: { color: colorMuted, callback: function (value) { return value === 1 ? formatNumber(1, 1) : ''; } }, grid: { color: function (ctx) { return ctx.tick.value === 1 ? colorMuted : 'transparent'; }, borderDash: [5, 5] } }
                     }
                 },
                 plugins: [coverageLabelPlugin]

@@ -243,6 +243,16 @@ ele ao exibir (`core/regional.py`).
 - **Não se traduz o que é dado:** valor gravado (status, tipo, `institution_type`),
   nome digitado pelo usuário, resumo de auditoria, texto de exportação e de parser
   de extrato. Rótulo de `choices` traduz, o valor gravado não: não gera migration.
+  Descrição gravada em lançamento (`Conta Destino: …`, `Fatura projetada …`) e o
+  `detected_label` da fila de importação ficam em português: são dado, não tela.
+  Exceção de vida curta: o erro de leitura da fila de importação passa por
+  `|traduzido` (`gettext` na exibição), que o mostra no idioma de quem lê quando o
+  texto está no catálogo e o deixa como foi gravado quando não está.
+- Dado de máquina não segue a região: o JSON de `import_status` devolve `created_at`
+  em ISO 8601; formatar é coisa do template (`|udatetime`) e do JS.
+- Frase com uma parte variável (nome de campo, tag) é um `msgid` inteiro por
+  variante, ou leva a tag dentro do `blocktrans`. Nunca se monta a frase encaixando
+  um pedaço traduzido em outro: a ordem das palavras muda entre os idiomas.
 - Texto de JavaScript passa por `t('texto em português')` e é registrado em
   `core/textos_js.py` (`FONTES`); o servidor o entrega já traduzido no JSON
   `#i18n-js`. `tests/test_textos_js.py` reprova `t()` sem registro.

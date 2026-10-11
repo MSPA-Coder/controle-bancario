@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import date
 
 from django import template
+from django.utils.translation import gettext
 
 from core import regional
 
@@ -32,6 +33,19 @@ def udatetime(value) -> str:
 def udatetime_s(value) -> str:
     """Data e hora até o segundo no formato do usuário."""
     return regional.formatar_data_hora(value, segundos=True)
+
+
+@register.filter
+def traduzido(value) -> str:
+    """Mostra no idioma de quem lê um texto que foi gravado em português.
+
+    Serve a registros de vida curta (o erro de leitura de um arquivo na fila de
+    importação), gravados com o texto de uma mensagem já marcada: se o texto
+    existir no catálogo, sai na língua ativa; se não existir (mensagem com valor
+    embutido, por exemplo), sai como foi gravado. Vazio continua vazio: o
+    `gettext("")` devolveria o cabeçalho do catálogo.
+    """
+    return gettext(value) if value else ""
 
 
 @register.filter

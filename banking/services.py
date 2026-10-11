@@ -276,13 +276,19 @@ def _clean_account_fields(owner_id: str, institution_id: str, account_name: str,
     return owner_id_int, institution_id_int, account_name, balance
 
 
-def _parse_card_day(raw_value: str | None, label: str) -> int:
+def _parse_card_day(raw_value: str | None, *, fechamento: bool) -> int:
+    # Uma frase inteira por campo: o nome do campo não é encaixado em outra frase,
+    # porque a ordem das palavras muda de um idioma para o outro.
     try:
         day = int((raw_value or "").strip())
     except ValueError as exc:
-        raise ValueError(gettext("%(campo)s do cartão é obrigatório (1 a 31).") % {"campo": label}) from exc
+        if fechamento:
+            raise ValueError(gettext("Dia de fechamento do cartão é obrigatório (1 a 31).")) from exc
+        raise ValueError(gettext("Dia de vencimento do cartão é obrigatório (1 a 31).")) from exc
     if not CARD_DAY_MIN <= day <= CARD_DAY_MAX:
-        raise ValueError(gettext("%(campo)s do cartão deve estar entre 1 e 31.") % {"campo": label})
+        if fechamento:
+            raise ValueError(gettext("Dia de fechamento do cartão deve estar entre 1 e 31."))
+        raise ValueError(gettext("Dia de vencimento do cartão deve estar entre 1 e 31."))
     return day
 
 
@@ -349,8 +355,8 @@ def _clean_card_fields(
             raise ValueError(gettext("A conta de pagamento deve estar na mesma moeda do cartão."))
     return {
         "account_kind": kind,
-        "card_closing_day": _parse_card_day(card_closing_day, gettext("Dia de fechamento")),
-        "card_due_day": _parse_card_day(card_due_day, gettext("Dia de vencimento")),
+        "card_closing_day": _parse_card_day(card_closing_day, fechamento=True),
+        "card_due_day": _parse_card_day(card_due_day, fechamento=False),
         "card_payment_account": payment,
         "card_estimated_spend": _parse_estimated_spend(card_estimated_spend),
     }
