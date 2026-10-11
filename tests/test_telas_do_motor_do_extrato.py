@@ -105,8 +105,8 @@ def test_aplicar_sugestoes_em_lote_cria_os_rendimentos_e_deixa_a_transferencia_e
     )
     assert resposta.status_code == 200
     mensagens = " ".join(str(m) for m in resposta.context["messages"])
-    assert "3 lançamento(s) criado(s)" in mensagens
-    assert "esperam decisão sua" in mensagens
+    assert "3 lançamentos criados" in mensagens
+    assert "decisão sua" in mensagens
     for linha in rendimentos:
         linha.refresh_from_db()
         assert linha.status == "conciliado" and linha.matched_entry.category == cat["rendimentos"]

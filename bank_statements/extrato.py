@@ -35,7 +35,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 from django.db import transaction as db_transaction
-from django.utils.translation import gettext, gettext_lazy
+from django.utils.translation import gettext, gettext_lazy, ngettext
 
 from accounts.models import AccountOwner
 from accounts.services import can_use_transfer_destination
@@ -104,16 +104,27 @@ ROTULOS = {
     MANUAL: gettext_lazy("Decida manualmente"),
 }
 
-# "(s)" fica até a tela de Conciliação passar a pluralizar: `views.py` monta
-# "<quantidade> <rótulo>" e o plural correto sai de `ngettext` com essa quantidade.
+# Cada rótulo recebe a quantidade e devolve "<quantidade> <descrição>" já no plural certo.
 ROTULOS_CURTOS = {
-    CONCILIA: gettext_lazy("conciliada(s)"),
-    CONCILIA_APROXIMADA: gettext_lazy("recorrência(s) conciliada(s) com valor diferente"),
-    CRIA: gettext_lazy("lançamento(s) criado(s)"),
-    TRANSFERENCIA_PAR: gettext_lazy("transferência(s) pareada(s)"),
-    TRANSFERENCIA_REGRA: gettext_lazy("transferência(s) por regra"),
-    TRANSFERENCIA_COM_LANCAMENTO: gettext_lazy("transferência(s) com lançamento já gravado"),
-    IGNORA: gettext_lazy("ignorada(s)"),
+    CONCILIA: lambda n: ngettext("%(n)s conciliada", "%(n)s conciliadas", n) % {"n": n},
+    CONCILIA_APROXIMADA: lambda n: ngettext(
+        "%(n)s recorrência conciliada com valor diferente",
+        "%(n)s recorrências conciliadas com valor diferente",
+        n,
+    )
+    % {"n": n},
+    CRIA: lambda n: ngettext("%(n)s lançamento criado", "%(n)s lançamentos criados", n) % {"n": n},
+    TRANSFERENCIA_PAR: lambda n: ngettext("%(n)s transferência pareada", "%(n)s transferências pareadas", n)
+    % {"n": n},
+    TRANSFERENCIA_REGRA: lambda n: ngettext("%(n)s transferência por regra", "%(n)s transferências por regra", n)
+    % {"n": n},
+    TRANSFERENCIA_COM_LANCAMENTO: lambda n: ngettext(
+        "%(n)s transferência com lançamento já gravado",
+        "%(n)s transferências com lançamento já gravado",
+        n,
+    )
+    % {"n": n},
+    IGNORA: lambda n: ngettext("%(n)s ignorada", "%(n)s ignoradas", n) % {"n": n},
 }
 
 _SEM_DESTINO = gettext_lazy("Acesso negado: você não tem permissão para receber transferência em %(conta)s.")

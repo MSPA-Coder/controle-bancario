@@ -549,7 +549,7 @@ def bulk_action_lines_view(request):
         )
         if feitas:
             detalhe = ", ".join(
-                f"{quantidade} {extrato.ROTULOS_CURTOS[acao]}" for acao, quantidade in feitas.items()
+                extrato.ROTULOS_CURTOS[acao](quantidade) for acao, quantidade in feitas.items()
             )
             messages.success(request, gettext("Sugestões aplicadas: %(detalhe)s.") % {"detalhe": detalhe})
         if errors:
