@@ -9,7 +9,7 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
 <div>
     <label>Conta</label>
     <select name="account_id" aria-label="Conta" required>
-        <option value="">Selecione...</option>
+        <option value="">Selecione…</option>
         {% if t %}
         {% for titular, contas in update_accounts|por_titular %}
         <optgroup label="{{ titular }}">
@@ -39,7 +39,7 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
 <div>
     <label>Categoria</label>
     <select name="category_id" aria-label="Categoria" required class="category-select">
-        <option value="" data-internal="0">Selecione...</option>
+        <option value="" data-internal="0">Selecione…</option>
         {% for cat in categories %}
         {% comment %}
         `data-internal` liga o campo de conta destino, e só a TRANSFERÊNCIA tem
@@ -59,12 +59,12 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
 </div>
 <div class="span-2">
     <label>Descrição</label>
-    <input type="text" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="Descricao" placeholder="Ex: Supermercado, salário..." required>
+    <input type="text" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="Descrição" placeholder="Ex: Supermercado, salário…" required>
 </div>
 <div class="counterparty-field" data-ui="hidden">
     <label>{% if t %}Conta contraparte{% else %}Conta destino{% endif %}</label>
     <select name="counterparty_account_id" aria-label="Conta contraparte">
-        <option value="">Selecione...</option>
+        <option value="">Selecione…</option>
         {% for titular, contas in counterparty_accounts|por_titular %}
         <optgroup label="{{ titular }}">
             {% for acc in contas %}
@@ -75,7 +75,7 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
     </select>
 </div>
 <div>
-    <label>Valor Total (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
+    <label>Valor total (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
     <input type="number" step="0.01" name="entry_amount" value="{% if t %}{{ t.entry_amount|unlocalize }}{% endif %}" aria-label="Valor total" required>
 </div>
 {% comment %}
@@ -99,7 +99,7 @@ são iguais (`counterparty_amount_for_transfer`).
 </div>
 <div>
     <label>Modo de cálculo</label>
-    <select name="calc_mode" aria-label="Modo de calculo">
+    <select name="calc_mode" aria-label="Modo de cálculo">
         <option value="repeat" selected>Repetir valor</option>
         <option value="divide">Dividir valor</option>
     </select>
@@ -110,7 +110,7 @@ são iguais (`counterparty_amount_for_transfer`).
 </div>
 <div class="realized-field" data-ui="hidden">
     <label>Data de realização</label>
-    <input type="date" name="realized_date" value="{% if t and t.realized_date %}{{ t.realized_date|date:'Y-m-d' }}{% endif %}" aria-label="Data de realizacao" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
+    <input type="date" name="realized_date" value="{% if t and t.realized_date %}{{ t.realized_date|date:'Y-m-d' }}{% endif %}" aria-label="Data de realização" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
 </div>
 <div class="realized-field" data-ui="hidden">
     <label>Valor realizado (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
@@ -119,7 +119,7 @@ são iguais (`counterparty_amount_for_transfer`).
 {% if t and t.supports_scope %}
 <div class="span-2">
     <label>Aplicar alteração</label>
-    <select name="operation_scope" aria-label="Aplicar alteracao" required
+    <select name="operation_scope" aria-label="Aplicar alteração" required
         data-current-future-token="{{ t.current_future_confirmation_token }}"
         {% if t.current_future_attachment_count %}data-current-future-confirm="Este registro e as parcelas seguintes serão recriados ao salvar com esse escopo, o que apaga {{ t.current_future_attachment_count }} comprovante{{ t.current_future_attachment_count|pluralize }} anexado{{ t.current_future_attachment_count|pluralize }} a eles. Deseja continuar?"{% endif %}>
         <option value="all">Todos os registros do grupo</option>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard • Fluxo de Caixa{% endblock %}
+{% block title %}Dashboard • Fluxo de caixa{% endblock %}
 {% load static icons navegacao contas %}
 
 {% block styles %}
@@ -31,7 +31,7 @@
             </select>
         </label>
         <label class="top-filter-field">
-            Instituicao
+            Instituição
             <select name="institution_id">
                 <option value="">Todas</option>
                 {% for bank in banks %}
