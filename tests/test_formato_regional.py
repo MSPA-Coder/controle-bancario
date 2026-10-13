@@ -25,6 +25,16 @@ from core.domain.settings import (
     resolve_regional_format,
 )
 
+
+def test_portador_regional_e_hidden_para_nao_validar_decimais_nativamente():
+    """O valor canônico decimal não pode herdar o passo padrão de number."""
+    javascript = (Path(__file__).parents[1] / "static" / "js" / "core" / "regional.js").read_text(
+        encoding="utf-8",
+    )
+
+    assert "input.setAttribute('data-regional-original-type', original);\n        // O portador" in javascript
+    assert "input.type = 'hidden';" in javascript
+
 RAIZ = Path(__file__).resolve().parent.parent
 
 
