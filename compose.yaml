@@ -115,7 +115,7 @@ services:
     image: mspa-postgres:17-alpine
     build:
       context: .
-      dockerfile: Dockerfile.postgres
+      dockerfile: docker/sandbox-postgres/Dockerfile
       pull: true
       no_cache: true
     pull_policy: build
@@ -150,7 +150,7 @@ services:
     image: mspa-postgres:17-alpine
     build:
       context: .
-      dockerfile: Dockerfile.postgres
+      dockerfile: docker/sandbox-postgres/Dockerfile
       pull: true
       no_cache: true
     pull_policy: build
@@ -279,7 +279,7 @@ services:
     image: mspa-postgres:17-alpine
     build:
       context: .
-      dockerfile: Dockerfile.postgres
+      dockerfile: docker/sandbox-postgres/Dockerfile
       pull: true
       no_cache: true
     pull_policy: build
