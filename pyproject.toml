@@ -14,7 +14,8 @@ name = "controle-bancario"
 version = "2.2.0"
 description = "Controle bancario e fluxo de caixa em Django."
 readme = "README.md"
-requires-python = ">=3.14"
+# Python 3.15 é a série padronizada nos venvs, imagens Docker e CI da frota.
+requires-python = ">=3.15"
 dependencies = [
   "Django>=5.2,<7",
   "psycopg[binary]>=3.2,<4",
@@ -81,7 +82,7 @@ allow-direct-references = true
 # layout de pacotes. Mantenha o resto em sincronia.
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py315"
 line-length = 100
 extend-exclude = [".venv", "backups", "instance", "staticfiles", "media"]
 
