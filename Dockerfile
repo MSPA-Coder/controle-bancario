@@ -1,11 +1,7 @@
 # syntax=docker/dockerfile:1.7
-# Base fixada por DIGEST do indice multi-arquitetura, e nao pela tag.
-#
-# `python:3.14-slim` e alvo movel: a tag e reapontada a cada republicacao, e
-# como o `deploy.sh` reconstroi no VPS, a imagem servida podia nascer de uma
-# base diferente da que a CI varreu. Mesmo raciocinio que ja fixa as actions
-# por SHA e o Trivy por digest. Digest de INDICE, para valer em amd64 e arm64.
-FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS base
+# A tag da série 3.15 acompanha correções de segurança. A CI semanal reconstrói
+# com `--pull`, testa a imagem e barra CVEs corrigíveis antes da adoção.
+FROM python:3.15-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -23,7 +19,7 @@ RUN --mount=type=secret,id=local_ca,required=false \
 
 # Correcoes de seguranca da base e das ferramentas de empacotamento.
 #
-# `apt-get upgrade` porque a `python:3.14-slim` publicada carrega pacotes do
+# `apt-get upgrade` porque a `python:3.15-slim` publicada carrega pacotes do
 # Debian com CVE ja corrigido a montante; sem isto a correcao so chega quando a
 # imagem oficial for republicada. O `setuptools` que vem na base tambem fica
 # para tras -- o 70.3.0 tinha CVE-2025-47273, travessia de caminho.
@@ -33,9 +29,7 @@ RUN --mount=type=secret,id=local_ca,required=false \
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
-    && python -m pip install --no-cache-dir \
-        "pip==26.2.1" \
-        "setuptools==80.9.0"
+    && python -m pip install --no-cache-dir --upgrade pip setuptools
 
 # GNU gettext (`msgfmt`, `xgettext`): compila o catalogo de traducao (`locale/`) em
 # `.mo` e extrai os textos novos (`makemessages`). So os estagios de build o
@@ -76,11 +70,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
-# Versao fixa: o instalador que garante reprodutibilidade nao pode ser ele
-# proprio uma variavel. O binario e autocontido, e o estagio `quality` o copia
-# daqui em vez de reinstala-lo.
+# O instalador acompanha a última versão e é validado pela mesma CI que testa
+# a aplicação. O binário autocontido é copiado pelo estágio `quality`.
 RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --upgrade "uv==0.12.10"
+    python -m pip install --no-cache-dir --upgrade uv
 
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 COPY pyproject.toml uv.lock README.md ./

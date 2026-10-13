@@ -10,6 +10,8 @@ x-app-build: &app-build
   image: controle-bancario:local
   build:
     context: .
+    pull: true
+    no_cache: true
     target: runtime
     secrets:
       - local_ca
@@ -110,7 +112,13 @@ x-postgres-hardening: &postgres-hardening
 services:
   postgres:
     <<: *postgres-hardening
-    image: postgres:17-alpine@sha256:f02121de6f74d30d8a94cd1d9584125e2178d7e6c377d8130112d4e52d867995
+    image: mspa-postgres:17-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+      pull: true
+      no_cache: true
+    pull_policy: build
     restart: unless-stopped
     cpus: 1.0
     mem_limit: 512m
@@ -124,7 +132,7 @@ services:
     secrets:
       - postgres_password
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5202}:5432"
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5202}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -139,7 +147,13 @@ services:
   # `migrate` criar depois. `DB_APP_MAINTAIN` libera o VACUUM ANALYZE da tela
   # Configurações > Banco de dados.
   db-provision:
-    image: postgres:17-alpine@sha256:f02121de6f74d30d8a94cd1d9584125e2178d7e6c377d8130112d4e52d867995
+    image: mspa-postgres:17-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+      pull: true
+      no_cache: true
+    pull_policy: build
     user: postgres
     read_only: true
     cpus: 0.5
@@ -248,8 +262,8 @@ services:
   # Ruff e a suíte mínima de segurança. Fica atrás de um perfil para não subir
   # junto com a aplicação:
   # `docker compose --profile quality run --build --rm quality`.
-  # O `--build` é necessário: este serviço não monta o código do host, e
-  # `docker compose run` reutiliza a imagem existente sem reconstruí-la.
+  # `--build` reconstrói explicitamente a imagem de qualidade a partir do
+  # código atual. A CI semanal também faz build sem cache.
   # Banco EFÊMERO da suíte.
   #
   # Não é o `postgres` de cima, e isso é deliberado: a suíte não pode ter
@@ -262,7 +276,13 @@ services:
   # de fechar a porta acima, deixa a suíte mais rápida, porque nada toca disco.
   postgres-teste:
     <<: [*postgres-hardening, *quality-secrets]
-    image: postgres:17-alpine@sha256:f02121de6f74d30d8a94cd1d9584125e2178d7e6c377d8130112d4e52d867995
+    image: mspa-postgres:17-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+      pull: true
+      no_cache: true
+    pull_policy: build
     profiles: ["quality"]
     cpus: 1.0
     mem_limit: 512m
@@ -307,6 +327,7 @@ services:
     <<: [*quality-hardening, *quality-secrets]
     build:
       context: .
+      pull: true
       target: quality
       secrets:
         - local_ca
