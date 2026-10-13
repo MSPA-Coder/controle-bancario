@@ -1,0 +1,63 @@
+name: Dependabot auto-merge
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    name: Auto merge
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/') &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Merge only the exact tested Dependabot commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          prs="$(gh pr list --repo "$REPO" --state open --head "$HEAD_BRANCH" --json number,headRefOid,author,baseRefName)"
+          candidatos="$(jq -c --arg sha "$HEAD_SHA" '[.[] | select(.headRefOid == $sha and (.author.login == "dependabot[bot]" or .author.login == "app/dependabot") and .baseRefName == "main")]' <<< "$prs")"
+          quantidade="$(jq 'length' <<< "$candidatos")"
+          if [[ "$quantidade" -eq 0 ]]; then
+            echo "Evento obsoleto: não há PR aberto para o SHA testado; nada a mesclar."
+            exit 0
+          fi
+          if [[ "$quantidade" -ne 1 ]]; then
+            echo "Mais de um PR aberto corresponde ao SHA testado." >&2
+            exit 1
+          fi
+          pr="$(jq -er '.[0].number' <<< "$candidatos")"
+          checks="$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?per_page=100")"
+          jq -e '
+            .total_count > 0 and
+            .total_count == (.check_runs | length) and
+            ([.check_runs[] | select(.name != "Auto merge" and .name != "Dependabot" and .name != "update-uv-graph" and .name != "update-pip-graph")] | length) > 0 and
+            all(.check_runs[] | select(.name != "Auto merge" and .name != "Dependabot" and .name != "update-uv-graph" and .name != "update-pip-graph");
+              .status == "completed" and
+              (.conclusion == "success" or .conclusion == "neutral" or .conclusion == "skipped"))
+          ' <<< "$checks" >/dev/null
+          pr_base="$(gh pr view "$pr" --repo "$REPO" --json baseRefOid --jq .baseRefOid)"
+          main_base="$(gh api "repos/$REPO/branches/main" --jq .commit.sha)"
+          if [[ "$pr_base" != "$main_base" ]]; then
+            gh pr update-branch "$pr" --repo "$REPO"
+            gh workflow run ci.yml --repo "$REPO" --ref "$HEAD_BRANCH"
+            echo "PR atualizado contra main; CI disparada para o novo SHA."
+            exit 0
+          fi
+          gh pr merge "$pr" --repo "$REPO" --squash
+          # O merge com GITHUB_TOKEN não dispara workflows de push; reexecuta
+          # a CI em main para que o deploy valide exatamente o commit integrado.
+          gh workflow run ci.yml --repo "$REPO" --ref main
