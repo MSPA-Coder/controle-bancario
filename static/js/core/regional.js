@@ -269,6 +269,10 @@
         input.removeAttribute('step');
         input.required = false;
         input.setAttribute('data-regional-original-type', original);
+        // O portador não participa da validação nativa. Só remover `step`
+        // deixa type=number com o passo padrão 1, que rejeita decimais como
+        // 260.76 antes de o formulário poder ser enviado.
+        input.type = 'hidden';
         input.hidden = true;
         input.tabIndex = -1;
         input.style.display = 'none';
