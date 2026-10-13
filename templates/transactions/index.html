@@ -133,11 +133,7 @@
             </div>
             <div class="modal-actions">
                 <button type="button" data-transaction-action="close-realize" class="modal-btn modal-btn-cancel">{% trans "Cancelar" %}</button>
-                <button type="submit" class="modal-btn modal-btn-primary"
-                        data-sa-confirmar="{% trans 'Marcar este lançamento como realizado?' %}"
-                        data-sa-titulo="{% trans 'Confirmar realização' %}"
-                        data-sa-severidade="warning"
-                        data-sa-ok="{% trans 'Realizar' %}">{% trans "Confirmar" %}</button>
+                <button type="submit" class="modal-btn modal-btn-primary">{% trans "Confirmar" %}</button>
             </div>
         </form>
     </div>
@@ -151,11 +147,7 @@
             {% csrf_token %}
             <div class="modal-actions">
                 <button type="button" data-transaction-action="close-unrealize" class="modal-btn modal-btn-cancel">{% trans "Cancelar" %}</button>
-                <button type="submit" class="modal-btn modal-btn-primary"
-                        data-sa-confirmar="{% trans 'Desfazer a realização deste lançamento?' %}"
-                        data-sa-titulo="{% trans 'Confirmar reversão' %}"
-                        data-sa-severidade="warning"
-                        data-sa-ok="{% trans 'Desfazer' %}">{% trans "Desfazer realização" %}</button>
+                <button type="submit" class="modal-btn modal-btn-primary">{% trans "Desfazer realização" %}</button>
             </div>
         </form>
     </div>

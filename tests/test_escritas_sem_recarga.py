@@ -8,6 +8,7 @@ token de uso único.
 """
 
 import json
+import re
 from datetime import date
 from decimal import Decimal
 
@@ -75,6 +76,18 @@ def test_erro_por_htmx_nao_recarrega_a_tabela(client, cenario):
     assert "tableRefresh" not in _gatilhos(response)
     cenario["entry"].refresh_from_db()
     assert cenario["entry"].status == STATUS_PROJECTED
+
+
+def test_modais_de_realizacao_confirmam_sem_interceptar_o_submit_htmx(client, cenario):
+    """O próprio modal confirma a ação; a confirmação declarativa bloqueava o POST."""
+    response = client.get("/transactions/")
+    conteudo = response.content.decode()
+
+    for form_id in ("realizeForm", "unrealizeForm"):
+        form = re.search(rf'<form id="{form_id}".*?</form>', conteudo, re.DOTALL)
+        assert form is not None
+        assert "data-tx-htmx" in form.group()
+        assert "data-sa-confirmar" not in form.group()
 
 
 def _novo(cenario, token, descricao="Envio único"):

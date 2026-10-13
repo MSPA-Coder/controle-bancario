@@ -358,13 +358,13 @@ document.addEventListener('htmx:load', function (event) {
    `lancamentoGravado` (abaixo). Se deu errado, nada se recarrega e o
    formulário continua preenchido; a mensagem chega fora de banda.
 
-   O ouvinte fica no `document`, na fase de bolha: as confirmações que seguram
-   o envio (a da SharedAuth no clique e a de escopo em `_initEditScopeConfirm`)
-   rodam antes e chamam `preventDefault()`; só o envio já confirmado chega
-   aqui sem isso. `data-enviando` segura o segundo clique enquanto a resposta
-   não volta -- dois cliques rápidos criavam dois lançamentos (auditoria de
-   09/10/2026, CB-10). Sem HTMX carregado, o POST comum segue: o servidor
-   volta para a lista com os filtros. */
+   O ouvinte fica no `document`, na fase de bolha: a confirmação de escopo da
+   edição roda antes e chama `preventDefault()`; só o envio já confirmado chega
+   aqui sem isso. Realizar e desfazer realização já são confirmados pelos seus
+   próprios modais, antes do submit. `data-enviando` segura o segundo clique
+   enquanto a resposta não volta -- dois cliques rápidos criavam dois
+   lançamentos (auditoria de 09/10/2026, CB-10). Sem HTMX carregado, o POST
+   comum segue: o servidor volta para a lista com os filtros. */
 document.addEventListener('submit', function (event) {
     var form = event.target;
     if (!form.matches || !form.matches('form[data-tx-htmx]')) return;
