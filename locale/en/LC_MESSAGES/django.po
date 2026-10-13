@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-11 04:08-0300\n"
+"POT-Creation-Date: 2026-10-13 08:34-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -3030,7 +3030,6 @@ msgstr "Undo import"
 
 #: templates/banking/_import_table.html
 #: templates/banking/_reconciliation_tables.html
-#: templates/transactions/index.html
 msgid "Desfazer"
 msgstr "Undo"
 
@@ -5958,7 +5957,7 @@ msgstr "Filter by date"
 msgid "Filtrar por categoria"
 msgstr "Filter by category"
 
-#: templates/transactions/_table_body.html templates/transactions/index.html
+#: templates/transactions/_table_body.html
 msgid "Realizar"
 msgstr "Settle"
 
@@ -6016,24 +6015,8 @@ msgid "Marcar como realizado"
 msgstr "Mark as settled"
 
 #: templates/transactions/index.html
-msgid "Marcar este lançamento como realizado?"
-msgstr "Mark this entry as settled?"
-
-#: templates/transactions/index.html
-msgid "Confirmar realização"
-msgstr "Confirm settlement"
-
-#: templates/transactions/index.html
 msgid "O lançamento deixará de compor o saldo realizado e voltará a ficar em aberto: a vencer ou vencido, conforme a data de vencimento."
 msgstr "The entry will no longer be part of the settled balance and will return to open status: Upcoming or Overdue, depending on its due date."
-
-#: templates/transactions/index.html
-msgid "Desfazer a realização deste lançamento?"
-msgstr "Undo the settlement of this entry?"
-
-#: templates/transactions/index.html
-msgid "Confirmar reversão"
-msgstr "Confirm reversal"
 
 #: templates/transactions/index.html
 msgid "Confirmar exclusão"
