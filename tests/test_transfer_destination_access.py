@@ -80,6 +80,19 @@ def test_only_granted_destination_is_exposed_to_transaction_context(transfer_set
     assert origin.id not in [account.id for account in accounts]
 
 
+def test_transfer_without_visible_description_uses_its_structural_description(transfer_setup):
+    """A descrição das pontas vem das contas e não pode barrar o formulário."""
+    _user, origin, destination, category = transfer_setup
+
+    request = views._transaction_request_from_post({
+        "account_id": str(origin.id), "category_id": str(category.id),
+        "counterparty_account_id": str(destination.id), "entry_type": ENTRY_TYPE_EXPENSE,
+        "entry_amount": "10.00", "due_date": "2026-09-10", "description": "",
+    })
+
+    assert request.description
+
+
 @pytest.mark.parametrize("period,year,month", [("9999-12", None, None), (None, -1, 9), (None, 10000, 9), (None, 2026, 0)])
 def test_explicit_invalid_period_is_rejected(period, year, month):
     with pytest.raises(InvalidMonthPeriodError):

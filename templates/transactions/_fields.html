@@ -59,7 +59,7 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
 </div>
 <div class="span-2">
     <label>{% trans "Descrição" %}</label>
-    <input type="text" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="{% trans 'Descrição' %}" placeholder="{% trans 'Ex: Supermercado, salário…' %}" required>
+    <input type="text" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="{% trans 'Descrição' %}" placeholder="{% trans 'Ex: Supermercado, salário…' %}" data-transfer-description-prefix="{% trans 'Conta destino' %}" required>
 </div>
 <div class="counterparty-field" data-ui="hidden">
     <label>{% if t %}{% trans "Conta contraparte" %}{% else %}{% trans "Conta destino" %}{% endif %}</label>

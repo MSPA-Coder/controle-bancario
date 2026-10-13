@@ -20,6 +20,7 @@ from django.views.decorators.http import require_POST
 from core.domain.finance import (
     CALC_REPEAT,
     CATEGORY_KIND_OPTIONS,
+    CATEGORY_KIND_TRANSFER,
     OPERATION_SCOPE_SINGLE,
     STATUS_FILTER_OPTIONS,
     STATUS_OPTIONS,
@@ -174,10 +175,16 @@ def _transaction_request_from_post(post) -> TransactionRequest:
 
     # Obrigatória no formulário manual desde 09/10/2026: a sugestão de
     # conciliação compara descrições, e um lançamento sem ela fica invisível
-    # para essa sugestão. O campo do model continua opcional (`blank=True`)
-    # porque o que vem de extrato e de migração entra por outros caminhos.
+    # para essa sugestão. A transferência é a exceção: suas duas descrições
+    # são derivadas das contas pelo service, então a ausência do campo visível
+    # não pode bloquear a criação antes dessa derivação.
     description = (post.get("description") or "").strip()
-    if not description:
+    is_transfer = CashFlowCategory.objects.filter(
+        id=category_id, kind=CATEGORY_KIND_TRANSFER,
+    ).exists()
+    if not description and is_transfer:
+        description = gettext("Transferência entre contas")
+    elif not description:
         raise ValueError(gettext("Informe a descrição do lançamento."))
 
     return TransactionRequest(

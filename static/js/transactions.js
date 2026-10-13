@@ -77,6 +77,31 @@ function updateTransferCurrencyFields(form) {
     });
 }
 
+/* A transferência sempre recebe a descrição estrutural produzida pelo
+   servidor. Preencher a mesma informação no campo visível evita que a
+   validação nativa de `required` bloqueie o envio antes de o service montar
+   as duas pontas. */
+function updateTransferDescription(form) {
+    if (!form) return;
+    var categorySelect = form.querySelector('.category-select');
+    var category = categorySelect && categorySelect.options[categorySelect.selectedIndex];
+    var description = form.querySelector('input[name="description"]');
+    var counterpartySelect = form.querySelector('select[name="counterparty_account_id"]');
+    var destination = counterpartySelect && counterpartySelect.options[counterpartySelect.selectedIndex];
+    var isInternal = !!(category && category.dataset.internal === '1');
+    if (!description) return;
+
+    if (isInternal && destination && destination.value) {
+        description.value = (description.dataset.transferDescriptionPrefix || '') + ': ' + destination.text.trim();
+        description.dataset.transferGenerated = '1';
+        description.readOnly = true;
+        return;
+    }
+    if (description.dataset.transferGenerated === '1') description.value = '';
+    delete description.dataset.transferGenerated;
+    description.readOnly = false;
+}
+
 function toggleCounterpartyFields(select) {
     if (!select || !select.closest) return;
     var form = select.closest('form');
@@ -89,6 +114,7 @@ function toggleCounterpartyFields(select) {
         if (acSel) acSel.required = isInternal;
     });
     updateTransferCurrencyFields(form);
+    updateTransferDescription(form);
 }
 
 function initCounterpartyFields() {
@@ -105,7 +131,9 @@ function initCounterpartyFields() {
             if (select._currencyFieldsBound) return;
             select._currencyFieldsBound = true;
             select.addEventListener('change', function () {
-                updateTransferCurrencyFields(select.closest('form'));
+                var form = select.closest('form');
+                updateTransferCurrencyFields(form);
+                updateTransferDescription(form);
             });
         }
     );
