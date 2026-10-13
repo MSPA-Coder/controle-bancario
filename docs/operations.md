@@ -44,6 +44,7 @@ Variáveis principais:
 | `POSTGRES_USER` | papel administrativo (dono das tabelas; `migrate`) | `controle_bancario` |
 | `POSTGRES_APP_USER` | papel restrito com que o `web` conecta | `controle_bancario_app` |
 | `POSTGRES_PORT` | porta local publicada | `5202` |
+| `POSTGRES_BIND_ADDRESS` | endereço local onde a porta do PostgreSQL é publicada | `127.0.0.1` |
 | `APP_PORT` | porta local da aplicação | `5201` |
 | `ALLOWED_HOSTS` | hosts aceitos pelo Django | `localhost,127.0.0.1` |
 | `CSRF_TRUSTED_ORIGINS` | origens públicas autorizadas para CSRF | vazio |
