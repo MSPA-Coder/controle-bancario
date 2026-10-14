@@ -35,6 +35,7 @@ from core import regional
 from core.account_group_filter import ALL_ACCOUNT_GROUPS, account_group_q, parse_account_groups
 from core.currency_filter import ALL_CURRENCIES, currency_q, parse_currency_filter
 from core.domain.finance import (
+    ACCOUNT_KIND_CREDIT_CARD,
     BASE_CURRENCY,
     ENTRY_TYPE_INCOME,
     OPERATION_INTERNAL_TRANSFER,
@@ -1711,9 +1712,14 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
     start_date, end_date = bounded_upcoming_period(start_date, end_date)
     end_exclusive = end_date + timedelta(days=1)
 
+    # Cartão fica de fora: o que sai do caixa é o pagamento da fatura, uma
+    # transferência que já aparece na conta pagadora. As compras, parcelas e o
+    # gasto estimado do cartão são dívida na competência, e o saldo negativo
+    # dele não é alerta de caixa (docs/domain.md, "Cartão de crédito").
     candidate_accounts = _limited_list(
         FinancialAccount.objects.select_related("owner", "institution")
         .filter(id__in=[int(a) for a in account_ids if a])
+        .exclude(account_kind=ACCOUNT_KIND_CREDIT_CARD)
         .order_by("owner__name", "institution__institution_name", "account_name"),
         limit=_report_limit("REPORT_MAX_ACCOUNTS", DEFAULT_MAX_REPORT_ACCOUNTS),
         description=gettext("contas"),

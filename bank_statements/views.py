@@ -13,6 +13,8 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from accounts.services import has_function_permission
 from banking.services import accessible_account_ids
+from core.account_group_filter import account_group_q
+from core.currency_filter import currency_q
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
 from core.services import audit_request_context
@@ -372,7 +374,9 @@ def reclassificacao_view(request):
         "limite": reclassificacao.LIMITE_DA_LISTA,
         "categorias": list(fatura.categorias_gerenciais()),
         "categorias_do_banco": reclassificacao.categorias_do_banco(),
-        "contas": accounts_for_import_form(request.user),
+        "contas": accounts_for_import_form(request.user).filter(
+            account_group_q(filtros.grupos) & currency_q(filtros.moeda)
+        ),
         "plano": plano,
         "escolhas": escolhas,
         "pode_reabrir": has_function_permission(request.user, 'settings.monthly_close.manage'),

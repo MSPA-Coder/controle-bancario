@@ -894,7 +894,10 @@ select.filter-active {
     padding: 0.65rem;
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
-    overflow: hidden;
+    /* Tabela mais larga que a caixa rola na horizontal (roda, barra e arrasto com
+       o botão direito) em vez de ser cortada; na vertical segue cortando. */
+    overflow-x: auto;
+    overflow-y: hidden;
     position: relative;
 }
 .table-scroll,
@@ -1321,3 +1324,11 @@ canvas { display: block; box-sizing: border-box; }
     position: absolute; right: 0; bottom: 0; width: 1px; height: 1px;
     opacity: 0; pointer-events: none; padding: 0; border: 0 !important;
 }
+
+/* Rolagem horizontal arrastando com o botão esquerdo (static/js/core/drag-scroll.js).
+   `scroll-behavior:auto` evita que a rolagem suave faça a área atrasar o dedo; a
+   mãozinha (`grab`) só aparece em área que de fato rola, e controles mantêm o
+   cursor deles (link e botão têm `pointer` próprio). */
+.drag-scroll-ready { cursor: grab; }
+.is-drag-scrolling { scroll-behavior: auto !important; }
+html.drag-scrolling, html.drag-scrolling * { cursor: grabbing !important; user-select: none !important; }

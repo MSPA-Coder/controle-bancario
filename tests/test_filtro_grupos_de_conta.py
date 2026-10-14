@@ -65,12 +65,14 @@ def test_cada_conta_cai_em_um_grupo_so(kind, institution_type, grupo):
     assert account_group(kind, institution_type) == grupo
 
 
-def test_ausente_ou_vazio_vale_o_padrao_que_nao_inclui_administradas():
+def test_ausente_ou_vazio_vale_o_padrao_de_bancos_e_corretoras():
     # Decisão de 02/10/2026: o dinheiro de terceiros que o titular só gere não
-    # entra no fluxo pessoal sem que ele peça.
+    # entra no fluxo pessoal sem que ele peça. Decisão de 14/10/2026: o padrão
+    # é só Bancos e Corretoras; cartões, aplicações e administradas entram
+    # quando marcados.
     assert parse_account_groups({}) == DEFAULT_ACCOUNT_GROUPS
     assert parse_account_groups({"grupos": ""}) == DEFAULT_ACCOUNT_GROUPS
-    assert ALL_ACCOUNT_GROUPS - {GROUP_ADMINISTERED} == DEFAULT_ACCOUNT_GROUPS
+    assert {GROUP_BANKS, GROUP_BROKERS} == DEFAULT_ACCOUNT_GROUPS
     assert not is_filtering(DEFAULT_ACCOUNT_GROUPS)
     assert is_filtering(ALL_ACCOUNT_GROUPS)
 
@@ -109,9 +111,9 @@ def test_grupos_continuam_uma_particao_com_a_conta_administrada(contas):
     assert sum(len(ids) for ids in por_grupo.values()) == len(todas)
     assert por_grupo[GROUP_ADMINISTERED] == {administrada.id, administrada_aplicacao.id}
     assert administrada_aplicacao.id not in por_grupo[GROUP_INVESTMENTS]
-    # O padrão deixa as administradas de fora; marcar todas as traz de volta.
+    # O padrão é Bancos e Corretoras; marcar todas traz o resto de volta.
     padrao = set(FinancialAccount.objects.filter(account_group_q(DEFAULT_ACCOUNT_GROUPS)).values_list("id", flat=True))
-    assert padrao == todas - por_grupo[GROUP_ADMINISTERED]
+    assert padrao == por_grupo[GROUP_BANKS] | por_grupo[GROUP_BROKERS]
     assert set(FinancialAccount.objects.filter(account_group_q(ALL_ACCOUNT_GROUPS)).values_list("id", flat=True)) == todas
 
 
@@ -201,6 +203,7 @@ def test_seletor_de_contas_combina_titular_e_instituicao(usuario, contas):
             "owner_id": str(conta_do_banco.owner_id),
             "institution_id": str(conta_do_banco.institution_id),
             "currency": "BRL",
+            "grupos": "bancos,corretoras,cartoes,aplicacoes",
         },
     )
     options = reports_services.context_options(usuario, ctx)
@@ -247,7 +250,7 @@ def test_seletores_respeitam_a_moeda(usuario, contas):
     contas_usd, instituicoes_usd = seletores({"currency": "USD"})
     assert contas_usd == {dolar.id} and instituicoes_usd == {dolar.institution_id}
 
-    contas_todas, _ = seletores({"currency": "BRL,USD"})
+    contas_todas, _ = seletores({"currency": "BRL,USD", "grupos": "bancos,corretoras,cartoes,aplicacoes"})
     assert contas_todas == {conta.id for conta in contas.values()} | {dolar.id}
 
 
@@ -325,14 +328,14 @@ def test_menu_conta_as_contas_de_cada_grupo_e_avisa_o_filtro_ativo(client, usuar
 @pytest.mark.django_db
 def test_menu_manda_ao_script_a_selecao_padrao_dos_grupos(client, usuario, contas):
     """Marcar todos os grupos (Administradas incluída) não é o padrão: o padrão
-    deixa Administradas de fora. O script só pode omitir `grupos` da URL quando
-    a escolha é a padrão; antes ele omitia com todas marcadas, e a tela voltava
-    a esconder as administradas (a C6 da Esposita sumia do filtro)."""
+    é só Bancos e Corretoras. O script só pode omitir `grupos` da URL quando a
+    escolha é a padrão; antes ele omitia com todas marcadas, e a tela voltava a
+    esconder as administradas (a C6 da Esposita sumia do filtro)."""
     client.force_login(usuario)
 
     pagina = client.get("/dashboard/").content.decode()
 
-    assert 'data-default-value="bancos,corretoras,cartoes,aplicacoes"' in pagina
+    assert 'data-default-value="bancos,corretoras"' in pagina
     todos = client.get("/transactions/?grupos=bancos,corretoras,cartoes,aplicacoes,administradas")
     assert todos.context["global_account_groups_active"] is True
 

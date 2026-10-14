@@ -13,9 +13,11 @@ finalidade vence o tipo da conta, e o tipo da conta vence o tipo da instituiçã
 - conta comum -> Bancos ou Corretoras, pelo tipo da instituição.
 
 Como a moeda, o filtro vive na URL (`grupos=bancos,cartoes`) e não é gravado.
-Ausente, valem todos **menos Administradas**: o dinheiro de terceiros não entra
-no fluxo pessoal sem que o usuário peça. Marcar só "Administradas" mostra o
-resultado delas sozinho, e marcar todas mostra tudo junto.
+Ausente, valem **Bancos e Corretoras**: o fluxo do dia a dia é o das contas
+correntes. Cartões (cuja fatura já aparece como pagamento na conta), Aplicações
+e o dinheiro de terceiros (Administradas) só entram quando o usuário pede.
+Marcar só "Administradas" mostra o resultado delas sozinho, e marcar todas
+mostra tudo junto.
 """
 
 from __future__ import annotations
@@ -50,8 +52,8 @@ ACCOUNT_GROUP_OPTIONS = (
     (GROUP_ADMINISTERED, gettext_lazy("Administradas")),
 )
 ALL_ACCOUNT_GROUPS = frozenset(code for code, _label in ACCOUNT_GROUP_OPTIONS)
-# O que vale quando a URL não diz nada: tudo, menos o dinheiro de terceiros.
-DEFAULT_ACCOUNT_GROUPS = ALL_ACCOUNT_GROUPS - {GROUP_ADMINISTERED}
+# O que vale quando a URL não diz nada: contas correntes de bancos e corretoras.
+DEFAULT_ACCOUNT_GROUPS = frozenset({GROUP_BANKS, GROUP_BROKERS})
 
 # Valores de `FinancialInstitution.institution_type`.
 _INSTITUTION_TYPE_BY_GROUP = {GROUP_BANKS: "Banco", GROUP_BROKERS: "Corretora"}
@@ -60,7 +62,7 @@ _INSTITUTION_TYPE_BY_GROUP = {GROUP_BANKS: "Banco", GROUP_BROKERS: "Corretora"}
 def parse_account_groups(params: Mapping[str, str]) -> frozenset[str]:
     """Normaliza ``grupos``; entrada inválida resulta em resposta HTTP 400.
 
-    Ausente ou vazio vale o padrão (todos menos Administradas). Seleção vazia
+    Ausente ou vazio vale o padrão (Bancos e Corretoras). Seleção vazia
     não é um estado útil -- seria uma tela sempre zerada -- e a tela não deixa
     desmarcar o último grupo.
     """

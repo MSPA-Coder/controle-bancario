@@ -43,6 +43,13 @@ from django.utils.translation import gettext
 from accounts.services import has_function_permission
 from banking.models import FinancialAccount
 from banking.services import accessible_account_ids
+from core.account_group_filter import (
+    DEFAULT_ACCOUNT_GROUPS,
+    GROUPS_PARAM,
+    account_group_q,
+    parse_account_groups,
+)
+from core.currency_filter import CURRENCY_PARAM, DEFAULT_CURRENCY, currency_q, parse_currency_filter
 from core.domain.finance import (
     CATEGORY_KIND_MANAGERIAL,
     OPERATION_INSTALLMENT,
@@ -57,6 +64,7 @@ from .models import LINE_STATUS_RECONCILED, BankStatementLine
 LIMITE_DA_LISTA = 500
 LIMITE_DE_PARECIDAS = 50
 MOTIVO_DA_REABERTURA = "Reclassificação de categorias em lote"
+PARAMETROS_GLOBAIS = (CURRENCY_PARAM, GROUPS_PARAM)
 
 _SEPARADOR = re.compile(r"[^A-Z0-9]+")
 _RUIDO = {"PARC", "PARCELA", "PARCELADO", "PARCELAS"}
@@ -121,6 +129,10 @@ class Filtros:
     texto: str = ""
     categoria_do_banco: str = ""
     so_importados: bool = True
+    # Filtros globais do menu (moeda e grupos de conta): vivem na URL como nas
+    # demais telas e valem também aqui.
+    moeda: str = DEFAULT_CURRENCY
+    grupos: frozenset[str] = DEFAULT_ACCOUNT_GROUPS
 
     @classmethod
     def do_get(cls, get) -> Filtros:
@@ -142,8 +154,13 @@ class Filtros:
             texto=(get.get("texto") or "").strip()[:100],
             categoria_do_banco=(get.get("banco") or "").strip()[:100],
             # Checkbox desmarcado não vem no GET; a primeira abertura (sem
-            # filtro algum) mostra só importados.
-            so_importados=get.get("importados") == "1" or not get,
+            # filtro próprio algum) mostra só importados. Moeda e grupos são
+            # globais e viajam em toda URL, então não contam como filtro.
+            so_importados=get.get("importados") == "1" or not any(
+                valor for chave, valor in get.items() if chave not in PARAMETROS_GLOBAIS
+            ),
+            moeda=parse_currency_filter(get),
+            grupos=parse_account_groups(get),
         )
 
 
@@ -175,7 +192,9 @@ def _categoria_do_banco_por_lancamento(ids) -> dict[int, str]:
 
 def lancamentos(user, filtros: Filtros) -> list[CashFlowEntry]:
     """A lista da tela: uma linha por compra (parcelado aparece uma vez)."""
-    qs = _gerenciais(user)
+    qs = _gerenciais(user).filter(
+        account_group_q(filtros.grupos, "account__") & currency_q(filtros.moeda, "account__")
+    )
     if filtros.conta_id:
         qs = qs.filter(account_id=filtros.conta_id)
     if filtros.de:

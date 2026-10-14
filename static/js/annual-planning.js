@@ -15,21 +15,38 @@
             }
         });
 
-        var summaryWrap = document.querySelector('.annual-summary-wrap');
-        var planningWrap = document.querySelector('[data-annual-planning-table]');
-        if (!summaryWrap || !planningWrap || summaryWrap.dataset.annualPlanningScrollBound === '1') return;
+        // Cada moeda tem o seu par resumo + grade, um logo após o outro; o par
+        // rola junto, e um par não mexe no outro.
+        document.querySelectorAll('.annual-summary-wrap').forEach(function (summaryWrap) {
+            var planningWrap = summaryWrap.nextElementSibling;
+            if (!planningWrap || !planningWrap.matches('[data-annual-planning-table]')) return;
+            if (summaryWrap.dataset.annualPlanningScrollBound === '1') return;
+            summaryWrap.dataset.annualPlanningScrollBound = '1';
+            planningWrap.dataset.annualPlanningScrollBound = '1';
+            mirrorScroll(summaryWrap, planningWrap);
+        });
+    }
 
-        summaryWrap.dataset.annualPlanningScrollBound = '1';
-        planningWrap.dataset.annualPlanningScrollBound = '1';
-        var syncing = false;
-        function syncScroll(source, target) {
-            if (syncing) return;
-            syncing = true;
-            target.scrollLeft = source.scrollLeft;
-            syncing = false;
+    /* O evento `scroll` é assíncrono: uma trava booleana ao redor da escrita não
+       impede o eco, e com larguras diferentes o lado arrastado era puxado de
+       volta. Cada lado lembra o valor que o OUTRO acabou de gravar nele (já
+       limitado pela largura dele) e ignora o evento que esse valor provoca. */
+    function mirrorScroll(first, second) {
+        var echo = new Map([[first, null], [second, null]]);
+        function follow(source, target) {
+            source.addEventListener('scroll', function () {
+                if (echo.get(source) === source.scrollLeft) {
+                    echo.set(source, null);
+                    return;
+                }
+                echo.set(source, null);
+                var before = target.scrollLeft;
+                target.scrollLeft = source.scrollLeft;
+                echo.set(target, target.scrollLeft === before ? null : target.scrollLeft);
+            });
         }
-        summaryWrap.addEventListener('scroll', function () { syncScroll(summaryWrap, planningWrap); });
-        planningWrap.addEventListener('scroll', function () { syncScroll(planningWrap, summaryWrap); });
+        follow(first, second);
+        follow(second, first);
     }
 
     document.addEventListener('DOMContentLoaded', function () { initAnnualPlanning(document); });

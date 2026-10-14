@@ -21,6 +21,7 @@ from bank_statements.reclassificacao import chave_da_descricao, primeira_palavra
 from banking.models import FinancialAccount, FinancialInstitution
 from core.domain.finance import (
     ACCOUNT_KIND_CREDIT_CARD,
+    ACCOUNT_PURPOSE_ADMINISTERED,
     CATEGORY_KIND_MANAGERIAL,
     CATEGORY_KIND_TRANSFER,
     ENTRY_TYPE_EXPENSE,
@@ -203,7 +204,10 @@ def test_tela_lista_previa_e_aplica(cenario):
     client = Client()
     client.force_login(cenario["usuario"])
 
-    lista = client.get("/banking/reclassification/", {"texto": "DROGA"})
+    # O cartão é do grupo Cartões: fora do padrão (Bancos e Corretoras), só
+    # aparece quando o filtro global o marca.
+    assert "DROGASIL" not in client.get("/banking/reclassification/", {"texto": "DROGA"}).content.decode()
+    lista = client.get("/banking/reclassification/", {"texto": "DROGA", "grupos": "cartoes"})
     assert lista.status_code == 200
     assert "DROGASIL" in lista.content.decode()
 
@@ -220,3 +224,51 @@ def test_tela_lista_previa_e_aplica(cenario):
     assert aplicada.status_code == 302
     assert aplicada["Location"] == "/banking/reclassification/?texto=DROGA"
     assert _categoria(entrada) == cenario["saude"]
+
+
+@pytest.mark.django_db
+def test_tela_respeita_os_filtros_globais_de_grupos_e_moeda(cenario):
+    administrada = FinancialAccount.objects.create(
+        owner=cenario["corrente"].owner, institution=cenario["corrente"].institution,
+        account_name="Administrada", purpose=ACCOUNT_PURPOSE_ADMINISTERED,
+    )
+    dolar = FinancialAccount.objects.create(
+        owner=cenario["corrente"].owner, institution=cenario["corrente"].institution,
+        account_name="Dolar", currency="USD",
+    )
+    _lancar(cenario, "LOJA PESSOAL", date(2026, 3, 10), conta=cenario["corrente"])
+    _lancar(cenario, "LOJA TERCEIROS", date(2026, 3, 10), conta=administrada)
+    _lancar(cenario, "LOJA EXTERIOR", date(2026, 3, 10), conta=dolar)
+    client = Client()
+    client.force_login(cenario["usuario"])
+
+    def corpo(**params):
+        return client.get("/banking/reclassification/", {"texto": "LOJA", **params}).content.decode()
+
+    padrao = corpo()
+    assert "LOJA PESSOAL" in padrao
+    assert "LOJA TERCEIROS" not in padrao
+    assert "LOJA EXTERIOR" not in padrao
+
+    so_administradas = corpo(grupos="administradas")
+    assert "LOJA TERCEIROS" in so_administradas
+    assert "LOJA PESSOAL" not in so_administradas
+    assert "Banco reclass / Administrada" in so_administradas
+    assert "Banco reclass / Corrente" not in so_administradas
+
+    em_dolar = corpo(currency="USD")
+    assert "LOJA EXTERIOR" in em_dolar
+    assert "LOJA PESSOAL" not in em_dolar
+
+    tudo = corpo(currency="ALL", grupos="bancos,corretoras,cartoes,aplicacoes,administradas")
+    assert all(nome in tudo for nome in ("LOJA PESSOAL", "LOJA TERCEIROS", "LOJA EXTERIOR"))
+
+
+@pytest.mark.django_db
+def test_filtros_globais_sozinhos_nao_desligam_so_importados(cenario):
+    _lancar(cenario, "SEM EXTRATO", date(2026, 3, 10), conta=cenario["corrente"])
+    client = Client()
+    client.force_login(cenario["usuario"])
+
+    resposta = client.get("/banking/reclassification/", {"currency": "BRL", "grupos": "bancos,cartoes"})
+    assert "SEM EXTRATO" not in resposta.content.decode()

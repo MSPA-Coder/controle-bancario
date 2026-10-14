@@ -542,8 +542,9 @@ cartão emitido por um banco não aparece ao marcar só "Bancos". Conta
 aluguéis do Jardim Iva); ela fica fora do fluxo pessoal por padrão. Dinheiro que
 cruza a fronteira entre administrada e pessoal não é transferência: é repasse
 (despesa) e renda (receita). Como a moeda, o filtro vive na URL
-(`grupos=bancos,cartoes`) e não é gravado; ausente, valem todos **menos
-Administradas**, e marcar só Administradas mostra o resultado delas sozinho. Ele tira
+(`grupos=bancos,cartoes`) e não é gravado; ausente, valem **Bancos e
+Corretoras** (com a moeda Real), e marcar só Administradas mostra o resultado
+delas sozinho. Ele tira
 contas dos números, deixa os seletores inteiros e cede à conta escolhida
 explicitamente. No Planejamento anual, cujo seletor de
 contas é o próprio escopo, ele restringe as opções.

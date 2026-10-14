@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-13 10:15-0300\n"
+"POT-Creation-Date: 2026-10-14 12:33-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2285,6 +2285,7 @@ msgstr "Amounts"
 
 #: core/textos_js.py dashboard/views.py reports/services.py
 #: templates/tables/_categories_table.html templates/tables/categories.html
+#: templates/tables/category_groups.html
 msgid "Sem grupo"
 msgstr "No group"
 

@@ -135,7 +135,8 @@ def upcoming_movements_view(request):
         "status_options": status_options,
         "owners": options.owners,
         "banks": options.institutions,
-        "accounts": options.accounts,
+        # Visão de caixa: o cartão não entra (ver `upcoming_movements_report`).
+        "accounts": [account for account in options.accounts if not account.is_credit_card],
         "current_owner_id": ctx.owner_id,
         "current_institution_id": ctx.institution_id,
         "current_account_id": ctx.account_id,
