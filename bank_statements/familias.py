@@ -74,7 +74,7 @@ FAMILIAS: tuple[Familia, ...] = (
             ENTRY_TYPE_EXPENSE, "Farmácia", "Saúde"),
     Familia("Bem-estar", ("PILATES",), ("Saúde",), ENTRY_TYPE_EXPENSE, "Bem-estar", "Saúde"),
     Familia("Aluguel recebido do Butantã", ("ALUGUEL BUTANTA",), ("Casa",),
-            ENTRY_TYPE_INCOME, "Aluguel Butantã", "Imóvel Butantã"),
+            ENTRY_TYPE_INCOME, "Imóvel Butantã", "Imóvel Butantã"),
     Familia("Remuneração do aluguel de ações", ("TAXA DE REMUNERACAO EMPRESTIMO",), ("Rendimentos",),
             ENTRY_TYPE_INCOME, "Aluguel de Açoes / Dividendos / JCP", "Investimentos"),
     Familia("JCP creditado", ("JCP",), ("Rendimentos",),

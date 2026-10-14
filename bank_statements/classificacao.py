@@ -10,7 +10,8 @@ Ordem de precedência, da mais para a menos confiável:
 2. **a mesma descrição já classificada**: a categoria mais frequente entre os
    lançamentos gerenciais de mesma chave (ver `chave_da_linha`), **sem contar
    "Outros"**. Antes valia o lançamento mais recente, e uma loja que caiu uma
-   vez em "Outros" arrastava todas as compras seguintes para lá;
+   vez em "Outros" arrastava todas as compras seguintes para lá. Descrição
+   que só diz o meio de pagamento ("DEBIT", "Boleto") não conta;
 3. **a categoria do banco** já escolhida antes (fatura de cartão e OFX com
    `NAME`): a escolha feita numa prévia vale para as linhas seguintes;
 4. **o prefixo do PDF** ou a categoria do banco, quando têm o nome de uma
@@ -83,6 +84,19 @@ _PREFIXOS_DE_EXTRATO = frozenset(
 _SEPARADOR_DE_PREFIXO = " - "
 _PALAVRA = re.compile(r"[^\W\d_]{3,}", re.UNICODE)
 
+# Palavras que dizem o meio de pagamento, não o que foi pago. O OFX do C6 traz
+# linhas só com "DEBIT", "CREDIT", "Boleto" ou "TRANSF ENVIADA PIX": aprendidas
+# na conta do Jardim Iva, elas mandavam para "Jardim Iva" qualquer linha igual de
+# qualquer conta. Descrição feita só delas não ensina categoria nenhuma.
+_PALAVRAS_GENERICAS = frozenset(
+    {
+        "DEBIT", "CREDIT", "DEBITO", "CREDITO", "BOLETO", "PIX", "TED", "DOC", "TEF",
+        "TRANSF", "TRANSFERENCIA", "ENVIADA", "ENVIADO", "RECEBIDA", "RECEBIDO",
+        "RECORRENTE", "PAGAMENTO", "PAGTO", "PGTO", "COMPRA", "CARTAO", "CONTA",
+        "DE", "DA", "DO", "PARA", "EM",
+    }
+)
+
 
 @dataclass(frozen=True)
 class Sugestao:
@@ -143,10 +157,11 @@ def _categoria_padrao(apenas_gerenciais: bool) -> CashFlowCategory | None:
 def categoria_do_historico(descricao: str, *, apenas_gerenciais: bool = False) -> CashFlowCategory | None:
     """Categoria mais frequente dos lançamentos de mesma chave, sem "Outros".
 
-    Em empate vence a que apareceu primeiro entre os mais recentes."""
+    Em empate vence a que apareceu primeiro entre os mais recentes. Descrição
+    genérica (ver `_PALAVRAS_GENERICAS`) não tem histórico."""
     chave = chave_da_linha(descricao)
     termo = _termo_de_busca(descricao)
-    if not chave or not termo:
+    if not chave or not termo or set(chave.split()) <= _PALAVRAS_GENERICAS:
         return None
     anteriores = (
         CashFlowEntry.objects.filter(
