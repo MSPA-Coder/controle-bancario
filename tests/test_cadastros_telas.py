@@ -103,7 +103,7 @@ def test_grupos_de_categoria_tem_tela_propria_com_a_contagem_de_categorias(logad
 
     html = logado.get(reverse("transactions:category_groups_view")).content.decode()
 
-    assert re.search(r"<td>Moradia</td>\s*<td>1</td>\s*<td>Sim</td>\s*<td>\s*2\s*<ul", html)
+    assert re.search(r"<td>Moradia</td>\s*<td>1</td>\s*<td>Sim</td>\s*<td>2</td>", html)
     assert "Nenhum grupo cadastrado" not in html
     # E a tela de Categorias já não carrega o cadastro de grupos.
     categorias = logado.get(reverse("transactions:categories_view")).content.decode()
@@ -128,24 +128,12 @@ def test_filtro_de_tipo_das_categorias_usa_os_mesmos_nomes_do_selo(logado):
 
 
 @pytest.mark.django_db
-def test_grupos_saem_na_ordem_dos_graficos_e_empatando_por_nome(logado):
-    for nome, posicao in (("Beta", 2), ("alfa", 2), ("Zero", 1)):
+def test_grupos_saem_classificados_pela_coluna_grupo_sem_diferenciar_maiusculas(logado):
+    # A posição (ordem dos gráficos) segue na tabela, mas não ordena a lista:
+    # quem lê a tela procura o grupo pelo nome.
+    for nome, posicao in (("Beta", 1), ("alfa", 9), ("Zero", 2)):
         CashFlowCategoryGroup.objects.create(group_name=nome, position=posicao)
 
     html = logado.get(reverse("transactions:category_groups_view")).content.decode()
 
-    assert _ordem(html, ["Beta", "alfa", "Zero"]) == ["Zero", "alfa", "Beta"]
-
-
-@pytest.mark.django_db
-def test_tela_de_grupos_lista_as_categorias_de_cada_grupo_e_as_sem_grupo(logado):
-    saude = CashFlowCategoryGroup.objects.create(group_name="Saúde grupos", position=10)
-    CashFlowCategory.objects.create(category_name="Farmácia grupos", group=saude)
-    CashFlowCategory.objects.create(category_name="Consulta grupos", group=saude)
-    CashFlowCategory.objects.create(category_name="Solta grupos")
-
-    html = logado.get(reverse("transactions:category_groups_view")).content.decode()
-
-    assert "<li>Consulta grupos</li><li>Farmácia grupos</li>" in html  # por nome, dentro do grupo
-    assert "group-row-sem-grupo" in html
-    assert html.index("<li>Solta grupos</li>") > html.index("<li>Farmácia grupos</li>")
+    assert _ordem(html, ["Beta", "alfa", "Zero"]) == ["alfa", "Beta", "Zero"]
