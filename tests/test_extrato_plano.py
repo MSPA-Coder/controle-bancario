@@ -11,7 +11,8 @@ errou onde o histórico acertava.
 
 O QUE ESTE ARQUIVO FIXA
 
-- o histórico vence o prefixo do extrato, e "Outros" nunca é aprendido;
+- o histórico vence o prefixo do extrato, e nem "Outros" nem descrição que só
+  diz o meio de pagamento ("DEBIT", "Boleto") são aprendidos;
 - duas linhas de sinal oposto e mesmo valor em contas suas viram UMA
   transferência (nenhuma receita nem despesa gerencial);
 - linha que cita um titular sem a outra ponta importada espera, em vez de virar
@@ -164,6 +165,21 @@ def test_outros_nunca_e_aprendido_e_a_mais_frequente_vence(mundo):
     _lancar(user, conta, cat["rendimentos"], "Padaria Central", "13.00", date(2026, 6, 3))
     # A mais recente é "Outros" (ignorada) e a mais frequente é "Rendimentos".
     assert sugerir_categoria("Padaria Central").categoria == cat["rendimentos"]
+
+
+def test_descricao_que_so_diz_o_meio_de_pagamento_nao_ensina_categoria(mundo):
+    user, contas, cat = mundo
+    for descricao in ("DEBIT", "Boleto", "TRANSF ENVIADA PIX"):
+        _lancar(user, contas["c6"], cat["corretagem"], descricao, "81.32", date(2026, 5, 15))
+        sugestao = sugerir_categoria(descricao)
+        assert (sugestao.categoria, sugestao.origem) == (cat["outros"], ORIGEM_PADRAO), descricao
+    # Com quem pagou, a descrição volta a ensinar.
+    _lancar(
+        user, contas["c6"], cat["corretagem"], "Pix recebido de ANGELA LIMA NUNES", "585.00",
+        date(2026, 5, 20), tipo=ENTRY_TYPE_INCOME,
+    )
+    sugestao = sugerir_categoria("Pix recebido de ANGELA LIMA NUNES")
+    assert (sugestao.categoria, sugestao.origem) == (cat["corretagem"], ORIGEM_HISTORICO)
 
 
 def test_movimentacao_pode_ser_sugerida_no_extrato_mas_nao_na_fatura(mundo):
