@@ -41,12 +41,7 @@
                     <td>{{ group.group_name }}</td>
                     <td>{{ group.position }}</td>
                     <td>{% if group.in_charts %}{% trans "Sim" %}{% else %}{% trans "Não" %}{% endif %}</td>
-                    <td>
-                        {{ group.total_categories }}
-                        {% if group.categorias %}
-                        <ul class="group-categories">{% for categoria in group.categorias %}<li>{{ categoria.category_name }}</li>{% endfor %}</ul>
-                        {% endif %}
-                    </td>
+                    <td>{{ group.total_categories }}</td>
                     <td class="actions">
                         <button type="button" class="btn btn-sm btn-icon btn-action-edit" title="{% trans 'Editar' %}" data-toggle-edit="edit-group-{{ group.id }}">{% icon 'edit' %}</button>
                         <form method="post" action="{% url 'transactions:delete_category_group' group.id %}" data-ui="inline">
@@ -77,18 +72,6 @@
             {% empty %}
                 <tr><td colspan="5" class="empty-state">{% trans "Nenhum grupo cadastrado." %}</td></tr>
             {% endfor %}
-            {% if categorias_sem_grupo %}
-                <tr class="group-row-sem-grupo">
-                    <td>{% trans "Sem grupo" %}</td>
-                    <td></td>
-                    <td></td>
-                    <td>
-                        {{ categorias_sem_grupo|length }}
-                        <ul class="group-categories">{% for categoria in categorias_sem_grupo %}<li>{{ categoria.category_name }}</li>{% endfor %}</ul>
-                    </td>
-                    <td></td>
-                </tr>
-            {% endif %}
             </tbody>
         </table>
     </div>
