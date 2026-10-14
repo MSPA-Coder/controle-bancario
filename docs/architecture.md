@@ -50,7 +50,7 @@ favoritos e links válidos.
 
 `grupos=bancos,corretoras,cartoes,aplicacoes` segue o mesmo contrato da moeda:
 lido da query string por `core.account_group_filter.parse_account_groups`,
-ausente vale todos, valor desconhecido responde 400, nada é gravado. A regra de
+ausente vale Bancos e Corretoras (e a moeda, Real), valor desconhecido responde 400, nada é gravado. A regra de
 partição está em `docs/domain.md`. O filtro entra num lugar só,
 `reports.services.selected_context`/`context_options`, e por isso vale em toda
 tela que monta as contas por ali: Lançamentos, dashboard, Projeções, Próximos

@@ -40,6 +40,7 @@ from transactions.models import CashFlowCategory, CashFlowEntry
 pytestmark = pytest.mark.django_db
 
 PERIODO = "2026-06"
+TODOS_OS_GRUPOS = "bancos,corretoras,cartoes,aplicacoes,administradas"
 
 
 @pytest.fixture
@@ -56,7 +57,11 @@ def painel(client, usuario):
     client.force_login(usuario)
 
     def abrir(**params):
-        query = {"period": PERIODO, **params}
+        # Estes testes descrevem o painel com todas as contas; o padrão da URL
+        # (só Bancos e Corretoras) tem teste próprio, com `grupos=None`.
+        query = {"period": PERIODO, "grupos": TODOS_OS_GRUPOS, **params}
+        if query["grupos"] is None:
+            del query["grupos"]
         resposta = client.get("/dashboard/", query)
         assert resposta.status_code == 200
         return resposta.context
@@ -158,6 +163,13 @@ def test_filtro_de_grupos_vale_para_todos_os_graficos(cenario, painel):
     assert _mes(so_cartoes, "chartExpense") == 300.0
     assert _mes(so_cartoes, "projSaldo") == -300.0
     assert so_cartoes["chart_data"]["accountGroups"] == "cartoes"
+
+
+def test_sem_grupos_na_url_o_painel_mostra_so_bancos_e_corretoras(cenario, painel):
+    contexto = painel(grupos=None)
+
+    assert _mes(contexto, "chartExpense") == 350.0  # sem os 300 do cartão
+    assert _mes(contexto, "projSaldo") == 3150.0  # sem a aplicação
 
 
 def test_moeda_todas_mostra_uma_moeda_e_avisa(cenario, painel):

@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db import transaction as db_transaction
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, OuterRef, Prefetch
 from django.db.models.functions import Lower
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
@@ -529,10 +529,19 @@ def categories_view(request):
 def category_groups_view(request):
     """Lista e cadastro dos grupos que agrupam categorias (tela própria)."""
     # Na ordem dos gráficos (posição) e, empatando, por nome.
+    # Cada grupo mostra as categorias classificadas nele (`categorias`), e as
+    # que ainda não têm grupo aparecem à parte, para a classificação não ficar
+    # escondida na tela de Categorias.
+    grupos = list_category_groups().annotate(total_categories=Count("categories")).order_by(
+        "position", Lower("group_name"), "id"
+    ).prefetch_related(
+        Prefetch("categories", queryset=CashFlowCategory.objects.order_by(Lower("category_name")), to_attr="categorias")
+    )
     context = {
-        "category_groups": list_category_groups().annotate(total_categories=Count("categories")).order_by(
-            "position", Lower("group_name"), "id"
-        )
+        "category_groups": grupos,
+        "categorias_sem_grupo": list(
+            CashFlowCategory.objects.filter(group__isnull=True).order_by(Lower("category_name"))
+        ),
     }
     return render(request, 'tables/category_groups.html', context)
 
