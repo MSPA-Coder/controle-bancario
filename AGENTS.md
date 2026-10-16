@@ -102,7 +102,13 @@ Antes de mudança destrutiva, conversão de dados ou manutenção de dados reais
 faça backup validado pelo BackupRestore:
 
 ```powershell
-python cli.py backup --projeto controle_bancario --tipos banco
+# Execute from the sistema-financeiro checkout root; BackupRestore is a sibling.
+Push-Location ..\BackupRestore
+try {
+  & .\.venv\Scripts\python.exe .\cli.py backup --projeto controle_bancario --tipos banco
+} finally {
+  Pop-Location
+}
 ```
 
 Esse backup não cobre `media_volume`. Se a operação puder afetar comprovantes,
