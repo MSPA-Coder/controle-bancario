@@ -180,6 +180,7 @@ def update_institution_view(request, institution_id):
             institution,
             request.POST.get('institution_name', ''),
             request.POST.get('institution_type', ''),
+            user=request.user,
         )
         messages.success(request, gettext("Instituição atualizada."))
     except ValueError as exc:

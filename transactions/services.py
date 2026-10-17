@@ -42,6 +42,7 @@ from transactions.models import (
     CashFlowCategoryGroup,
     CashFlowEntry,
 )
+from transactions.rotulos import rotulo_da_conta
 
 
 def is_month_closed(account: FinancialAccount, year: int, month: int) -> bool:
@@ -700,11 +701,9 @@ def _opposite_entry_type(entry_type: str) -> str:
 
 
 def _account_label(account: FinancialAccount | None) -> str:
-    if not account:
-        return ""
-    owner_name = account.owner.name if account.owner_id else ""
-    institution_name = account.institution.institution_name if account.institution_id else ""
-    return " / ".join(p for p in (owner_name, institution_name, account.account_name) if p)
+    # Um lugar só para o formato: `rotulos.atualizar_rotulos` refaz este mesmo
+    # texto quando a conta, o titular ou a instituição é renomeado.
+    return rotulo_da_conta(account)
 
 
 def _monthly_amount_for(entry_amount: Decimal, installments: int, calc_mode: str) -> Decimal:

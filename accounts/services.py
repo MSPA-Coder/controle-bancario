@@ -5,7 +5,7 @@ from typing import Final
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.utils import timezone
 from django.utils.translation import gettext, gettext_lazy, gettext_noop
@@ -653,12 +653,19 @@ def update_owner(user, owner: AccountOwner, name: str) -> AccountOwner:
     # escopo por titular vale aqui como vale para as contas do titular.
     if not can_access_owner(user, owner.id, "update"):
         raise ValueError(gettext("Acesso negado: você não tem permissão para alterar este titular."))
+    from transactions.rotulos import atualizar_rotulos
+
     clean_name = _clean_owner_name(name)
     if AccountOwner.objects.filter(name__iexact=clean_name).exclude(id=owner.id).exists():
         raise ValueError(gettext("Já existe um titular com esse nome."))
+    renomeado = owner.name != clean_name
     owner.name = clean_name
     try:
-        owner.save(update_fields=["name", "updated_at"])
+        with transaction.atomic():
+            owner.save(update_fields=["name", "updated_at"])
+            if renomeado:
+                # O nome do titular está no rótulo das transferências das contas dele.
+                atualizar_rotulos(owner.accounts.values_list("id", flat=True), user=user)
     except IntegrityError as exc:
         raise ValueError(gettext("Já existe um titular com esse nome.")) from exc
     return owner

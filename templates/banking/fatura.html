@@ -49,6 +49,19 @@
                 {% icon 'check' %}<span>{% trans "Processar fatura" %}</span>
             </button>
         </div>
+        {% if meses_fechados %}
+        <div class="fatura-aviso u-mb-075">
+            <p><strong>{% trans "A fatura tem lançamentos em mês fechado do cartão." %}</strong>
+                {% trans "O mês só fica completo no cartão quando chega a fatura seguinte. Ao processar, estes meses são reabertos e fechados de novo com o saldo que a fatura deixar:" %}</p>
+            <ul>
+                {% for fechamento in meses_fechados %}
+                <li>{% blocktrans trimmed with mes=fechamento.month|stringformat:"02d" ano=fechamento.year saldo=fechamento.closing_balance|money_signed:conta.currency %}{{ mes }}/{{ ano }}, hoje fechado com {{ saldo }}{% endblocktrans %}</li>
+                {% endfor %}
+            </ul>
+            <label><input type="checkbox" name="autorizar_meses" value="1" required>
+                {% trans "Autorizo reabrir e fechar de novo esses meses" %}</label>
+        </div>
+        {% endif %}
         <table class="tx-table">
             <thead>
                 <tr>
