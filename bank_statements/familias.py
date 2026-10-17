@@ -40,7 +40,10 @@ from transactions.models import (
 from . import reclassificacao
 from .regras import normalizar
 
-_PALAVRAS = re.compile(r"[A-Z0-9]+")
+# Letras e números são palavras separadas: a fatura do C6 cola o número da loja
+# no nome ("DROGASIL1115"), e a loja tem de casar como "DROGASIL" sem que
+# "PRAIA" passe a casar com "RAIA".
+_PALAVRAS = re.compile(r"[A-Z]+|[0-9]+")
 
 
 @dataclass(frozen=True)

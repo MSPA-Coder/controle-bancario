@@ -55,7 +55,7 @@
                 {% trans "O mês só fica completo no cartão quando chega a fatura seguinte. Ao processar, estes meses são reabertos e fechados de novo com o saldo que a fatura deixar:" %}</p>
             <ul>
                 {% for fechamento in meses_fechados %}
-                <li>{% blocktrans trimmed with mes=fechamento.month|stringformat:"02d" ano=fechamento.year saldo=fechamento.closing_balance|money_signed:conta.currency %}{{ mes }}/{{ ano }}, hoje fechado com {{ saldo }}{% endblocktrans %}</li>
+                <li>{% blocktrans trimmed with mes=fechamento.month|stringformat:"02d" ano=fechamento.year saldo=fechamento.closing_balance|balance_signed:conta.currency %}{{ mes }}/{{ ano }}, hoje fechado com {{ saldo }}{% endblocktrans %}</li>
                 {% endfor %}
             </ul>
             <label><input type="checkbox" name="autorizar_meses" value="1" required>

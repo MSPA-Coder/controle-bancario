@@ -39,6 +39,10 @@ VA_SAIDA = next(f for f in FAMILIAS if f.nome == "VA/VR: saída no mercado")
     (FARMACIA, "Raia · Claudia", True),
     (FARMACIA, "Drogaria Sao Paulo · Claudia", True),
     (FARMACIA, "Praia Grande Turismo", False),
+    # O número da loja vem colado no nome na fatura do C6.
+    (FARMACIA, "DROGASIL1115 · Mariano", True),
+    (FARMACIA, "RAIA158 · Claudia", True),
+    (FARMACIA, "PRAIA158 · Claudia", False),
     (SALARIO, "Salário", True),
     (SALARIO, "Salário - adiantamento", False),
     (IRRF, "Irrf S/Rendimentos Empréstimos de Ações Brraizacnpr6", True),

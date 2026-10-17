@@ -14,7 +14,7 @@ from decimal import Decimal
 from django.template import Context, Template
 
 from core.domain.finance import BASE_CURRENCY, CURRENCY_BRL, CURRENCY_USD
-from core.templatetags.money_filters import money, money_signed
+from core.templatetags.money_filters import balance_signed, money, money_signed
 
 
 def _render(template_text: str, **contexto) -> str:
@@ -118,3 +118,11 @@ def test_o_valor_do_destino_nasce_desabilitado_no_formulario():
 
     campo = re.search(r'<input[^>]*name="counterparty_amount"[^>]*>', html)
     assert campo and re.search(r"\sdisabled[\s>]", campo.group(0))
+
+
+def test_saldo_zero_aparece_e_movimento_zero_nao():
+    """O aviso de mês fechado da fatura mostrava "hoje fechado com" e nada: o
+    saldo de fechamento era zero, e o filtro de movimento esconde o zero."""
+    assert money_signed(Decimal("0")) == ""
+    assert balance_signed(Decimal("0")) == "R$ 0,00"
+    assert balance_signed(Decimal("-3099.95")) == "- R$ 3.099,95"
