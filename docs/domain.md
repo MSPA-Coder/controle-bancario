@@ -364,6 +364,13 @@ o IOF. A data de cada linha é a da liquidação, quando o saldo muda; a coluna 
 saldo confere linha a linha a partir do saldo inicial do resumo, e o saldo final
 fecha a cadeia. Formato reconhecido por "www.avenue.us"; conta por "Nº conta".
 
+PDF protegido por senha (fatura e extrato costumam chegar assim) fica pendente
+na tela de confirmação, sem detecção de conta, até o usuário digitar a senha
+(`bank_statements/pdf_senha.py`). Com a senha, o arquivo pendente é regravado
+sem a proteção e segue como qualquer PDF; a senha vale só naquela requisição e
+não é gravada, nem em log. Confirmar a importação sem abrir o arquivo o descarta
+com aviso.
+
 ### Plano do extrato de conta
 
 A tela de Conciliação mostra, por linha pendente, o que ela vai virar, e

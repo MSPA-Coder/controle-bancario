@@ -23,6 +23,9 @@ dependencies = [
   "whitenoise>=6.12.0,<7",
   "django-htmx>=1.18,<2",
   "pdfplumber>=0.11,<1",
+  # Já vinha com o pdfplumber; declarado porque `bank_statements/pdf_senha.py`
+  # o usa direto para abrir PDF protegido por senha e regravá-lo sem a proteção.
+  "pypdfium2>=5.13,<6",
   # Cabecalhos de seguranca e formatacao de numeros em pt-BR compartilhados com
   # os outros aplicativos do mantenedor. A tag e fixada manualmente e nunca
   # aponta para branch.

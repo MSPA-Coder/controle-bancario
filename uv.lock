@@ -167,6 +167,7 @@ dependencies = [
     { name = "gunicorn" },
     { name = "pdfplumber" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pypdfium2" },
     { name = "sharedauth" },
     { name = "whitenoise" },
 ]
@@ -190,6 +191,7 @@ requires-dist = [
     { name = "pdfplumber", specifier = ">=0.11,<1" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.10,<3" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
+    { name = "pypdfium2", specifier = ">=5.13,<6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3,<10" },
     { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.9,<5" },
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6,<7" },
