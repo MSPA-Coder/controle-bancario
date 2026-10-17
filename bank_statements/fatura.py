@@ -73,6 +73,15 @@ from transactions.services import (
     reopen_month,
 )
 
+from .classificacao import (
+    CONFIANCA_ALTA,
+    CONFIANCA_BAIXA,
+    CONFIANCA_MEDIA,
+    CONFIANCA_NENHUMA,
+    Sugestao,
+    chave_da_linha,
+    sugerir_para_linha,
+)
 from .models import (
     LINE_STATUS_IGNORED,
     LINE_STATUS_NEW,
@@ -115,9 +124,21 @@ class Plano:
     acao: str
     lancamento: CashFlowEntry | None = None
     categoria: CashFlowCategory | None = None
+    # De onde veio a categoria sugerida e o quanto confiar nela (ver `classificacao`).
+    sugestao: Sugestao | None = None
     # Linha já no saldo inicial que é parcela: a partir de qual parcela criar.
     futuras_a_partir_de: int | None = None
     futuras_vencimento: date | None = None
+
+    @property
+    def escolhe_categoria(self) -> bool:
+        """Se a prévia pede a categoria desta linha: ela cria lançamento, ou cria as
+        parcelas que faltam de uma compra que já está no saldo inicial."""
+        return self.cria_lancamento or bool(self.futuras_a_partir_de)
+
+    @property
+    def confiavel(self) -> bool:
+        return self.sugestao is not None and self.sugestao.confiavel
 
     @property
     def cria_lancamento(self) -> bool:
@@ -216,13 +237,12 @@ def _compra_lancada(conta, linha, usados) -> CashFlowEntry | None:
     return _mais_perto(candidatos, linha.statement_date, usados)
 
 
-def _categoria_sugerida(conta, linha) -> CashFlowCategory | None:
+def _sugerir(plano: Plano) -> None:
     # A mesma loja em qualquer conta, a mais frequente entre as que o usuário
     # classificou (nunca "Outros"), e só depois a categoria do banco: ver
     # `classificacao`, que o extrato de conta também usa.
-    from .classificacao import sugerir_categoria
-
-    return sugerir_categoria(linha.description, linha.bank_category, apenas_gerenciais=True).categoria
+    plano.sugestao = sugerir_para_linha(plano.linha, apenas_gerenciais=True)
+    plano.categoria = plano.sugestao.categoria
 
 
 def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
@@ -253,7 +273,7 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
                 if _parcela(conta, linha, vencimento, usados, livres=False) is None:
                     plano.futuras_a_partir_de = primeira
                     plano.futuras_vencimento = vencimento
-                    plano.categoria = _categoria_sugerida(conta, linha)
+                    _sugerir(plano)
         elif eh_pagamento(linha):
             plano.lancamento = _transferencia(conta, linha, usados)
             plano.acao = PAGAMENTO if plano.lancamento else PAGAMENTO_SEM_PAR
@@ -267,11 +287,107 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
             else:
                 plano.acao = ESTORNO if linha.amount > 0 else COMPRA
         if plano.cria_lancamento:
-            plano.categoria = _categoria_sugerida(conta, linha)
+            _sugerir(plano)
         if plano.lancamento is not None:
             usados.add(plano.lancamento.id)
         planos.append(plano)
     return planos
+
+
+@dataclass
+class Grupo:
+    """Linhas a conferir da mesma loja, sinal e sugestão: uma escolha vale para todas.
+
+    A viagem da United numa fatura só eram 25 linhas, uma por bilhete, com a
+    mesma resposta. O formulário manda a escolha do grupo (`grupo_<numero>`) e a
+    lista das linhas dele (`membros_<numero>`); a linha que tiver escolha
+    própria (`categoria_<id>`) fica com a dela."""
+
+    numero: int
+    planos: list[Plano]
+
+    @property
+    def sugestao(self) -> Sugestao | None:
+        return self.planos[0].sugestao
+
+    @property
+    def categoria(self) -> CashFlowCategory | None:
+        return self.planos[0].categoria
+
+    @property
+    def linha(self) -> BankStatementLine:
+        return self.planos[0].linha
+
+    @property
+    def total(self) -> Decimal:
+        return sum((plano.linha.amount for plano in self.planos), Decimal("0.00"))
+
+    @property
+    def membros(self) -> str:
+        return ",".join(str(plano.linha.id) for plano in self.planos)
+
+
+@dataclass
+class Previa:
+    """A prévia na ordem de conferir: primeiro o incerto, agrupado por loja; no fim,
+    recolhido, o que tem confiança alta e o que não pede categoria."""
+
+    a_conferir: list[Grupo]
+    confiaveis: list[Plano]
+    sem_escolha: list[Plano]
+
+    @property
+    def linhas_a_conferir(self) -> int:
+        return sum(len(grupo.planos) for grupo in self.a_conferir)
+
+
+_ORDEM_DA_CONFIANCA = {CONFIANCA_NENHUMA: 0, CONFIANCA_BAIXA: 1, CONFIANCA_MEDIA: 2, CONFIANCA_ALTA: 3}
+
+
+def organizar(planos: list[Plano]) -> Previa:
+    """Separa e agrupa os planos para a prévia. Não muda nenhum plano."""
+    sem_escolha = [plano for plano in planos if not plano.escolhe_categoria]
+    confiaveis = [plano for plano in planos if plano.escolhe_categoria and plano.confiavel]
+    grupos: dict[tuple, list[Plano]] = {}
+    for plano in planos:
+        if plano.escolhe_categoria and not plano.confiavel:
+            chave = (
+                chave_da_linha(plano.linha.description),
+                plano.linha.amount > 0,
+                plano.categoria.id if plano.categoria else None,
+            )
+            grupos.setdefault(chave, []).append(plano)
+    ordenados = sorted(
+        grupos.values(),
+        key=lambda membros: (
+            _ORDEM_DA_CONFIANCA[membros[0].sugestao.confianca if membros[0].sugestao else CONFIANCA_NENHUMA],
+            membros[0].linha.statement_date,
+            membros[0].linha.id,
+        ),
+    )
+    return Previa(
+        a_conferir=[Grupo(numero, membros) for numero, membros in enumerate(ordenados, start=1)],
+        confiaveis=confiaveis,
+        sem_escolha=sem_escolha,
+    )
+
+
+def escolhas_do_formulario(post) -> dict[str, str]:
+    """As categorias escolhidas na prévia, por linha: a da própria linha, ou a do
+    grupo dela quando a linha ficou em "igual ao grupo"."""
+    escolhas = {
+        chave.removeprefix("categoria_"): valor
+        for chave, valor in post.items()
+        if chave.startswith("categoria_") and valor
+    }
+    for chave, valor in post.items():
+        if not chave.startswith("grupo_") or not valor:
+            continue
+        numero = chave.removeprefix("grupo_")
+        for linha_id in post.get(f"membros_{numero}", "").split(","):
+            if linha_id.strip():
+                escolhas.setdefault(linha_id.strip(), valor)
+    return escolhas
 
 
 @dataclass
@@ -312,7 +428,8 @@ def lote_de_fatura(user, batch_id, action: str = "view") -> BankStatementImport:
 
 
 def linhas_novas(lote: BankStatementImport):
-    return lote.lines.filter(status=LINE_STATUS_NEW).order_by("statement_date", "id")
+    # A conta vem junto: a sugestão de cada linha a consulta (texto genérico).
+    return lote.lines.filter(status=LINE_STATUS_NEW).select_related("account").order_by("statement_date", "id")
 
 
 def categorias_gerenciais():

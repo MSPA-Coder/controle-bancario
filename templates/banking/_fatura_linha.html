@@ -1,0 +1,27 @@
+{% load i18n regional_filters money_filters %}
+{# Uma linha da prévia. `membro`: a linha está num grupo e, sem escolha própria, fica com a categoria do grupo. #}
+<tr>
+    <td>{{ plano.linha.statement_date|udate }}
+        {% if plano.linha.purchase_date and plano.linha.purchase_date != plano.linha.statement_date %}<br><small>{% blocktrans trimmed with data=plano.linha.purchase_date|udate %}compra em {{ data }}{% endblocktrans %}</small>{% endif %}
+    </td>
+    <td>{{ plano.linha.description }}
+        {% if plano.linha.bank_category %}<br><small>{{ plano.linha.bank_category }}</small>{% endif %}
+    </td>
+    <td>{% if plano.linha.installment_current %}{{ plano.linha.installment_current }}/{{ plano.linha.installment_total }}{% endif %}</td>
+    <td class="amount {{ plano.linha.amount|amount_class }}">{{ plano.linha.amount|money_signed:conta.currency }}</td>
+    <td>{{ plano.rotulo }}
+        {% if plano.escolhe_categoria and plano.sugestao and not membro %}<br>{% include "banking/_confianca.html" with sugestao=plano.sugestao %}{% endif %}
+    </td>
+    <td>
+        {% if plano.escolhe_categoria %}
+        <select name="categoria_{{ plano.linha.id }}" aria-label="{% trans 'Categoria' %}">
+            {% if membro %}<option value="" selected>{% trans "Igual ao grupo" %}</option>{% endif %}
+            {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" {% if not membro and plano.categoria and plano.categoria.id == categoria.id %}selected{% endif %}>{{ categoria.category_name }}</option>
+            {% endfor %}
+        </select>
+        {% elif plano.lancamento %}
+        <small>{{ plano.lancamento.category.category_name }}</small>
+        {% endif %}
+    </td>
+</tr>

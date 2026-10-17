@@ -269,9 +269,9 @@ def suggested_category_for_line(line: BankStatementLine) -> CashFlowCategory | N
     do extrato, e por último de "Outros". Ver `classificacao`. O prefixo ficou
     atrás do histórico porque o rótulo do banco erra de vez em quando: o PDF da
     Genial chama o aluguel de ações de "Rendimentos"."""
-    from .classificacao import sugerir_categoria
+    from .classificacao import sugerir_para_linha
 
-    return sugerir_categoria(line.description, line.bank_category).categoria
+    return sugerir_para_linha(line).categoria
 
 
 def _get_line_in_scope(
@@ -406,6 +406,10 @@ def reconciliation_view_data(user, target_line_id: int | None = None) -> dict:
             else suggested_category_for_line(line)
         )
         line.suggested_category_id = suggested.id if suggested else None
+        line.confiavel = plano is not None and plano.confiavel
+    # O que pede atenção vem primeiro; o que o plano resolve com segurança (ver
+    # `extrato.Plano.confiavel`) fica no fim, na mesma ordem de antes.
+    lines.sort(key=lambda line: line.confiavel)
 
     return {
         "lines": lines,

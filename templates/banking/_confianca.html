@@ -1,0 +1,1 @@
+{% load i18n %}<span class="confianca confianca-{{ sugestao.confianca }}" title="{{ sugestao.rotulo }}">{{ sugestao.rotulo_da_confianca }}{% if sugestao.votos %} · {% blocktrans trimmed with iguais=sugestao.iguais votos=sugestao.votos %}{{ iguais }} de {{ votos }}{% endblocktrans %}{% endif %}</span>

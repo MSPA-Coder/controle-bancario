@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 08:16-0300\n"
+"POT-Creation-Date: 2026-10-17 10:26-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -729,6 +729,10 @@ msgid "histórico"
 msgstr "history"
 
 #: bank_statements/classificacao.py
+msgid "categoria mais usada na conta"
+msgstr "category most used in the account"
+
+#: bank_statements/classificacao.py
 msgid "categoria do banco (aprendida)"
 msgstr "bank category (learned)"
 
@@ -743,6 +747,22 @@ msgstr "bank category"
 #: bank_statements/classificacao.py
 msgid "padrão"
 msgstr "default"
+
+#: bank_statements/classificacao.py
+msgid "confiança alta"
+msgstr "high confidence"
+
+#: bank_statements/classificacao.py
+msgid "confiança média"
+msgstr "medium confidence"
+
+#: bank_statements/classificacao.py
+msgid "confiança baixa"
+msgstr "low confidence"
+
+#: bank_statements/classificacao.py
+msgid "sem sugestão"
+msgstr "no suggestion"
 
 #: bank_statements/extrato.py
 msgid "Concilia com o lançamento existente"
@@ -2932,6 +2952,74 @@ msgstr "Delete"
 msgid "Nenhum comprovante anexado."
 msgstr "No receipt attached."
 
+#: templates/banking/_confianca.html
+#, python-format
+msgid "%(iguais)s de %(votos)s"
+msgstr "%(iguais)s of %(votos)s"
+
+#: templates/banking/_fatura_cabecalho.html
+#: templates/banking/_import_table.html
+#: templates/banking/_reconciliation_tables.html
+#: templates/banking/atualizar_saldo.html templates/banking/extrato.html
+#: templates/banking/reclassificacao.html
+#: templates/management/partials/management_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+msgid "Data"
+msgstr "Date"
+
+#: templates/banking/_fatura_cabecalho.html
+#: templates/banking/_reconciliation_tables.html
+#: templates/banking/account_detail.html templates/banking/atualizar_saldo.html
+#: templates/banking/extrato.html templates/banking/reclassificacao.html
+#: templates/management/partials/management_content.html
+#: templates/permissions/index.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/transactions/_fields.html
+#: templates/transactions/_operations_table.html
+#: templates/transactions/_table_body.html
+msgid "Descrição"
+msgstr "Description"
+
+#: templates/banking/_fatura_cabecalho.html
+#: templates/transactions/_operations_table.html
+msgid "Parcela"
+msgstr "Installment"
+
+#: templates/banking/_fatura_cabecalho.html
+#: templates/banking/_reconciliation_tables.html
+#: templates/banking/account_detail.html templates/banking/atualizar_saldo.html
+#: templates/banking/extrato.html templates/banking/reclassificacao.html
+#: templates/management/partials/management_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/transactions/_operations_table.html
+#: templates/transactions/_table_body.html
+msgid "Valor"
+msgstr "Amount"
+
+#: templates/banking/_fatura_cabecalho.html
+msgid "O que acontece"
+msgstr "What happens"
+
+#: templates/banking/_fatura_cabecalho.html
+#: templates/banking/_fatura_linha.html templates/banking/account_detail.html
+#: templates/banking/reclassificacao.html templates/components/filter_type.html
+#: templates/management/partials/management_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/transactions/_fields.html
+#: templates/transactions/_operations_table.html
+#: templates/transactions/_table_body.html
+msgid "Categoria"
+msgstr "Category"
+
+#: templates/banking/_fatura_linha.html
+#, python-format
+msgid "compra em %(data)s"
+msgstr "purchase on %(data)s"
+
+#: templates/banking/_fatura_linha.html
+msgid "Igual ao grupo"
+msgstr "Same as the group"
+
 #: templates/banking/_fatura_projetada.html
 msgid "Próximas faturas (projeção)"
 msgstr "Upcoming card statements (projection)"
@@ -2998,15 +3086,6 @@ msgstr "Without a default payment account in the card's record, the projected pa
 #: templates/banking/_import_table.html
 msgid "Últimas importações"
 msgstr "Recent imports"
-
-#: templates/banking/_import_table.html
-#: templates/banking/_reconciliation_tables.html
-#: templates/banking/atualizar_saldo.html templates/banking/extrato.html
-#: templates/banking/fatura.html templates/banking/reclassificacao.html
-#: templates/management/partials/management_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-msgid "Data"
-msgstr "Date"
 
 #: templates/banking/_import_table.html
 msgid "Linhas novas"
@@ -3170,30 +3249,6 @@ msgid "Selecionar todas"
 msgstr "Select all"
 
 #: templates/banking/_reconciliation_tables.html
-#: templates/banking/account_detail.html templates/banking/atualizar_saldo.html
-#: templates/banking/extrato.html templates/banking/fatura.html
-#: templates/banking/reclassificacao.html
-#: templates/management/partials/management_content.html
-#: templates/permissions/index.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/transactions/_fields.html
-#: templates/transactions/_operations_table.html
-#: templates/transactions/_table_body.html
-msgid "Descrição"
-msgstr "Description"
-
-#: templates/banking/_reconciliation_tables.html
-#: templates/banking/account_detail.html templates/banking/atualizar_saldo.html
-#: templates/banking/extrato.html templates/banking/fatura.html
-#: templates/banking/reclassificacao.html
-#: templates/management/partials/management_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/transactions/_operations_table.html
-#: templates/transactions/_table_body.html
-msgid "Valor"
-msgstr "Amount"
-
-#: templates/banking/_reconciliation_tables.html
 msgid "Sugestão"
 msgstr "Suggestion"
 
@@ -3204,6 +3259,10 @@ msgstr "Reconcile with entry"
 #: templates/banking/_reconciliation_tables.html
 msgid "Ou criar lançamento"
 msgstr "Or create entry"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Sugestões seguras: candidato único, transferência pareada, regra ou categoria com confiança alta. Confira se quiser."
+msgstr "Safe suggestions: single candidate, paired transfer, rule or high-confidence category. Check them if you like."
 
 #: templates/banking/_reconciliation_tables.html
 msgid "Selecionar linha"
@@ -3374,16 +3433,6 @@ msgstr "Settlement"
 #: templates/transactions/_table_body.html
 msgid "Tipo"
 msgstr "Type"
-
-#: templates/banking/account_detail.html templates/banking/fatura.html
-#: templates/banking/reclassificacao.html templates/components/filter_type.html
-#: templates/management/partials/management_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/transactions/_fields.html
-#: templates/transactions/_operations_table.html
-#: templates/transactions/_table_body.html
-msgid "Categoria"
-msgstr "Category"
 
 #: templates/banking/account_detail.html
 msgid "Nenhum lançamento realizado neste período."
@@ -3717,18 +3766,49 @@ msgstr "%(mes)s/%(ano)s, currently closed at %(saldo)s"
 msgid "Autorizo reabrir e fechar de novo esses meses"
 msgstr "I authorize reopening and closing these months again"
 
-#: templates/banking/fatura.html templates/transactions/_operations_table.html
-msgid "Parcela"
-msgstr "Installment"
-
 #: templates/banking/fatura.html
-msgid "O que acontece"
-msgstr "What happens"
+msgid "Para conferir"
+msgstr "To check"
 
 #: templates/banking/fatura.html
 #, python-format
-msgid "compra em %(data)s"
-msgstr "purchase on %(data)s"
+msgid "%(n)s linha com sugestão incerta."
+msgid_plural "%(n)s linhas com sugestão incerta."
+msgstr[0] "%(n)s line with an uncertain suggestion."
+msgstr[1] "%(n)s lines with an uncertain suggestion."
+
+#: templates/banking/fatura.html
+msgid "Compras da mesma loja estão agrupadas: a categoria do grupo vale para todas, e dá para abrir o grupo e mudar uma só."
+msgstr "Purchases from the same store are grouped: the group's category applies to all of them, and you can open the group to change just one."
+
+#: templates/banking/fatura.html
+#, python-format
+msgid "%(n)s compra da mesma loja"
+msgid_plural "%(n)s compras da mesma loja"
+msgstr[0] "%(n)s purchase from the same store"
+msgstr[1] "%(n)s purchases from the same store"
+
+#: templates/banking/fatura.html
+msgid "Categoria do grupo"
+msgstr "Group category"
+
+#: templates/banking/fatura.html
+msgid "Ver as compras do grupo"
+msgstr "See the purchases in the group"
+
+#: templates/banking/fatura.html
+#, python-format
+msgid "Confiança alta: %(n)s linha já com a categoria sugerida"
+msgid_plural "Confiança alta: %(n)s linhas já com a categoria sugerida"
+msgstr[0] "High confidence: %(n)s line already with the suggested category"
+msgstr[1] "High confidence: %(n)s lines already with the suggested category"
+
+#: templates/banking/fatura.html
+#, python-format
+msgid "Sem categoria a escolher: %(n)s linha (pagamento, parcela ou compra já lançada, saldo inicial)"
+msgid_plural "Sem categoria a escolher: %(n)s linhas (pagamentos, parcelas e compras já lançadas, saldo inicial)"
+msgstr[0] "No category to choose: %(n)s line (payment, installment or purchase already recorded, opening balance)"
+msgstr[1] "No category to choose: %(n)s lines (payments, installments and purchases already recorded, opening balance)"
 
 #: templates/banking/fatura.html
 msgid "Nenhuma linha pendente nesta fatura."

@@ -441,6 +441,48 @@ def test_tela_mostra_a_previa_e_grava_a_categoria_escolhida(cenario):
     assert entrada.category == cenario["saude"]
 
 
+FATURA_UNITED = _c6(
+    "05/03/2026;MARIANO S;1111;T&E Companhia aérea;UNITED01647204721164;Única;0;0;4.50",
+    "05/03/2026;MARIANO S;1111;T&E Companhia aérea;UNITED01647204721175;Única;0;0;6.37",
+    "05/03/2026;MARIANO S;1111;T&E Companhia aérea;UNITED01647204721186;Única;0;0;8.25",
+    "06/03/2026;MARIANO S;1111;Padaria;PADARIA NOVA;Única;0;0;12.00",
+)
+
+
+@pytest.mark.django_db
+def test_previa_agrupa_a_mesma_loja_e_a_escolha_do_grupo_vale_para_todas(cenario):
+    client = Client()
+    client.force_login(cenario["usuario"])
+    lote, *_ = _importar(cenario, FATURA_UNITED)
+    united = list(lote.lines.filter(description__startswith="UNITED").order_by("id"))
+    padaria = lote.lines.get(description="PADARIA NOVA")
+
+    conteudo = client.get(f"/banking/import/{lote.id}/fatura/").content.decode()
+    assert "3 compras da mesma loja" in conteudo
+    assert 'name="grupo_1"' in conteudo
+    assert f'name="membros_1" value="{",".join(str(linha.id) for linha in united)}"' in conteudo
+    assert f'name="categoria_{padaria.id}"' in conteudo
+
+    # Uma escolha para o grupo; a terceira passagem fica com a escolha própria.
+    gravada = client.post(f"/banking/import/{lote.id}/fatura/processar/", {
+        "grupo_1": cenario["mercado"].id,
+        "membros_1": ",".join(str(linha.id) for linha in united),
+        f"categoria_{united[0].id}": "",
+        f"categoria_{united[2].id}": cenario["saude"].id,
+        f"categoria_{padaria.id}": cenario["mercado"].id,
+    })
+    assert gravada.status_code == 302
+    categorias = {
+        linha.description: linha.matched_entry.category for linha in lote.lines.select_related("matched_entry__category")
+    }
+    assert categorias == {
+        "UNITED01647204721164": cenario["mercado"],
+        "UNITED01647204721175": cenario["mercado"],
+        "UNITED01647204721186": cenario["saude"],
+        "PADARIA NOVA": cenario["mercado"],
+    }
+
+
 @pytest.mark.django_db
 def test_parcela_antiga_so_cria_as_parcelas_depois_do_saldo_inicial(cenario):
     # Saldo inicial em 01/03/2026. A compra de 10/11/2025 em 6x tem a 3ª e a
