@@ -46,6 +46,8 @@
                     <td>
                         {% if upload.detection_error %}
                         <small style="color: var(--danger)">{{ upload.detection_error|traduzido }}</small>
+                        {% elif upload.password_required %}
+                        {% icon 'lock' %} {% trans "PDF protegido por senha" %}
                         {% elif upload.detected_label %}
                         {{ upload.detected_label }}
                         {% else %}
@@ -55,6 +57,15 @@
                     <td>
                         {% if upload.detection_error %}
                         <small class="text-muted">{% trans "Será descartado" %}</small>
+                        {% elif upload.password_required %}
+                        {# Campos do formulário próprio (atributo form), declarado depois da tabela: o Enter na senha só desbloqueia este arquivo. #}
+                        <div class="u-d-flex u-items-center u-gap-05">
+                            <input type="password" name="senha" form="desbloquear-{{ upload.id }}" autocomplete="off" required
+                                   placeholder="{% trans 'Senha do PDF' %}"
+                                   aria-label="{% blocktrans with arquivo=upload.original_filename %}Senha do PDF {{ arquivo }}{% endblocktrans %}">
+                            <button type="submit" class="btn-sm" form="desbloquear-{{ upload.id }}">{% icon 'lock' %}<span>{% trans "Abrir" %}</span></button>
+                        </div>
+                        <small class="text-muted">{% trans "A senha só é usada para abrir o arquivo e não é guardada." %}</small>
                         {% else %}
                         <select name="account_{{ upload.id }}" aria-label="{% blocktrans with arquivo=upload.original_filename %}Conta para {{ arquivo }}{% endblocktrans %}">
                             <option value="">{% trans "Não importar" %}</option>
@@ -73,6 +84,9 @@
             </tbody>
         </table>
     </form>
+    {% for upload in uploads %}{% if upload.password_required and not upload.detection_error %}
+    <form id="desbloquear-{{ upload.id }}" method="post" action="{% url 'bank_statements:unlock_pending' upload.id %}">{% csrf_token %}</form>
+    {% endif %}{% endfor %}
     <p><a href="{% url 'bank_statements:imports_view' %}">{% trans "Voltar para a importação" %}</a></p>
 </div>
 {% endblock %}

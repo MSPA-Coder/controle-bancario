@@ -9,6 +9,7 @@ from django.http import FileResponse, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext, ngettext
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods, require_POST
 
 from accounts.services import has_function_permission
@@ -103,6 +104,29 @@ def confirm_imports_view(request):
         "import_accounts": accounts_for_import_form(request.user),
     }
     return render(request, 'banking/pending_imports_confirm.html', context)
+
+
+@sensitive_post_parameters('senha')
+@login_required
+@permission_required('banking.import', fallback='bank_statements:imports_view')
+@require_POST
+def unlock_pending_view(request, pending_id):
+    """Abre com a senha o PDF protegido de uma importação pendente e detecta a conta.
+
+    A senha vale só para esta requisição (ver `pdf_senha`) e fica fora dos
+    relatórios de erro do Django."""
+    try:
+        upload = pending_imports.desbloquear(request.user, pending_id, request.POST.get('senha', ''))
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, gettext("%(nome)s: PDF aberto.") % {"nome": upload.original_filename})
+    destino = reverse('bank_statements:confirm_imports')
+    if quer_fragmento(request):
+        resposta = HttpResponse(status=204)
+        resposta['HX-Redirect'] = destino
+        return resposta
+    return redirect(destino)
 
 
 @login_required

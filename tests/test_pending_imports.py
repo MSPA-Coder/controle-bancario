@@ -19,6 +19,7 @@ from django.test import Client
 from accounts.models import AccountOwner, AppUser, UserOwnerAccess
 from bank_statements.models import BankStatementLine, PendingStatementUpload
 from bank_statements.pending_imports import (
+    desbloquear,
     detect_account,
     pending_uploads_for_user,
     resolve_pending_uploads,
@@ -26,6 +27,7 @@ from bank_statements.pending_imports import (
 )
 from banking.models import FinancialAccount, FinancialInstitution
 from core.domain.identity import USER_TYPE_ADMINISTRATOR, USER_TYPE_USER
+from tests.pdf_com_senha import pdf_com_senha
 
 GENIAL_TEXT = """
 Extrato de conta corrente
@@ -447,3 +449,90 @@ def test_process_imports_view_commits_confirmed_account_and_reports_summary(cena
     assert resposta["Location"] == "/banking/imports/"
     assert BankStatementLine.objects.filter(account=cenario["conta_ofx"]).count() == 1
     assert not PendingStatementUpload.objects.filter(id=pendente.id).exists()
+
+
+# --- PDF protegido por senha ----------------------------------------------------
+#
+# PDF de verdade (montado por `tests/pdf_com_senha.py`), sem trocar
+# `extract_pdf_text`: o que se verifica é que, aberto com a senha, o arquivo
+# segue o mesmo caminho de um PDF comum até virar linha de extrato.
+
+SENHA = "12345"
+
+
+def _pdf_genial_trancado() -> bytes:
+    return pdf_com_senha(GENIAL_TEXT.strip().splitlines(), SENHA)
+
+
+def _stage_trancado(cenario) -> PendingStatementUpload:
+    arquivo = SimpleUploadedFile("fatura.pdf", _pdf_genial_trancado(), content_type="application/pdf")
+    return stage_uploaded_files(cenario["usuario"], [arquivo])[0]
+
+
+@pytest.mark.django_db
+def test_pdf_com_senha_fica_pendente_esperando_a_senha(cenario):
+    pendente = _stage_trancado(cenario)
+    assert pendente.password_required
+    assert pendente.detected_account is None
+    assert pendente.detection_error == ""
+
+
+@pytest.mark.django_db
+def test_senha_errada_nao_abre_e_o_arquivo_continua_pendente(cenario):
+    pendente = _stage_trancado(cenario)
+    with pytest.raises(ValueError, match="Senha do PDF incorreta"):
+        desbloquear(cenario["usuario"], pendente.id, "00000")
+    pendente.refresh_from_db()
+    assert pendente.password_required
+
+
+@pytest.mark.django_db
+def test_senha_certa_abre_detecta_a_conta_e_importa(cenario, settings):
+    pendente = _stage_trancado(cenario)
+    desbloquear(cenario["usuario"], pendente.id, SENHA)
+    pendente.refresh_from_db()
+    assert not pendente.password_required
+    assert pendente.detected_account == cenario["conta_genial"]
+    guardado = (settings.MEDIA_ROOT / pendente.stored_path).read_bytes()
+    assert b"/Encrypt" not in guardado
+
+    resultados, erros, _ = resolve_pending_uploads(cenario["usuario"], {pendente.id: str(cenario["conta_genial"].id)})
+    assert erros == []
+    assert resultados == [("fatura.pdf", 1, 0)]
+    assert BankStatementLine.objects.filter(account=cenario["conta_genial"]).count() == 1
+
+
+@pytest.mark.django_db
+def test_pdf_trancado_nao_some_calado_ao_confirmar(cenario):
+    pendente = _stage_trancado(cenario)
+    resultados, erros, _ = resolve_pending_uploads(cenario["usuario"], {pendente.id: ""})
+    assert resultados == []
+    assert [nome for nome, _ in erros] == ["fatura.pdf"]
+    assert "senha" in erros[0][1]
+
+
+@pytest.mark.django_db
+def test_so_o_dono_do_upload_desbloqueia(cenario):
+    pendente = _stage_trancado(cenario)
+    outro = AppUser.objects.create_user(username="outro-lote", password="troca-esta-senha-no-primeiro-acesso")
+    with pytest.raises(ValueError):
+        desbloquear(outro, pendente.id, SENHA)
+
+
+@pytest.mark.django_db
+def test_tela_pede_a_senha_e_a_view_abre_o_pdf(cenario):
+    client = Client()
+    client.force_login(cenario["usuario"])
+    pendente = _stage_trancado(cenario)
+
+    tela = client.get("/banking/imports/confirm/").content.decode()
+    assert f'form="desbloquear-{pendente.id}"' in tela
+    assert f'name="account_{pendente.id}"' not in tela
+
+    resposta = client.post(f"/banking/imports/confirm/{pendente.id}/unlock/", {"senha": SENHA})
+    assert resposta.status_code == 302
+    assert resposta["Location"] == "/banking/imports/confirm/"
+    pendente.refresh_from_db()
+    assert pendente.detected_account == cenario["conta_genial"]
+    tela = client.get("/banking/imports/confirm/").content.decode()
+    assert f'name="account_{pendente.id}"' in tela

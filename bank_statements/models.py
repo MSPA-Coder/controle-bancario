@@ -151,6 +151,9 @@ class PendingStatementUpload(models.Model):
     )
     detected_label = models.CharField(max_length=255, blank=True)
     detection_error = models.TextField(blank=True)
+    # PDF trancado: a detecção espera a senha (`pending_imports.desbloquear`),
+    # que regrava o arquivo sem a proteção. A senha em si nunca é guardada.
+    password_required = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

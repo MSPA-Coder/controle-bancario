@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-13 10:15-0300\n"
+"POT-Creation-Date: 2026-10-17 07:31-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -498,11 +498,11 @@ msgstr[1] "OFX exceeds the limit of %(n)s transactions."
 msgid "Arquivo OFX não contém transações válidas."
 msgstr "OFX file contains no valid transactions."
 
-#: bank_statements/adapters.py
+#: bank_statements/adapters.py bank_statements/pdf_senha.py
 msgid "Suporte a extrato em PDF indisponível no momento (dependência não instalada)."
 msgstr "PDF statement support is currently unavailable (dependency not installed)."
 
-#: bank_statements/adapters.py
+#: bank_statements/adapters.py bank_statements/pdf_senha.py
 msgid "Não foi possível ler o PDF do extrato."
 msgstr "Could not read the statement PDF."
 
@@ -1036,6 +1036,14 @@ msgstr "Skipped"
 msgid "Esta importação é de um cartão de crédito: veja em Faturas."
 msgstr "This import is from a credit card: see it under Card statements."
 
+#: bank_statements/pdf_senha.py
+msgid "Informe a senha do PDF."
+msgstr "Enter the PDF password."
+
+#: bank_statements/pdf_senha.py
+msgid "Senha do PDF incorreta."
+msgstr "Incorrect PDF password."
+
 #: bank_statements/pending_imports.py
 msgid "Fatura C6"
 msgstr "C6 card statement"
@@ -1069,6 +1077,14 @@ msgstr "Bank statement CSV"
 #: bank_statements/pending_imports.py
 msgid "Tipo de arquivo não permitido para importação."
 msgstr "File type not allowed for import."
+
+#: bank_statements/pending_imports.py
+msgid "Importação pendente não encontrada."
+msgstr "Pending import not found."
+
+#: bank_statements/pending_imports.py
+msgid "PDF protegido por senha não foi importado: desbloqueie o arquivo antes de confirmar."
+msgstr "Password-protected PDF was not imported: unlock the file before confirming."
 
 #: bank_statements/reclassificacao.py
 msgid "Escolha a categoria de destino (receita ou despesa)."
@@ -1360,6 +1376,11 @@ msgstr "Select at least one file to import."
 #: bank_statements/views.py
 msgid "Nenhuma importação pendente de confirmação."
 msgstr "No import is pending confirmation."
+
+#: bank_statements/views.py
+#, python-format
+msgid "%(nome)s: PDF aberto."
+msgstr "%(nome)s: PDF opened."
 
 #: bank_statements/views.py
 #, python-format
@@ -3812,12 +3833,33 @@ msgid "Detectado"
 msgstr "Detected"
 
 #: templates/banking/pending_imports_confirm.html
+msgid "PDF protegido por senha"
+msgstr "Password-protected PDF"
+
+#: templates/banking/pending_imports_confirm.html
 msgid "Não identificado"
 msgstr "Not identified"
 
 #: templates/banking/pending_imports_confirm.html
 msgid "Será descartado"
 msgstr "Will be discarded"
+
+#: templates/banking/pending_imports_confirm.html
+msgid "Senha do PDF"
+msgstr "PDF password"
+
+#: templates/banking/pending_imports_confirm.html
+#, python-format
+msgid "Senha do PDF %(arquivo)s"
+msgstr "Password for PDF %(arquivo)s"
+
+#: templates/banking/pending_imports_confirm.html
+msgid "Abrir"
+msgstr "Open"
+
+#: templates/banking/pending_imports_confirm.html
+msgid "A senha só é usada para abrir o arquivo e não é guardada."
+msgstr "The password is only used to open the file and is not stored."
 
 #: templates/banking/pending_imports_confirm.html
 #, python-format

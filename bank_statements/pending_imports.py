@@ -7,6 +7,10 @@ a conta de cada arquivo na tela seguinte, chama `import_statement_file` -
 exatamente a mesma função que o formulário de um arquivo só sempre chamou,
 sem nenhuma mudança nela.
 
+PDF protegido por senha fica pendente sem detecção (`password_required`) até
+o usuário digitar a senha na tela de confirmação (`desbloquear`, ver
+`pdf_senha`).
+
 Upload é superfície hostil, então a validação segue a mesma disciplina de
 `bank_statements/attachments.py`: extensão permitida, tamanho limitado (reusa
 `max_statement_size_bytes`/`read_statement_upload`, os mesmos limites que já
@@ -40,6 +44,7 @@ from .adapters import (
 )
 from .fatura_csv import FORMATO_C6, FORMATO_XP, formato_da_fatura
 from .models import BankStatementImport, PendingStatementUpload
+from .pdf_senha import pede_senha, sem_senha
 from .services import accounts_for_import_form, import_statement_file
 
 ALLOWED_UPLOAD_EXTENSIONS = {".csv", ".ofx", ".ofc", ".qfx", ".pdf"}
@@ -87,6 +92,10 @@ def _unlink_pending_file(path: Path) -> None:
     candidate.unlink(missing_ok=True)
 
 
+def _eh_pdf(filename: str, content_type: str) -> bool:
+    return (filename or "").lower().endswith(".pdf") or "pdf" in (content_type or "").lower()
+
+
 def _account_lookup(user) -> dict[str, list[FinancialAccount]]:
     """`statement_identifier` só-dígitos -> contas que o têm, entre as que
     `user` pode escolher como destino de importação."""
@@ -129,7 +138,7 @@ def detect_account(
     lowered_type = (content_type or "").lower()
     file_like = SimpleUploadedFile(filename or "extrato", raw, content_type=content_type or "")
 
-    if lowered_name.endswith(".pdf") or "pdf" in lowered_type:
+    if _eh_pdf(filename, content_type):
         try:
             text = extract_pdf_text(raw)
         except ValueError as exc:
@@ -229,7 +238,22 @@ def stage_uploaded_files(user, files: list[UploadedFile]) -> list[PendingStateme
         with path.open("wb") as destination:
             destination.write(raw)
 
+        content_type = getattr(uploaded_file, "content_type", "") or ""
         try:
+            if _eh_pdf(original, content_type) and pede_senha(raw):
+                # A detecção espera a senha: ver `desbloquear`.
+                staged.append(
+                    PendingStatementUpload.objects.create(
+                        uploaded_by=user,
+                        original_filename=original,
+                        stored_filename=stored,
+                        stored_path=str(Path("pending_imports") / stored),
+                        mime_type=content_type or None,
+                        file_size=len(raw),
+                        password_required=True,
+                    )
+                )
+                continue
             account, label, error = detect_account(
                 user,
                 filename=original,
@@ -260,6 +284,34 @@ def pending_uploads_for_user(user):
     return PendingStatementUpload.objects.filter(uploaded_by=user).select_related(
         "detected_account__owner", "detected_account__institution"
     )
+
+
+def desbloquear(user, pending_id, senha: str) -> PendingStatementUpload:
+    """Abre o PDF pendente com a senha, regrava-o sem a proteção e detecta a conta.
+
+    A senha só abre o arquivo nesta chamada; o que fica guardado é o PDF já
+    aberto, que some com o resto da importação pendente depois da confirmação.
+    `ValueError` com a mensagem para o usuário quando a senha não serve."""
+    try:
+        upload = PendingStatementUpload.objects.get(id=pending_id, uploaded_by=user, password_required=True)
+    except (PendingStatementUpload.DoesNotExist, ValueError, TypeError) as exc:
+        raise ValueError(gettext("Importação pendente não encontrada.")) from exc
+    path = _pending_removal_path(upload)
+    aberto = sem_senha(path.read_bytes(), senha)
+    account, label, error = detect_account(
+        user, filename=upload.original_filename, content_type=upload.mime_type or "", raw=aberto
+    )
+    with path.open("wb") as destination:
+        destination.write(aberto)
+    upload.password_required = False
+    upload.file_size = len(aberto)
+    upload.detected_account = account
+    upload.detected_label = label
+    upload.detection_error = error
+    upload.save(update_fields=[
+        "password_required", "file_size", "detected_account", "detected_label", "detection_error",
+    ])
+    return upload
 
 
 def _delete_pending(upload: PendingStatementUpload) -> None:
@@ -295,6 +347,15 @@ def resolve_pending_uploads(
 
         if upload.detection_error:
             erros.append((upload.original_filename, gettext(upload.detection_error)))
+            _delete_pending(upload)
+            continue
+
+        # Antes do "não importar": o PDF trancado não tem seletor de conta, e
+        # descartá-lo calado esconderia que ele ficou de fora.
+        if upload.password_required:
+            erros.append((upload.original_filename, gettext(
+                "PDF protegido por senha não foi importado: desbloqueie o arquivo antes de confirmar."
+            )))
             _delete_pending(upload)
             continue
 
