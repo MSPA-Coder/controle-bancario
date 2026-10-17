@@ -41,8 +41,8 @@ from core.domain.finance import (
 )
 from core.domain.identity import USER_TYPE_ADMINISTRATOR
 from reports.services import VIEW_REALIZED, decimal_balance_before
-from transactions.models import CashFlowCategory, CashFlowEntry
-from transactions.services import TransactionRequest, create_transaction_batch
+from transactions.models import AccountMonthClose, CashFlowCategory, CashFlowEntry
+from transactions.services import TransactionRequest, close_month, create_transaction_batch
 
 CABECALHO_C6 = (
     "Data de Compra;Nome no Cartão;Final do Cartão;Categoria;Descrição;Parcela;"
@@ -504,3 +504,79 @@ def test_parcelado_pode_comecar_no_meio(cenario):
     assert [(e.current_installment, e.installments, e.due_date) for e in criadas] == [
         (10, 12, date(2026, 3, 10)), (11, 12, date(2026, 4, 10)), (12, 12, date(2026, 5, 10)),
     ]
+
+
+# --- Fatura que atravessa mês fechado -------------------------------------------
+#
+# A fatura de abril traz compras de março; março já pode estar fechado no
+# cartão. Sem autorização, nada é gravado; com ela, março (e o que estiver
+# fechado depois dele) é reaberto e fechado de novo com o saldo da fatura.
+
+FATURA_ABRIL_COM_MARCO = _c6(
+    "28/03/2026;MARIANO S;1111;Padaria;PADARIA DE MARCO;Única;0;0;60.00",
+    "06/04/2026;CLAUDIA S;2222;Farmácia;FARMACIA;Única;0;0;40.00",
+)
+
+
+def _fechar(c, ano, mes):
+    close_month(c["cartao"], ano, mes, None, c["usuario"])
+    return AccountMonthClose.objects.get(account=c["cartao"], year=ano, month=mes, active=True).closing_balance
+
+
+@pytest.mark.django_db
+def test_fatura_com_compra_em_mes_fechado_pede_autorizacao_e_nao_grava_sem_ela(cenario):
+    _fechar(cenario, 2026, 3)
+    lote, _, _ = _importar(cenario, FATURA_ABRIL_COM_MARCO)
+    novas = list(fatura.linhas_novas(lote))
+    assert [(f.year, f.month) for f in fatura.meses_fechados(cenario["cartao"], fatura.planejar(cenario["cartao"], novas))] == [(2026, 3)]
+
+    with pytest.raises(ValueError, match="03/2026"):
+        fatura.processar(cenario["usuario"], lote.id, {})
+    assert not CashFlowEntry.objects.filter(account=cenario["cartao"]).exists()
+
+
+@pytest.mark.django_db
+def test_com_autorizacao_reabre_lanca_e_fecha_com_o_saldo_da_fatura(cenario):
+    marco = _fechar(cenario, 2026, 3)
+    _fechar(cenario, 2026, 4)
+    lote, _, _ = _importar(cenario, FATURA_ABRIL_COM_MARCO)
+
+    fatura.processar(cenario["usuario"], lote.id, {}, autorizar_meses=True)
+
+    fechamentos = {
+        f.month: f.closing_balance
+        for f in AccountMonthClose.objects.filter(account=cenario["cartao"], year=2026, active=True)
+    }
+    # Março ganha a compra de 28/03; abril, que vem depois e é acumulado, também a de 06/04.
+    assert fechamentos == {3: marco - Decimal("60.00"), 4: marco - Decimal("100.00")}
+    assert not fatura.linhas_novas(lote).exists()
+
+
+@pytest.mark.django_db
+def test_tela_da_fatura_mostra_o_mes_fechado_e_exige_a_autorizacao(cenario):
+    _fechar(cenario, 2026, 3)
+    lote, _, _ = _importar(cenario, FATURA_ABRIL_COM_MARCO)
+    client = Client()
+    client.force_login(cenario["usuario"])
+
+    tela = client.get(f"/banking/import/{lote.id}/fatura/").content.decode()
+    assert 'name="autorizar_meses"' in tela
+
+    client.post(f"/banking/import/{lote.id}/fatura/processar/", {})
+    assert fatura.linhas_novas(lote).exists()
+    client.post(f"/banking/import/{lote.id}/fatura/processar/", {"autorizar_meses": "1"})
+    assert not fatura.linhas_novas(lote).exists()
+
+
+@pytest.mark.django_db
+def test_mes_fechado_depois_sem_compra_na_fatura_tambem_recebe_o_novo_saldo(cenario):
+    # O saldo de fechamento é acumulado: mudar março muda o de abril, mesmo
+    # que a fatura não traga nada de abril.
+    marco = _fechar(cenario, 2026, 3)
+    _fechar(cenario, 2026, 4)
+    lote, _, _ = _importar(cenario, _c6("28/03/2026;MARIANO S;1111;Padaria;PADARIA DE MARCO;Única;0;0;60.00"))
+
+    fatura.processar(cenario["usuario"], lote.id, {}, autorizar_meses=True)
+
+    abril = AccountMonthClose.objects.get(account=cenario["cartao"], year=2026, month=4, active=True)
+    assert abril.closing_balance == marco - Decimal("60.00")

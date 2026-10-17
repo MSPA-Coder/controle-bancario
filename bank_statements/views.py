@@ -19,6 +19,8 @@ from core.currency_filter import currency_q
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
 from core.services import audit_request_context
+from core.templatetags.money_filters import money_signed
+from transactions.models import AccountMonthClose
 
 from . import (
     extrato,
@@ -236,6 +238,7 @@ def fatura_view(request, batch_id):
         "processadas": lote.lines.exclude(status="novo").count(),
         "categorias": list(fatura.categorias_gerenciais()),
         "projetadas": fatura_projetada.planejar(lote.account),
+        "meses_fechados": fatura.meses_fechados(lote.account, planos),
     }
     return render(request, 'banking/fatura.html', context)
 
@@ -328,9 +331,19 @@ def processar_fatura_view(request, batch_id):
         if chave.startswith('categoria_')
     }
     try:
+        conta = fatura.lote_de_fatura(request.user, batch_id).account
+        antes = {(f.year, f.month): f.closing_balance for f in AccountMonthClose.objects.filter(account=conta, active=True)}
         contagem = fatura.processar(
-            request.user, batch_id, escolhas, audit_context=audit_request_context(request)
+            request.user, batch_id, escolhas, audit_context=audit_request_context(request),
+            autorizar_meses=request.POST.get('autorizar_meses') == '1',
         )
+        for f in AccountMonthClose.objects.filter(account=conta, active=True).order_by("year", "month"):
+            anterior = antes.get((f.year, f.month))
+            if anterior is not None and anterior != f.closing_balance:
+                messages.info(request, gettext(
+                    "%(mes)02d/%(ano)s reaberto e fechado de novo: saldo de %(antes)s para %(depois)s."
+                ) % {"mes": f.month, "ano": f.year, "antes": money_signed(anterior, conta.currency),
+                     "depois": money_signed(f.closing_balance, conta.currency)})
         pendentes = contagem.get(fatura.PAGAMENTO_SEM_PAR, 0)
         feitas = sum(contagem.values()) - pendentes
         texto = ngettext(

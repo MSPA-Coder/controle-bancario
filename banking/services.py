@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, ProtectedError
 from django.utils.timezone import localdate
 from django.utils.translation import gettext
@@ -66,14 +66,23 @@ def create_institution(name: str, institution_type: str) -> FinancialInstitution
         raise ValueError(gettext("Já existe uma instituição com esse nome.")) from exc
 
 
-def update_institution(institution: FinancialInstitution, name: str, institution_type: str) -> FinancialInstitution:
+def update_institution(
+    institution: FinancialInstitution, name: str, institution_type: str, *, user=None
+) -> FinancialInstitution:
+    from transactions.rotulos import atualizar_rotulos
+
     clean_name, clean_type = _clean_institution_fields(name, institution_type)
     if FinancialInstitution.objects.filter(institution_name__iexact=clean_name).exclude(id=institution.id).exists():
         raise ValueError(gettext("Já existe uma instituição com esse nome."))
+    renomeada = institution.institution_name != clean_name
     institution.institution_name = clean_name
     institution.institution_type = clean_type
     try:
-        institution.save(update_fields=["institution_name", "institution_type", "updated_at"])
+        with transaction.atomic():
+            institution.save(update_fields=["institution_name", "institution_type", "updated_at"])
+            if renomeada:
+                # O nome da instituição está no rótulo das transferências das contas dela.
+                atualizar_rotulos(institution.accounts.values_list("id", flat=True), user=user)
     except IntegrityError as exc:
         raise ValueError(gettext("Já existe uma instituição com esse nome.")) from exc
     return institution
@@ -527,6 +536,9 @@ def update_account(
         owner_id=clean_owner_id, currency=clean_currency, account_id=account.id,
     )
 
+    from transactions.rotulos import atualizar_rotulos, rotulo_da_conta
+
+    rotulo_anterior = rotulo_da_conta(account)
     account.owner_id = clean_owner_id
     account.institution_id = clean_institution_id
     account.account_name = clean_name
@@ -538,10 +550,16 @@ def update_account(
     account.movement_account = movement
     for field, value in card.items():
         setattr(account, field, value)
-    account.save(update_fields=[
-        "owner", "institution", "account_name", "initial_balance",
-        "currency", "initial_balance_date", "statement_identifier", "purpose", "movement_account", *card, "updated_at",
-    ])
+    with transaction.atomic():
+        account.save(update_fields=[
+            "owner", "institution", "account_name", "initial_balance",
+            "currency", "initial_balance_date", "statement_identifier", "purpose", "movement_account", *card,
+            "updated_at",
+        ])
+        # Releitura: `owner`/`institution` em cache ainda seriam os de antes da troca.
+        account.refresh_from_db(fields=["owner", "institution"])
+        if rotulo_da_conta(account) != rotulo_anterior:
+            atualizar_rotulos([account.id], user=user)
     return account
 
 

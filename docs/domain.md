@@ -364,6 +364,22 @@ o IOF. A data de cada linha é a da liquidação, quando o saldo muda; a coluna 
 saldo confere linha a linha a partir do saldo inicial do resumo, e o saldo final
 fecha a cadeia. Formato reconhecido por "www.avenue.us"; conta por "Nº conta".
 
+A fatura de cartão quase sempre atravessa dois meses: a de outubro traz as
+compras de meados de setembro em diante, e setembro pode já estar fechado no
+cartão. O mês do cartão só fica completo quando chega a fatura seguinte. A
+prévia mostra os meses fechados que a fatura toca e, com a autorização do
+usuário, o processamento os reabre e fecha de novo com o saldo que a fatura
+deixou. Entram também os meses fechados depois deles, porque o saldo de
+fechamento é acumulado. Aqui o saldo de fechamento muda de propósito: a fatura é
+a verdade sobre o mês. Reabertura e novo fechamento ficam na auditoria.
+
+O rótulo "Conta Origem: …" / "Conta Destino: …" de cada ponta de transferência
+acompanha o cadastro: renomear titular, instituição ou conta o refaz nas pontas
+que apontam para ela, também em mês fechado, porque é o nome da conta e não um
+fato do período (`transactions/rotulos.py`). Descrição digitada pelo usuário
+numa transferência não muda. O comando `refazer_rotulos_de_transferencia`
+corrige o que ficou para trás.
+
 PDF protegido por senha (fatura e extrato costumam chegar assim) fica pendente
 na tela de confirmação, sem detecção de conta, até o usuário digitar a senha
 (`bank_statements/pdf_senha.py`). Com a senha, o arquivo pendente é regravado

@@ -25,6 +25,11 @@ O que cada linha vira:
   valor e até 3 dias de distância. É conciliada em vez de duplicada;
 - **compra** e **estorno**: criam a despesa ou a receita, já realizadas.
 
+Mês fechado: a fatura de um mês traz compras do mês anterior, que pode já estar
+fechado no cartão. A prévia mostra esses meses e o processamento, com a
+autorização do usuário, os reabre e fecha de novo com o saldo que a fatura
+deixou (ver `meses_fechados`).
+
 A categoria sugerida vem, nesta ordem, da categoria mais frequente que o usuário
 deu à mesma loja em qualquer conta, sem contar "Outros" (a descrição sem
 portador, dólar e número de pedido; ver `reclassificacao.chave_da_descricao`),
@@ -43,6 +48,7 @@ from django.db import transaction as db_transaction
 from django.db.models import Q
 from django.utils.translation import gettext
 
+from accounts.services import has_function_permission
 from banking.models import FinancialAccount
 from banking.services import can_access_account
 from core import regional
@@ -57,12 +63,14 @@ from core.domain.finance import (
     STATUS_PROJECTED,
     STATUS_REALIZED,
 )
-from transactions.models import CashFlowCategory, CashFlowEntry
+from transactions.models import AccountMonthClose, CashFlowCategory, CashFlowEntry
 from transactions.services import (
     TransactionRequest,
     assert_entry_period_open,
+    close_month,
     create_transaction_batch,
     realize_transaction,
+    reopen_month,
 )
 
 from .models import (
@@ -367,11 +375,60 @@ def _criar_parcelas(user, conta, linha, categoria, *, primeira: int, vencimento:
     )
 
 
-def processar(user, batch_id, escolhas: dict, audit_context=None) -> dict[str, int]:
+def _meses_tocados(planos) -> set[tuple[int, int]]:
+    """Os meses em que o processamento cria, realiza ou concilia lançamento."""
+    from reports.services import add_months
+
+    datas: list[date] = []
+    for plano in planos:
+        linha = plano.linha
+        if plano.acao == SALDO_INICIAL:
+            if plano.futuras_a_partir_de:
+                restantes = linha.installment_total - plano.futuras_a_partir_de + 1
+                datas += [add_months(plano.futuras_vencimento, k) for k in range(restantes)]
+            continue
+        if plano.acao == PAGAMENTO_SEM_PAR:
+            continue
+        datas.append(linha.statement_date)
+        if plano.lancamento is not None:
+            datas += [d for d in (plano.lancamento.due_date, plano.lancamento.realized_date) if d]
+        if plano.acao == PARCELADO_NOVO:
+            restantes = linha.installment_total - linha.installment_current + 1
+            datas += [add_months(linha.statement_date, k) for k in range(restantes)]
+    return {(d.year, d.month) for d in datas}
+
+
+def meses_fechados(conta: FinancialAccount, planos) -> list[AccountMonthClose]:
+    """Os fechamentos do cartão que o processamento precisa reabrir.
+
+    A fatura quase sempre atravessa dois meses: a de outubro traz as compras de
+    meados de setembro em diante, e setembro pode já estar fechado. O mês só
+    fica completo, no cartão, quando chega a fatura seguinte. Reabre-se o
+    primeiro mês fechado que a fatura toca e todos os fechados depois dele,
+    porque o saldo de fechamento é acumulado."""
+    tocados = _meses_tocados(planos)
+    fechados = list(AccountMonthClose.objects.filter(account=conta, active=True).order_by("year", "month"))
+    atingidos = [(f.year, f.month) for f in fechados if (f.year, f.month) in tocados]
+    if not atingidos:
+        return []
+    primeiro = min(atingidos)
+    return [f for f in fechados if (f.year, f.month) >= primeiro]
+
+
+MOTIVO_DA_REABERTURA = "Fatura do cartão com compras em mês fechado"
+
+
+def processar(user, batch_id, escolhas: dict, audit_context=None, *, autorizar_meses: bool = False) -> dict[str, int]:
     """Aplica o plano às linhas novas do lote, tudo ou nada.
 
     `escolhas` mapeia o id da linha para o id da categoria escolhida na prévia;
     linha sem escolha usa a sugerida. Devolve a contagem por ação.
+
+    Quando a fatura toca mês fechado do cartão (ver `meses_fechados`), só
+    processa com `autorizar_meses`: reabre esses meses, grava e fecha de novo
+    com o saldo que a fatura deixou. O saldo de fechamento muda, de propósito:
+    a fatura é a verdade sobre o mês, e o fechamento anterior não tinha as
+    compras que só ela trouxe.
     """
     lote = lote_de_fatura(user, batch_id, "update")
     conta = lote.account
@@ -383,7 +440,20 @@ def processar(user, batch_id, escolhas: dict, audit_context=None) -> dict[str, i
         linhas = list(linhas_novas(lote).select_for_update())
         if not linhas:
             raise ValueError(gettext("Esta fatura não tem linhas pendentes."))
-        for plano in planejar(conta, linhas):
+        planos = planejar(conta, linhas)
+        fechamentos = meses_fechados(conta, planos)
+        if fechamentos:
+            if not autorizar_meses:
+                raise ValueError(gettext(
+                    "A fatura tem lançamentos em mês fechado do cartão (%(meses)s): autorize a reabertura "
+                    "e o novo fechamento para processá-la."
+                ) % {"meses": ", ".join(f"{f.month:02d}/{f.year}" for f in fechamentos)})
+            if not has_function_permission(user, "settings.monthly_close.manage"):
+                raise ValueError(gettext("Reabrir mês fechado exige a permissão de fechamento mensal."))
+            for fechamento in fechamentos:
+                reopen_month(conta, fechamento.year, fechamento.month, MOTIVO_DA_REABERTURA, user,
+                             audit_context=audit_context)
+        for plano in planos:
             linha = plano.linha
             if plano.acao == SALDO_INICIAL:
                 if plano.futuras_a_partir_de:
@@ -421,4 +491,7 @@ def processar(user, batch_id, escolhas: dict, audit_context=None) -> dict[str, i
         from .fatura_projetada import atualizar
 
         atualizar(conta)
+        for fechamento in fechamentos:
+            # `None`: o saldo é calculado depois de trancar a conta, já com a fatura.
+            close_month(conta, fechamento.year, fechamento.month, None, user, audit_context=audit_context)
     return contagem
