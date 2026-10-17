@@ -61,6 +61,17 @@ def money_signed(value, currency=None) -> str:
 
 
 @register.filter
+def balance_signed(value, currency=None) -> str:
+    """Saldo com sinal, mostrando o zero: saldo zero é informação, movimento zero não.
+
+    O zero sai sem sinal (`moeda_com_sinal` o escreveria "- R$ 0,00")."""
+    valor = _to_decimal(value)
+    if not valor:
+        return _regional(moeda(valor, simbolo=_symbol(currency)))
+    return _regional(moeda_com_sinal(valor, simbolo=_symbol(currency)))
+
+
+@register.filter
 def currency_symbol(currency) -> str:
     """O símbolo sozinho, para rótulos de formulário.
 

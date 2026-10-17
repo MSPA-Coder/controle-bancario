@@ -19,7 +19,7 @@ from core.currency_filter import currency_q
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
 from core.services import audit_request_context
-from core.templatetags.money_filters import money_signed
+from core.templatetags.money_filters import balance_signed
 from transactions.models import AccountMonthClose
 
 from . import (
@@ -342,8 +342,8 @@ def processar_fatura_view(request, batch_id):
             if anterior is not None and anterior != f.closing_balance:
                 messages.info(request, gettext(
                     "%(mes)02d/%(ano)s reaberto e fechado de novo: saldo de %(antes)s para %(depois)s."
-                ) % {"mes": f.month, "ano": f.year, "antes": money_signed(anterior, conta.currency),
-                     "depois": money_signed(f.closing_balance, conta.currency)})
+                ) % {"mes": f.month, "ano": f.year, "antes": balance_signed(anterior, conta.currency),
+                     "depois": balance_signed(f.closing_balance, conta.currency)})
         pendentes = contagem.get(fatura.PAGAMENTO_SEM_PAR, 0)
         feitas = sum(contagem.values()) - pendentes
         texto = ngettext(
