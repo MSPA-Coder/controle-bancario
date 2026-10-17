@@ -38,6 +38,7 @@ from bank_statements.models import LINE_STATUS_RECONCILED, BankStatementImport, 
 from bank_statements.reconciliation import reconciliation_view_data
 from banking.models import FinancialAccount, FinancialInstitution
 from core.domain.finance import (
+    ACCOUNT_KIND_CREDIT_CARD,
     ENTRY_TYPE_EXPENSE,
     ENTRY_TYPE_INCOME,
     STATUS_PROJECTED,
@@ -275,20 +276,49 @@ def test_medicao_refaz_o_passado_sem_olhar_o_futuro(mundo):
     assert medicao.taxa(casos.values()) == medicao.Taxa(2, 1)
 
 
-def test_suspeito_e_a_compra_que_destoa_da_mesma_loja(mundo):
+def _nascido_da_linha(user, conta, categoria, texto, dia, *, bank_category=""):
+    """Lançamento criado a partir da linha (a linha existia antes dele)."""
+    linha = _linha(conta, texto, dia, "-10.00")
+    if bank_category:
+        BankStatementLine.objects.filter(id=linha.id).update(bank_category=bank_category)
+    entrada = _lancar(user, conta, categoria, texto, dia)
+    BankStatementLine.objects.filter(id=linha.id).update(status=LINE_STATUS_RECONCILED, matched_entry=entrada)
+    return entrada
+
+
+def test_suspeito_e_o_lancamento_do_extrato_que_destoa_da_mesma_loja(mundo):
     user, contas, cat = mundo
     conta = contas["corrente"]
-    for dia in (1, 2, 3):
+    for dia in range(1, 8):  # digitados à mão: contam para a maioria da loja
         _lancar(user, conta, cat["Lazer"], "ARMARINHO ARTE", date(2026, 8, dia))
-    destoa = _lancar(user, conta, cat["Supermercado"], "ARMARINHO ARTE", date(2026, 8, 4))
+    destoa = _nascido_da_linha(user, conta, cat["Supermercado"], "ARMARINHO ARTE", date(2026, 8, 10))
+    # Digitado à mão, com ou sem linha conciliada depois: a categoria foi escolhida
+    # junto com o texto, não é suspeito.
+    _lancar(user, conta, cat["Supermercado"], "ARMARINHO ARTE", date(2026, 8, 11))
+    ja_existia = _lancar(user, conta, cat["Supermercado"], "ARMARINHO ARTE", date(2026, 8, 12))
+    _linha(conta, "ARMARINHO ARTE", date(2026, 8, 12), "-10.00", lancamento=ja_existia)
     for dia in (1, 2, 3):  # intermediador: vender de tudo não é destoar
-        _lancar(user, conta, cat["Lazer"], "MERCADOLIVRE*LOJA", date(2026, 8, dia))
-    _lancar(user, conta, cat["Alimentação"], "MERCADOLIVRE*LOJA", date(2026, 8, 4))
+        _nascido_da_linha(user, conta, cat["Lazer"], "MERCADOLIVRE*LOJA", date(2026, 8, dia))
+    _nascido_da_linha(user, conta, cat["Alimentação"], "MERCADOLIVRE*LOJA", date(2026, 8, 4))
 
     achados = medicao.suspeitos()
-    assert [(s.lancamento.id, s.esperada, s.iguais, s.total, s.motivo) for s in achados] == [
-        (destoa.id, cat["Lazer"], 3, 4, "loja")
-    ]
+    assert [(s.lancamento.id, s.esperada, s.iguais, s.total) for s in achados] == [(destoa.id, cat["Lazer"], 7, 10)]
+
+
+def test_destoar_so_da_categoria_do_banco_nao_e_suspeito(mundo):
+    user, _, cat = mundo
+    banco = FinancialInstitution.objects.create(institution_name="C6 cartão", institution_type="Banco")
+    titular = AccountOwner.objects.get(name="Titular")
+    cartao = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Carbon", account_kind=ACCOUNT_KIND_CREDIT_CARD,
+        card_closing_day=19, card_due_day=25,
+    )
+    for dia in range(1, 11):
+        _nascido_da_linha(user, cartao, cat["Lazer"], f"CINEMA {chr(64 + dia)}", date(2026, 8, dia),
+                          bank_category="Entretenimento")
+    # Uma escolha mais específica que a do banco, numa loja sem outras compras.
+    _nascido_da_linha(user, cartao, cat["Alimentação"], "LASTPASS", date(2026, 8, 20), bank_category="Entretenimento")
+    assert medicao.suspeitos() == []
 
 
 def test_comando_mede_e_desfaz_o_que_a_medicao_gravar(mundo, monkeypatch):

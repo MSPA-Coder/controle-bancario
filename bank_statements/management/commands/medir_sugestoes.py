@@ -5,7 +5,8 @@
 
 Cada linha conciliada recebe a sugestão que teria tido com o histórico de antes
 do mês dela; o relatório mostra o acerto, o acerto por nível de confiança,
-quanto o usuário confere e os lançamentos suspeitos de classificação errada.
+quanto o usuário confere e os lançamentos nascidos do extrato que destoam da
+mesma loja (suspeitos de classificação errada).
 Só lê: a medição roda numa transação desfeita no fim.
 """
 from __future__ import annotations
@@ -62,12 +63,8 @@ class Command(BaseCommand):
         escrever(f"Suspeitos de classificação errada ({len(achados)}; corrija em Bancos > Reclassificação):")
         for suspeito in achados:
             entrada = suspeito.lancamento
-            if suspeito.motivo == "loja":
-                porque = (f"a mesma loja é \"{suspeito.esperada.category_name}\" "
-                          f"em {suspeito.iguais} de {suspeito.total} compras")
-            else:
-                porque = (f"\"{suspeito.bank_category}\" é \"{suspeito.esperada.category_name}\" "
-                          f"em {suspeito.iguais} de {suspeito.total} linhas")
+            porque = (f"a mesma loja é \"{suspeito.esperada.category_name}\" "
+                      f"em {suspeito.iguais} de {suspeito.total} compras")
             escrever(f"  #{entrada.id} {entrada.due_date} {suspeito.texto[:45]}: "
                      f"\"{entrada.category.category_name}\"; {porque}")
 

@@ -12,9 +12,18 @@ Duas populações: todas as linhas avaliadas, e as que precisaram de lançamento
 novo (o lançamento nasceu depois da linha). A segunda é onde a sugestão é usada
 de verdade; na primeira, a linha casou com um lançamento que já existia.
 
-Também lista os **suspeitos**: lançamentos cuja categoria contradiz a da mesma
-loja ou a da categoria do banco. Eles ensinam errado as próximas sugestões e se
-corrigem em Bancos > Reclassificação. Nada aqui grava.
+Também lista os **suspeitos**: lançamentos que nasceram de uma linha de extrato
+e cuja categoria contradiz a da mesma loja. Eles ensinam errado as próximas
+sugestões e se corrigem em Bancos > Reclassificação. Nada aqui grava.
+
+Ficaram de fora, pela primeira lista medida na produção (17/10/2026):
+
+- **destoar da categoria do banco**. Dos 10 suspeitos, 5 vinham só daí, e os 5
+  eram escolhas do usuário mais específicas que a do banco (seguro-viagem em
+  Viagem, Wellhub em Bem-estar, LastPass em trabalho): 0 acerto;
+- **lançamento digitado à mão**. A categoria foi escolhida junto com o texto, e a
+  chave, feita para o texto do banco, junta coisas diferentes no texto digitado
+  ("50% 13 Salário" vira "SALARIO"). Ele continua contando para a maioria da loja.
 """
 from __future__ import annotations
 
@@ -44,9 +53,6 @@ from .regras import Regras
 # minoria parecer erro, e não uma loja que vende duas coisas.
 _MINIMO_DA_LOJA = 3
 _MAIORIA_DA_LOJA = (7, 10)
-# Categoria do banco: mais base e mais folga, porque ela é mais grosseira.
-_MINIMO_DO_BANCO = 10
-_MAIORIA_DO_BANCO = (9, 10)
 
 
 @dataclass(frozen=True)
@@ -159,8 +165,6 @@ class Suspeito:
     esperada: CashFlowCategory
     iguais: int
     total: int
-    motivo: str  # "loja" ou "banco"
-    bank_category: str = ""
 
 
 def _maioria(contagem: Counter, total: int, numerador: int, denominador: int):
@@ -173,12 +177,18 @@ def _maioria(contagem: Counter, total: int, numerador: int, denominador: int):
 
 
 def suspeitos(*, limite: int = 30) -> list[Suspeito]:
-    """Lançamentos que destoam da mesma loja ou da categoria do banco."""
-    texto_do_banco = dict(
+    """Lançamentos nascidos de linha de extrato que destoam da mesma loja."""
+    texto_do_banco: dict[int, str] = {}
+    nasceu_da_linha: set[int] = set()
+    linhas = (
         BankStatementLine.objects.filter(status=LINE_STATUS_RECONCILED, matched_entry__isnull=False)
         .order_by("id")
-        .values_list("matched_entry_id", "description")
+        .values_list("matched_entry_id", "description", "created_at", "matched_entry__created_at")
     )
+    for entrada_id, texto, linha_criada, entrada_criada in linhas:
+        texto_do_banco.setdefault(entrada_id, texto)
+        if linha_criada is not None and entrada_criada is not None and entrada_criada >= linha_criada:
+            nasceu_da_linha.add(entrada_id)
     lancamentos = (
         CashFlowEntry.objects.filter(category__kind=CATEGORY_KIND_MANAGERIAL)
         .exclude(category__category_name__iexact=CATEGORIA_PADRAO)
@@ -194,7 +204,6 @@ def suspeitos(*, limite: int = 30) -> list[Suspeito]:
         )
         por_compra.setdefault(compra, entrada)
     categorias = {categoria.id: categoria for categoria in CashFlowCategory.objects.all()}
-    achados: list[Suspeito] = []
 
     por_loja: dict = defaultdict(list)
     for entrada in por_compra.values():
@@ -202,6 +211,7 @@ def suspeitos(*, limite: int = 30) -> list[Suspeito]:
         if eh_generica(texto) or eh_intermediador(texto):
             continue
         por_loja[(chave_da_linha(texto), entrada.entry_type)].append((entrada, texto))
+    achados: list[Suspeito] = []
     for membros in por_loja.values():
         if len(membros) < _MINIMO_DA_LOJA:
             continue
@@ -210,36 +220,7 @@ def suspeitos(*, limite: int = 30) -> list[Suspeito]:
         if esperada is None:
             continue
         for entrada, texto in membros:
-            if entrada.category_id != esperada:
-                achados.append(Suspeito(entrada, texto, categorias[esperada], iguais, len(membros), "loja"))
-
-    por_banco: dict = defaultdict(list)
-    linhas_do_cartao = (
-        BankStatementLine.objects.filter(
-            status=LINE_STATUS_RECONCILED,
-            matched_entry__category__kind=CATEGORY_KIND_MANAGERIAL,
-            account__account_kind="cartao_credito",
-        )
-        .exclude(bank_category="")
-        .exclude(matched_entry__category__category_name__iexact=CATEGORIA_PADRAO)
-        .select_related("matched_entry__category", "matched_entry__account")
-    )
-    ja = {suspeito.lancamento.id for suspeito in achados}
-    for linha in linhas_do_cartao:
-        por_banco[linha.bank_category].append(linha)
-    for bank_category, membros in por_banco.items():
-        if len(membros) < _MINIMO_DO_BANCO:
-            continue
-        contagem = Counter(linha.matched_entry.category_id for linha in membros)
-        esperada, iguais = _maioria(contagem, len(membros), *_MAIORIA_DO_BANCO)
-        if esperada is None:
-            continue
-        for linha in membros:
-            entrada = linha.matched_entry
-            if entrada.category_id != esperada and entrada.id not in ja:
-                ja.add(entrada.id)
-                achados.append(
-                    Suspeito(entrada, linha.description, categorias[esperada], iguais, len(membros), "banco", bank_category)
-                )
+            if entrada.category_id != esperada and entrada.id in nasceu_da_linha:
+                achados.append(Suspeito(entrada, texto, categorias[esperada], iguais, len(membros)))
     achados.sort(key=lambda suspeito: (suspeito.lancamento.due_date, suspeito.lancamento.id), reverse=True)
     return achados[:limite]
