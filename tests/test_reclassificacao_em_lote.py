@@ -44,6 +44,11 @@ from transactions.services import TransactionRequest, close_month, create_transa
         ("Farmácia São João 123", "FARMACIA SAO JOAO"),
         ("UBER* TRIP", "UBER TRIP"),
         ("PARC 02/10 LOJA X", "LOJA X"),
+        # Número colado no nome: sai o número, fica a loja (um bilhete por linha).
+        ("UNITED01647204721164 (US$ 34.00) · Mariano", "UNITED"),
+        ("30265583THIAGO · Claudia", "THIAGO"),
+        # Com outra palavra, a palavra com número sai inteira (código do papel).
+        ("Taxa de Remuneração Brraizacnpr6", "TAXA DE REMUNERACAO"),
     ],
 )
 def test_chave_tira_o_que_muda_de_uma_compra_para_outra(descricao, chave):

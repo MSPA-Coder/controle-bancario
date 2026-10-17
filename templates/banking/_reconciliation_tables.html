@@ -78,6 +78,9 @@
         </thead>
         <tbody>
         {% for line in lines %}
+            {% if line.confiavel %}{% ifchanged line.confiavel %}
+            <tr class="conciliacao-separador"><td colspan="9">{% trans "Sugestões seguras: candidato único, transferência pareada, regra ou categoria com confiança alta. Confira se quiser." %}</td></tr>
+            {% endifchanged %}{% endif %}
             <tr id="statement-line-{{ line.id }}" {% if target_line_id == line.id %}class="edit-row is-editing"{% endif %}>
                 <td>
                     {% if line.status == "novo" %}
@@ -88,7 +91,9 @@
                 <td>{{ line.account.owner.name }} / {{ line.account.institution.institution_name }} / {{ line.account.account_name }}</td>
                 <td>{{ line.description }}</td>
                 <td class="amount {{ line.amount|amount_class }}">{{ line.amount|money_signed:line.account.currency }}</td>
-                <td>{% if line.plano %}{{ line.plano.rotulo }}{% else %}<span class="empty-state">-</span>{% endif %}</td>
+                <td>{% if line.plano %}{{ line.plano.rotulo }}
+                    {% if line.plano.acao == "cria" and line.plano.sugestao %}<br>{% include "banking/_confianca.html" with sugestao=line.plano.sugestao %}{% endif %}
+                    {% else %}<span class="empty-state">-</span>{% endif %}</td>
                 <td>
                     {% if line.status == "novo" %}
                         {% if line.reconcile_candidates %}

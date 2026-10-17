@@ -227,11 +227,22 @@ Importações, na conta do cartão, e passa por duas etapas:
    - *compra já lançada* à mão (mesmo valor, até 3 dias), que é conciliada;
    - *compra* ou *estorno*, criados já realizados.
 
-A categoria sugerida vem da última compra com a mesma descrição no cartão,
-depois da categoria escolhida da última vez para a mesma categoria do banco
-(a prévia ensina as faturas seguintes), depois da categoria do banco quando ela
-tem o nome de uma categoria cadastrada, e por fim de "Outros"; a prévia deixa
-trocar cada uma. Uma fatura inteira anterior ao saldo inicial não lança nada, e
+A categoria sugerida segue a mesma ordem do extrato de conta (`classificacao.py`,
+ver "Plano do extrato de conta"): a mais frequente para a mesma descrição em
+qualquer conta, depois a categoria escolhida antes para a mesma categoria do banco
+(a prévia ensina as faturas seguintes), depois a categoria do banco quando ela tem
+o nome de uma categoria cadastrada, e por fim "Outros". A prévia organiza as
+linhas pelo nível de confiança (`fatura.organizar`):
+
+- primeiro, **para conferir**, as linhas sem confiança alta. As compras da mesma
+  loja, sinal e sugestão ficam juntas, e uma escolha vale para todas: os bilhetes
+  de uma viagem da United eram 25 linhas. Aberto o grupo, cada compra pode ficar
+  com outra categoria;
+- recolhidas no fim, as de confiança alta, já com a categoria e ainda editáveis;
+- e as que não pedem categoria (pagamento, parcela ou compra já lançada, saldo
+  inicial).
+
+Uma fatura inteira anterior ao saldo inicial não lança nada, e
 a prévia avisa isso em destaque: para importar histórico, a data do saldo
 inicial do cartão tem de ser anterior à primeira fatura. Quando o arquivo tem mais
 de um portador, o nome de quem comprou vai para a descrição.
@@ -244,7 +255,8 @@ vez; transferência e movimentação ficam de fora. A prévia mostra tudo antes 
 gravar:
 
 - **iguais** -- a mesma descrição depois de tirar portador, valor em dólar e
-  termos com número (`chave_da_descricao`) -- entram junto, já marcadas;
+  termos com número (`chave_da_descricao`; quando isso apagaria tudo, como em
+  "UNITED01647204721164", sai só o número) -- entram junto, já marcadas;
 - **parecidas** -- mesma primeira palavra, chave diferente -- só são sugeridas;
 - **mesma categoria do banco** pode ser aplicada a todas as compras dela;
 - parcelado e recorrente mudam inteiros.
@@ -252,8 +264,10 @@ gravar:
 Mês fechado só é atravessado com autorização explícita e com a permissão de
 fechamento mensal: cada mês é reaberto com motivo, alterado e fechado de novo;
 o saldo de fechamento é recalculado e, se diferir do anterior, nada é gravado.
-Não há tabela de regras: o importador de fatura sugere a categoria pela última
-compra com a mesma chave, em qualquer conta, então a reclassificação é a regra.
+A reclassificação é a forma de ensinar: o importador sugere a categoria mais
+frequente para a mesma chave, em qualquer conta, então corrigir aqui muda as
+próximas sugestões. As regras explícitas (`StatementRule`) ficam para o que o
+histórico não alcança.
 
 ### Fatura projetada
 
@@ -415,11 +429,28 @@ que `fatura.planejar` faz para o cartão). Na ordem em que é decidido:
 
 A categoria sugerida (`classificacao.py`) vem, nesta ordem, da regra explícita,
 da categoria mais frequente que o usuário deu à mesma descrição (sem contar
-"Outros"), da categoria do banco já escolhida antes, do prefixo do extrato e de
-"Outros". O prefixo do PDF fica depois do histórico porque erra (a Genial chama
-o aluguel de ações de "Rendimentos"). A regra explícita (`StatementRule`,
-`manage.py regras_de_extrato`) descreve uma família de texto por instituição e
-sinal, nunca por id.
+"Outros"), da categoria dominante da conta quando a descrição só diz o meio de
+pagamento ("Boleto", "DEBIT"; exige 5 lançamentos do mesmo tipo e 80% numa
+categoria), da categoria do banco já escolhida antes, do prefixo do extrato e de
+"Outros". A mesma descrição é procurada na descrição do lançamento **e** no texto
+da linha de extrato conciliada com ele, um voto por lançamento: reescrever a
+descrição ("Salário") não apaga o que o banco manda ("PAGTO SALARIO"). O prefixo
+do PDF fica depois do histórico porque erra (a Genial chama o aluguel de ações de
+"Rendimentos"). A regra explícita (`StatementRule`, `manage.py regras_de_extrato`)
+descreve uma família de texto por instituição e sinal, nunca por id.
+
+Cada sugestão tem um **nível de confiança**. É alta quando vem de regra ou de dois
+ou mais casos anteriores, todos na mesma categoria, fora de intermediador (Mercado
+Livre, Shopee, Amazon, MP*, PayGo, iFood: a mesma "loja" vende de tudo). Média
+com 90% ou mais de concordância, baixa abaixo disso, e nenhuma quando cai em
+"Outros". O critério vem do teste retroativo sobre os dados reais (17/10/2026):
+a confiança alta acertou 99,4%, e o resto ficou entre 55% e 89%. A Conciliação
+mostra primeiro as linhas que pedem atenção. No fim ficam as seguras: candidato
+único, transferência pareada ou por regra, regra de ignorar e criação com
+confiança alta. `manage.py medir_sugestoes [--desde AAAA-MM-DD]` refaz essa
+medição. Cada linha usa só o histórico de antes do mês dela, e a medição roda numa
+transação desfeita no fim. O comando lista também os lançamentos que destoam da
+mesma loja ou da categoria do banco, para corrigir em Reclassificação.
 
 O arquivo pode informar o saldo (`LEDGERBAL` do OFX, "Saldo final" da Genial e do
 Mercado Pago, último "SALDO DO DIA" do período no Itaú, "Saldo final" da Avenue). Ele é guardado no lote e conferido, nas telas Importar extratos e faturas e Extratos importados, com o

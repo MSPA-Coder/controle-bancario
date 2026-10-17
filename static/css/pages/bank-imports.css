@@ -9,3 +9,19 @@
 .reconciled-batch summary { padding: 0.55rem 0.75rem; cursor: pointer; background: var(--bg-header); font-size: 0.85rem; }
 .reconciled-batch summary:hover { background: rgba(148, 163, 184, 0.14); }
 .reconciled-batch .tx-table { margin: 0; }
+
+/* Nível de confiança da sugestão de categoria (ver classificacao.Sugestao.confianca). */
+.confianca { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.confianca-alta { background: var(--semantic-positive-bg); color: var(--semantic-positive); }
+.confianca-media { background: rgba(245, 158, 11, 0.14); color: var(--text); }
+.confianca-baixa, .confianca-nenhuma { background: var(--semantic-negative-bg); color: var(--semantic-negative); }
+
+/* Prévia da fatura: grupos da mesma loja e blocos recolhidos (ver fatura.organizar). */
+.fatura-grupo > td { border-bottom: 0; }
+.fatura-membros > td { padding-top: 0; }
+.fatura-membros summary, .fatura-bloco > summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+.fatura-bloco { border: 1px solid var(--border); border-radius: 8px; margin-top: 0.75rem; overflow: hidden; }
+.fatura-bloco > summary { padding: 0.55rem 0.75rem; background: var(--bg-header); color: var(--text); }
+.fatura-bloco > summary:hover { background: rgba(148, 163, 184, 0.14); }
+.fatura-bloco .tx-table { margin: 0; }
+.conciliacao-separador > td { background: var(--bg-header); font-size: 0.85rem; color: var(--muted); }

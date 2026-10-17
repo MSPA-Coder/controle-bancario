@@ -62,44 +62,81 @@
                 {% trans "Autorizo reabrir e fechar de novo esses meses" %}</label>
         </div>
         {% endif %}
+        {% if previa.a_conferir %}
+        <h4 class="u-mb-05">{% trans "Para conferir" %}</h4>
+        <p class="help-text">{% blocktrans trimmed count n=previa.linhas_a_conferir %}{{ n }} linha com sugestão incerta.{% plural %}{{ n }} linhas com sugestão incerta.{% endblocktrans %}
+            {% trans "Compras da mesma loja estão agrupadas: a categoria do grupo vale para todas, e dá para abrir o grupo e mudar uma só." %}</p>
         <table class="tx-table">
-            <thead>
-                <tr>
-                    <th>{% trans "Data" %}</th>
-                    <th>{% trans "Descrição" %}</th>
-                    <th>{% trans "Parcela" %}</th>
-                    <th>{% trans "Valor" %}</th>
-                    <th>{% trans "O que acontece" %}</th>
-                    <th>{% trans "Categoria" %}</th>
-                </tr>
-            </thead>
+            {% include "banking/_fatura_cabecalho.html" %}
             <tbody>
-            {% for plano in planos %}
-                <tr>
-                    <td>{{ plano.linha.statement_date|udate }}
-                        {% if plano.linha.purchase_date and plano.linha.purchase_date != plano.linha.statement_date %}<br><small>{% blocktrans trimmed with data=plano.linha.purchase_date|udate %}compra em {{ data }}{% endblocktrans %}</small>{% endif %}
+            {% for grupo in previa.a_conferir %}
+                {% if grupo.planos|length == 1 %}
+                {% include "banking/_fatura_linha.html" with plano=grupo.planos.0 %}
+                {% else %}
+                <tr class="fatura-grupo">
+                    <td>{{ grupo.linha.statement_date|udate }}</td>
+                    <td>{{ grupo.linha.description }}
+                        {% if grupo.linha.bank_category %}<br><small>{{ grupo.linha.bank_category }}</small>{% endif %}
                     </td>
-                    <td>{{ plano.linha.description }}
-                        {% if plano.linha.bank_category %}<br><small>{{ plano.linha.bank_category }}</small>{% endif %}
+                    <td></td>
+                    <td class="amount {{ grupo.total|amount_class }}">{{ grupo.total|money_signed:conta.currency }}</td>
+                    <td>{% blocktrans trimmed count n=grupo.planos|length %}{{ n }} compra da mesma loja{% plural %}{{ n }} compras da mesma loja{% endblocktrans %}
+                        {% if grupo.sugestao %}<br>{% include "banking/_confianca.html" with sugestao=grupo.sugestao %}{% endif %}
                     </td>
-                    <td>{% if plano.linha.installment_current %}{{ plano.linha.installment_current }}/{{ plano.linha.installment_total }}{% endif %}</td>
-                    <td class="amount {{ plano.linha.amount|amount_class }}">{{ plano.linha.amount|money_signed:conta.currency }}</td>
-                    <td>{{ plano.rotulo }}</td>
                     <td>
-                        {% if plano.cria_lancamento or plano.futuras_a_partir_de %}
-                        <select name="categoria_{{ plano.linha.id }}" aria-label="{% trans 'Categoria' %}">
+                        <input type="hidden" name="membros_{{ grupo.numero }}" value="{{ grupo.membros }}">
+                        <select name="grupo_{{ grupo.numero }}" aria-label="{% trans 'Categoria do grupo' %}">
                             {% for categoria in categorias %}
-                            <option value="{{ categoria.id }}" {% if plano.categoria and plano.categoria.id == categoria.id %}selected{% endif %}>{{ categoria.category_name }}</option>
+                            <option value="{{ categoria.id }}" {% if grupo.categoria and grupo.categoria.id == categoria.id %}selected{% endif %}>{{ categoria.category_name }}</option>
                             {% endfor %}
                         </select>
-                        {% elif plano.lancamento %}
-                        <small>{{ plano.lancamento.category.category_name }}</small>
-                        {% endif %}
                     </td>
                 </tr>
+                <tr class="fatura-membros">
+                    <td colspan="6">
+                        <details>
+                            <summary>{% trans "Ver as compras do grupo" %}</summary>
+                            <table class="tx-table">
+                                <tbody>
+                                {% for plano in grupo.planos %}
+                                {% include "banking/_fatura_linha.html" with membro=True %}
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    </td>
+                </tr>
+                {% endif %}
             {% endfor %}
             </tbody>
         </table>
+        {% endif %}
+        {% if previa.confiaveis %}
+        <details class="fatura-bloco">
+            <summary>{% blocktrans trimmed count n=previa.confiaveis|length %}Confiança alta: {{ n }} linha já com a categoria sugerida{% plural %}Confiança alta: {{ n }} linhas já com a categoria sugerida{% endblocktrans %}</summary>
+            <table class="tx-table">
+                {% include "banking/_fatura_cabecalho.html" %}
+                <tbody>
+                {% for plano in previa.confiaveis %}
+                {% include "banking/_fatura_linha.html" %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </details>
+        {% endif %}
+        {% if previa.sem_escolha %}
+        <details class="fatura-bloco" {% if not previa.a_conferir and not previa.confiaveis %}open{% endif %}>
+            <summary>{% blocktrans trimmed count n=previa.sem_escolha|length %}Sem categoria a escolher: {{ n }} linha (pagamento, parcela ou compra já lançada, saldo inicial){% plural %}Sem categoria a escolher: {{ n }} linhas (pagamentos, parcelas e compras já lançadas, saldo inicial){% endblocktrans %}</summary>
+            <table class="tx-table">
+                {% include "banking/_fatura_cabecalho.html" %}
+                <tbody>
+                {% for plano in previa.sem_escolha %}
+                {% include "banking/_fatura_linha.html" %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </details>
+        {% endif %}
     </form>
     {% else %}
     <p class="empty-state">{% trans "Nenhuma linha pendente nesta fatura." %}</p>

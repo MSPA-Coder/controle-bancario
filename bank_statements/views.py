@@ -233,6 +233,7 @@ def fatura_view(request, batch_id):
         "lote": lote,
         "conta": lote.account,
         "planos": planos,
+        "previa": fatura.organizar(planos),
         "tudo_no_saldo_inicial": bool(planos) and all(p.acao == fatura.SALDO_INICIAL for p in planos),
         "resumo": fatura.resumir(lote.lines.all()),
         "processadas": lote.lines.exclude(status="novo").count(),
@@ -325,11 +326,7 @@ def situacao_das_contas_view(request):
 @require_POST
 def processar_fatura_view(request, batch_id):
     """Grava a prévia: lança, concilia e ignora, tudo ou nada."""
-    escolhas = {
-        chave.removeprefix('categoria_'): valor
-        for chave, valor in request.POST.items()
-        if chave.startswith('categoria_')
-    }
+    escolhas = fatura.escolhas_do_formulario(request.POST)
     try:
         conta = fatura.lote_de_fatura(request.user, batch_id).account
         antes = {(f.year, f.month): f.closing_balance for f in AccountMonthClose.objects.filter(account=conta, active=True)}

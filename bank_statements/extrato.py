@@ -59,7 +59,7 @@ from transactions.services import (
 )
 
 from . import reconciliation
-from .classificacao import Sugestao, sugerir_categoria
+from .classificacao import Sugestao, sugerir_para_linha
 from .meses import meses_reabertos
 from .models import (
     LINE_STATUS_NEW,
@@ -151,6 +151,17 @@ class Plano:
     @property
     def executavel(self) -> bool:
         return self.acao in EXECUTAVEIS
+
+    @property
+    def confiavel(self) -> bool:
+        """Se a tela pode deixar a linha no fim, como já decidida: o lançamento
+        candidato é único e de valor exato, a transferência é pareada ou vem de
+        regra, a regra manda ignorar, ou a categoria tem confiança alta. Na
+        medição de 17/10/2026 o casamento único acertou 99,6% e o par de
+        transferência, todos. O resto vai para o topo, para conferir."""
+        if self.acao in (CONCILIA, TRANSFERENCIA_PAR, TRANSFERENCIA_REGRA, IGNORA):
+            return True
+        return self.acao == CRIA and self.sugestao is not None and self.sugestao.confiavel
 
     @property
     def rotulo(self) -> str:
@@ -447,7 +458,7 @@ def planejar(user, linhas) -> list[Plano]:
             planos.append(Plano(linha, TRANSFERENCIA_SEM_PAR, regra=regra))
             continue
         regra_de_categoria = regra if regra is not None and regra.action == RULE_ACTION_CATEGORY else None
-        sugestao = sugerir_categoria(linha.description, linha.bank_category, regra=regra_de_categoria)
+        sugestao = sugerir_para_linha(linha, regra=regra_de_categoria)
         if sugestao.categoria is None:
             planos.append(
                 Plano(linha, MANUAL, motivo=gettext("Sem categoria: cadastre “Outros” ou escolha uma."), regra=regra)

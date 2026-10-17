@@ -26,7 +26,7 @@ fechamento é recalculado e tem de ser o mesmo, ou nada é gravado. Reabertura,
 fechamento e cada troca de categoria ficam na auditoria.
 
 Não há tabela de regras: o importador aprende pelo histórico
-(`fatura._categoria_sugerida`), então a reclassificação feita aqui já é a
+(`classificacao.sugerir_categoria`), então a reclassificação feita aqui já é a
 sugestão das próximas faturas.
 """
 from __future__ import annotations
@@ -67,6 +67,7 @@ MOTIVO_DA_REABERTURA = "Reclassificação de categorias em lote"
 PARAMETROS_GLOBAIS = (CURRENCY_PARAM, GROUPS_PARAM)
 
 _SEPARADOR = re.compile(r"[^A-Z0-9]+")
+_LETRAS = re.compile(r"[A-Z]+")
 _RUIDO = {"PARC", "PARCELA", "PARCELADO", "PARCELAS"}
 # Intermediadores de pagamento: a primeira palavra é deles, não da loja, e
 # juntaria como "parecidas" compras que não têm nada em comum.
@@ -88,13 +89,20 @@ def _sem_dolar(texto: str) -> str:
 
 
 def chave_da_descricao(texto: str) -> str:
-    """A descrição sem o que muda de uma compra para outra da mesma loja."""
+    """A descrição sem o que muda de uma compra para outra da mesma loja.
+
+    Palavra com número sai inteira (o código do papel em "Brraizacnpr6" muda de
+    uma linha para outra). Quando isso apagaria tudo, como em "UNITED01647204721164"
+    ou "30265583THIAGO", o número é separado das letras e só ele sai: senão cada
+    bilhete da mesma companhia aérea seria uma loja diferente."""
     limpo = _sem_dolar(_sem_portador(texto or ""))
     ascii_ = unicodedata.normalize("NFKD", limpo).encode("ascii", "ignore").decode("ascii").upper()
     palavras = [
         p for p in _SEPARADOR.split(ascii_)
         if p and p not in _RUIDO and not any(c.isdigit() for c in p)
     ]
+    if not palavras:
+        palavras = [p for p in _LETRAS.findall(ascii_) if p not in _RUIDO]
     return " ".join(palavras) or ascii_.strip()
 
 
