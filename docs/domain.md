@@ -449,8 +449,12 @@ mostra primeiro as linhas que pedem atenção. No fim ficam as seguras: candidat
 único, transferência pareada ou por regra, regra de ignorar e criação com
 confiança alta. `manage.py medir_sugestoes [--desde AAAA-MM-DD]` refaz essa
 medição. Cada linha usa só o histórico de antes do mês dela, e a medição roda numa
-transação desfeita no fim. O comando lista também os lançamentos que destoam da
-mesma loja ou da categoria do banco, para corrigir em Reclassificação.
+transação desfeita no fim. O comando lista também os lançamentos nascidos de uma
+linha de extrato que destoam da mesma loja (3 ou mais compras, 70% numa
+categoria), para corrigir em Reclassificação. Destoar só da categoria do banco não
+conta: na primeira medição, os 5 casos assim eram escolhas mais específicas do
+usuário. Lançamento digitado à mão também não entra, porque a categoria foi
+escolhida junto com o texto.
 
 O arquivo pode informar o saldo (`LEDGERBAL` do OFX, "Saldo final" da Genial e do
 Mercado Pago, último "SALDO DO DIA" do período no Itaú, "Saldo final" da Avenue). Ele é guardado no lote e conferido, nas telas Importar extratos e faturas e Extratos importados, com o
