@@ -321,3 +321,18 @@ def test_pytest_bloqueia_acesso_ao_banco_sem_marcador(django_db_blocker):
     """A suíte focada não abre conexão por acidente nem reutiliza dados reais."""
     with pytest.raises(RuntimeError, match="Database access not allowed"), django_db_blocker.block():
         connection.cursor()
+
+
+def test_imagem_do_postgres_recebe_revisao_e_run_da_ci():
+    """O `deploy.sh` confere as labels de revisão e de run nas DUAS imagens
+    publicadas (app e PostgreSQL). Todo serviço que constrói o Dockerfile do
+    banco repassa os mesmos argumentos, porque eles compartilham a tag da imagem."""
+    servicos = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
+    construidos = {
+        nome: servico["build"]
+        for nome, servico in servicos.items()
+        if str(servico.get("build", {}).get("dockerfile", "")).endswith("sandbox-postgres/Dockerfile")
+    }
+    assert construidos
+    for nome, build in construidos.items():
+        assert set(build["args"]) == {"ARTIFACT_REVISION", "ARTIFACT_RUN"}, nome
