@@ -9,11 +9,12 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
 from functools import cached_property
 from typing import TYPE_CHECKING
 
 from django.core.files.uploadedfile import UploadedFile
+
+from .contracts import ParsedStatement as ParsedStatement
 
 if TYPE_CHECKING:
     from .adapters import ParsedStatementLine, StatementAdapter, _LinhaXp
@@ -27,13 +28,6 @@ def _optional[T](read: Callable[[], T]) -> T | None:
         return None
 
 
-@dataclass(frozen=True)
-class ParsedStatement:
-    lines: tuple[ParsedStatementLine, ...]
-    balance: tuple[Decimal, date] | None = None
-    period_end: date | None = None
-    account_hint: str | None = None
-    format_key: str = ""
 
 
 @dataclass(frozen=True)

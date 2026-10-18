@@ -123,6 +123,14 @@ schema e suas restrições. Consultas triviais podem permanecer na view; o
 projeto evita repositories pass-through, mas permite query objects ou
 repositories quando reduzirem duplicação, acoplamento ou custo de consulta.
 
+Na importação, `bank_statements/queries.py` concentra as leituras e a conferência
+agrupada; `services.py` mantém a escrita do lote. Os contratos imutáveis ficam
+em `bank_statements/contracts.py`. Em lançamentos, `transactions/contracts.py`
+define a entrada do comando e `calculations.py` calcula parcelas com `Decimal`,
+sem ORM. Os caminhos antigos em `services`/`adapters` continuam reexportados
+para não exigir migração simultânea dos consumidores. São fronteiras concretas,
+não um repository por model nem uma nova hierarquia de serviços.
+
 ### Leituras memorizadas por requisição
 
 A importação usa `bank_statements/document.py`: um contexto local conserva os

@@ -1,6 +1,7 @@
 """Vocabulário e normalizadores do domínio financeiro."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Final
 
 from django.utils.translation import gettext, gettext_lazy
@@ -109,7 +110,7 @@ class MixedCurrencyError(ValueError):
     total que parece certo.
     """
 
-    def __init__(self, currencies) -> None:
+    def __init__(self, currencies: Iterable[str]) -> None:
         self.currencies = tuple(sorted(currencies))
         super().__init__(
             gettext(

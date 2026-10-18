@@ -147,7 +147,7 @@ RUN DJANGO_SECRET_KEY=build-only-nao-usada-em-execucao \
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "ruff check . && pytest"]
+CMD ["sh", "-c", "ruff check . && mypy && pytest"]
 
 
 # Estagio de producao: somente dependencias e arquivos de runtime. Codigo fica

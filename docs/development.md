@@ -26,11 +26,19 @@ Verificação da configuração Django:
 docker compose --env-file .env.docker -f compose.yaml run --rm web python manage.py check
 ```
 
-Ruff e suíte automatizada:
+Ruff, piloto mypy e suíte automatizada:
 
 ```powershell
 docker compose --env-file .env.docker -f compose.yaml --profile quality run --build --rm quality
 ```
+
+O mypy verifica em modo estrito somente os arquivos de `[tool.mypy]`: vocabulário
+de domínio, contratos imutáveis de importação/comandos e cálculos de parcelas.
+Imports fora da fronteira não são analisados (`follow_imports=skip`); não é uma
+promessa de verificar os models dinâmicos do Django. `django-stubs` fica apenas
+no extra de desenvolvimento, sem plugin que inicialize o ORM. Não foram
+adicionados `Any` ou supressões para deixar o piloto verde. Execução isolada:
+`docker compose --env-file .env.docker --profile quality run --build --rm quality mypy`.
 
 **`--build` não é opcional.** O serviço `quality` não monta o código do
 host: o que ele executa é o que foi copiado para a imagem. `docker compose

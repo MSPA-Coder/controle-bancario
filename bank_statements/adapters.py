@@ -27,6 +27,7 @@ from django.utils.translation import gettext, ngettext
 
 from core import regional
 
+from .contracts import ParsedStatementLine as ParsedStatementLine
 from .document import StatementDocument
 
 
@@ -34,20 +35,6 @@ class ValorZeradoError(ValueError):
     """Valor 0,00 no extrato: a fatura em CSV trata como linha ignorável, não como erro."""
 
 
-@dataclass(frozen=True)
-class ParsedStatementLine:
-    """Linha de extrato já normalizada para o domínio interno."""
-
-    statement_date: date
-    description: str
-    amount: Decimal
-    line_hash: str
-    # Só a fatura de cartão preenche os campos abaixo (ver `fatura_csv`).
-    purchase_date: date | None = None
-    installment_current: int | None = None
-    installment_total: int | None = None
-    card_holder: str = ""
-    bank_category: str = ""
 
 
 @runtime_checkable
