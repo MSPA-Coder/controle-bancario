@@ -123,6 +123,9 @@ services:
       dockerfile: docker/sandbox-postgres/Dockerfile
       pull: true
       no_cache: true
+      args:
+        ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
+        ARTIFACT_RUN: ${ARTIFACT_RUN:-local}
     pull_policy: build
     restart: unless-stopped
     cpus: 1.0
@@ -158,6 +161,9 @@ services:
       dockerfile: docker/sandbox-postgres/Dockerfile
       pull: true
       no_cache: true
+      args:
+        ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
+        ARTIFACT_RUN: ${ARTIFACT_RUN:-local}
     pull_policy: build
     user: postgres
     read_only: true
@@ -287,6 +293,9 @@ services:
       dockerfile: docker/sandbox-postgres/Dockerfile
       pull: true
       no_cache: true
+      args:
+        ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
+        ARTIFACT_RUN: ${ARTIFACT_RUN:-local}
     pull_policy: build
     profiles: ["quality"]
     cpus: 1.0
