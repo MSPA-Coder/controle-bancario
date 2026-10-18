@@ -154,6 +154,11 @@ CMD ["sh", "-c", "ruff check . && mypy && pytest"]
 # como root:root e legivel pelo usuario da aplicacao; apenas volumes declarados
 # pelo Compose sao gravaveis em execucao.
 FROM base AS runtime
+ARG ARTIFACT_REVISION=local
+ARG ARTIFACT_RUN=local
+LABEL org.opencontainers.image.source="https://github.com/MSPA-Coder/sistema-financeiro" \
+      org.opencontainers.image.revision=$ARTIFACT_REVISION \
+      br.com.mspa.ci-run=$ARTIFACT_RUN
 
 # O venv vem do `builder`; sem isto, `python`, `gunicorn` e `manage.py`
 # resolveriam para o interpretador do sistema, que nao tem as dependencias.

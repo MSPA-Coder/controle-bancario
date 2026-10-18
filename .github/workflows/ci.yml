@@ -29,6 +29,12 @@ jobs:
     name: Qualidade
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      ARTIFACT_REVISION: ${{ github.sha }}
+      ARTIFACT_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
     defaults:
       run:
         shell: bash
@@ -91,6 +97,12 @@ jobs:
       - name: Executar quality
         run: docker compose --profile quality run --rm quality
 
+      - name: Construir uma única imagem operacional e PostgreSQL
+        run: |
+          docker compose build --pull --no-cache web postgres
+          echo "DELIVERY_APP_ID=$(docker image inspect --format '{{.Id}}' controle-bancario:local)" >> "$GITHUB_ENV"
+          echo "DELIVERY_POSTGRES_ID=$(docker image inspect --format '{{.Id}}' mspa-postgres:17-alpine)" >> "$GITHUB_ENV"
+
       - name: Smoke e readiness da imagem operacional
         run: |
           set -euo pipefail
@@ -102,7 +114,7 @@ jobs:
           # `up --wait` aguarda postgres-teste? Não: aqui o fluxo operacional
           # sobe postgres, migrate e web; o healthcheck de `/health/` só passa
           # depois que migrations terminaram e o PostgreSQL responde.
-          docker compose up --build --detach --wait --wait-timeout 120 web
+          docker compose up --no-build --pull never --detach --wait --wait-timeout 120 web
           curl --fail --silent --show-error --max-time 10 \
             http://127.0.0.1:5201/health/ | grep -F '"status": "ok"'
 
@@ -133,8 +145,6 @@ jobs:
       # PYTEST_ADDOPTS ja apontarem para /tmp no Dockerfile.
       - name: Auditar dependencias instaladas (CVE conhecido)
         run: docker compose --profile quality run --rm quality pip-audit --progress-spinner=off --cache-dir /tmp/pip-audit-cache
-      - name: Construir runtime imutavel
-        run: docker compose -f compose.yaml build --pull --no-cache web
 
       # O `pip-audit` acima cobre as dependencias Python. Esta varredura cobre o
       # que ele nao ve: os pacotes do sistema operacional da imagem base.
@@ -155,8 +165,6 @@ jobs:
       # `--ignore-unfixed` de proposito: CVE de pacote de sistema sem correcao
       # publicada nao e acionavel. Reprovar por ele travaria PR sem relacao
       # nenhuma com o assunto e ensinaria a ignorar o vermelho.
-      - name: Construir a imagem PostgreSQL derivada atualizada
-        run: docker compose build --pull --no-cache postgres
       - name: Varredura de CVEs corrigíveis na imagem PostgreSQL
         run: |
           set -euo pipefail
@@ -252,3 +260,37 @@ jobs:
             echo "Arquivo local, segredo ou dependencia de desenvolvimento encontrado no runtime." >&2
             exit 1
           fi
+
+      - name: Validar o artefato servido no Chromium
+        env:
+          BROWSER_APP_IMAGE: controle-bancario:local
+        run: |
+          set -euo pipefail
+          mkdir -p .browser-results
+          chmod 777 .browser-results
+          docker compose -f compose.browser.yaml build browser-tests
+          trap 'docker compose -f compose.browser.yaml down --remove-orphans' EXIT
+          docker compose -f compose.browser.yaml up --no-build --pull never --abort-on-container-exit --exit-code-from browser-tests
+
+      - name: Publicar as imagens validadas, sem reconstruir
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          registry="ghcr.io/${GITHUB_REPOSITORY,,}"
+          test "$(docker image inspect --format '{{.Id}}' controle-bancario:local)" = "$DELIVERY_APP_ID"
+          test "$(docker image inspect --format '{{.Id}}' mspa-postgres:17-alpine)" = "$DELIVERY_POSTGRES_ID"
+          tag="run-$ARTIFACT_RUN"
+          auth_dir="$RUNNER_TEMP/registry-auth"
+          install -d -m 700 "$auth_dir"
+          trap 'docker --config "$auth_dir" logout ghcr.io >/dev/null' EXIT
+          printf '%s' "$REGISTRY_TOKEN" | docker --config "$auth_dir" login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          for pair in "controle-bancario:local $registry" "mspa-postgres:17-alpine $registry-postgres"; do
+            read -r local_image destination <<<"$pair"
+            image_id="$(docker image inspect --format '{{.Id}}' "$local_image")"
+            docker tag "$image_id" "$destination:$tag"
+            docker --config "$auth_dir" push "$destination:$tag"
+            test "$(docker image inspect --format '{{.Id}}' "$destination:$tag")" = "$image_id"
+            printf '%s\n' "$destination:$tag" >> "$GITHUB_STEP_SUMMARY"
+          done

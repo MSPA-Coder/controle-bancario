@@ -23,12 +23,14 @@ services:
       timeout: 3s
       retries: 30
   browser-web:
-    image: cb-browser-app:local
+    image: ${BROWSER_APP_IMAGE:-cb-browser-app:local}
     build:
       context: .
-      target: quality
+      target: runtime
       secrets: [local_ca]
-    command: [python, -m, tests.browser_server]
+    command: [python, /browser_server.py]
+    volumes:
+      - ./tests/browser_server.py:/browser_server.py:ro
     environment:
       BROWSER_TEST_SERVER: "1"
       DJANGO_SETTINGS_MODULE: financeiro.settings

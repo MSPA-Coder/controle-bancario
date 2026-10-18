@@ -202,11 +202,39 @@ curl -I https://bancario-mspa.duckdns.org/
 
 Uma atualização só deve ocorrer depois dos backups necessários. O comando
 operacional é `~/deploy.sh bancario`; ele confere o commit elegível, atualiza
-o espelho, reconstrói a imagem, aguarda os health checks e valida o endereço
+o espelho, usa as imagens validadas por digest, aguarda os health checks e valida o endereço
 público. `~/deploy.sh --status` é diagnóstico transversal, não pré-requisito
 do deploy. `.env.vps`,
 `.secrets/` e `.certs/` também ficam fora do Git e precisam ser preservados em
 uma reinstalação.
+
+### Entrega do mesmo artefato testado
+
+Instale primeiro o `deploy.sh` correspondente em `_manutencao`. A CI de
+`main` constrói uma vez as imagens de aplicação e PostgreSQL; smoke,
+Chromium e Trivy usam essas imagens, e a publicação apenas retagueia seus IDs.
+PRs não publicam. O GHCR recebe
+`ghcr.io/mspa-coder/sistema-financeiro:run-<run_id>-<tentativa>` e o pacote
+`sistema-financeiro-postgres` com a mesma tag.
+
+O deploy exige o run completo `CI` bem-sucedido em `main`, no SHA candidato,
+confere os labels de revisão/run da aplicação e resolve ambas as referências
+para digest antes de alterar código ou contêineres. `compose.release.yaml`
+recebe essas referências; `up --no-build --pull never` impede reconstrução.
+Ausência de run, imagem ou acesso aborta sem alterar o app; `--sem-ci` não
+dispensa a identidade do artefato. Nenhuma credencial do GitHub entra na imagem.
+
+O GHCR cria pacotes privados por padrão. Antes da ativação, defina a
+visibilidade dos dois pacotes: públicos permitem pull anônimo; privados exigem
+credencial de leitura no mecanismo de credenciais Docker do VPS, por canal
+seguro. Não grave tokens em `.env`, scripts ou logs. Não habilite deploy
+automático deste caminho sem confirmar esse acesso.
+
+A CI semanal publica outro run testado mesmo sem novo commit; o refresh de
+quarta-feira baixa esse artefato, não atualiza bases às cegas no VPS.
+O estado em `~/.local/state/mspa-deploy/controle-bancario.images` registra os
+digests saudáveis. Rollback usa os IDs locais capturados antes da mudança,
+incluindo migrate/provisionamento, sem novo pull/build; nunca desfaz banco.
 
 **Antes do primeiro deploy**, crie `.secrets/patrimonio_integration_token` no
 servidor (o token do contrato v4 e da projeção). O Compose recusa subir com um
