@@ -19,6 +19,8 @@ from core.domain.finance import (
     STATUS_REALIZED,
     VALID_CATEGORY_KINDS,
     VALID_ENTRY_TYPES,
+    VALID_INCOME_KINDS,
+    VALID_INCOME_ROLES,
     VALID_STATUSES,
 )
 
@@ -397,3 +399,40 @@ class EnvioDeLancamento(models.Model):
 
     class Meta:
         db_table = "cash_flow_entry_submission"
+
+
+class EntryInvestmentDetail(models.Model):
+    """Dado estruturado de investimento de um lançamento (1:1, só quando há).
+
+    A corretora imprime o ativo e o tipo de renda só no texto do extrato; o
+    Controle de Renda Variável, dono dos papéis, os lê daqui pelo contrato
+    patrimonio/v4 em vez de reinterpretar texto. Tabela à parte para não inflar
+    `CashFlowEntry` nem tocar as views do esquema `leitura`. Todo campo é
+    opcional: só os lançamentos que casam com `bank_statements/investimentos.py`
+    ganham linha, e a linha só guarda o que a descrição disse.
+    """
+
+    entry = models.OneToOneField(CashFlowEntry, on_delete=models.CASCADE, related_name="investment_detail")
+    instrument_code = models.CharField(max_length=20, null=True, blank=True)
+    income_kind = models.CharField(max_length=20, null=True, blank=True)
+    income_role = models.CharField(max_length=30, null=True, blank=True)
+    settlement_pregao_date = models.DateField(null=True, blank=True)
+    settlement_note = models.CharField(max_length=40, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cash_flow_entry_investment"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(income_kind__isnull=True) | models.Q(income_kind__in=VALID_INCOME_KINDS),
+                name="ck_entry_investment_income_kind_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(income_role__isnull=True) | models.Q(income_role__in=VALID_INCOME_ROLES),
+                name="ck_entry_investment_income_role_valid",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.entry_id}: {self.instrument_code or '-'} {self.income_kind or ''}".strip()

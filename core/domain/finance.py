@@ -176,3 +176,23 @@ ACCOUNT_PURPOSE_OPTIONS: Final = (
 VALID_ACCOUNT_PURPOSES: Final = (ACCOUNT_PURPOSE_PERSONAL, ACCOUNT_PURPOSE_ADMINISTERED)
 CARD_DAY_MIN: Final = 1
 CARD_DAY_MAX: Final = 31
+
+# Dado estruturado de investimento no lançamento (`EntryInvestmentDetail`),
+# lido da descrição do extrato da corretora (`bank_statements/investimentos.py`)
+# e publicado no contrato patrimonio/v4. Texto livre de máquina, nunca traduzido.
+INCOME_KIND_RENTAL: Final = "aluguel"
+INCOME_KIND_JCP: Final = "jcp"
+INCOME_KIND_DIVIDEND: Final = "dividendo"
+VALID_INCOME_KINDS: Final = (INCOME_KIND_RENTAL, INCOME_KIND_JCP, INCOME_KIND_DIVIDEND)
+INCOME_ROLE_CREDIT: Final = "credito"
+INCOME_ROLE_RENTAL_IRRF: Final = "irrf_aluguel"
+INCOME_ROLE_RENTAL_BROKERAGE: Final = "corretagem_aluguel"
+INCOME_ROLE_RENTAL_FEE: Final = "taxa_aluguel"
+INCOME_ROLE_REVERSAL: Final = "estorno"
+VALID_INCOME_ROLES: Final = (
+    INCOME_ROLE_CREDIT,
+    INCOME_ROLE_RENTAL_IRRF,
+    INCOME_ROLE_RENTAL_BROKERAGE,
+    INCOME_ROLE_RENTAL_FEE,
+    INCOME_ROLE_REVERSAL,
+)

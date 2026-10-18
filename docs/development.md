@@ -165,3 +165,22 @@ Três coisas que valem saber antes de rodar com `--aplicar`:
   `data;valor_origem;valor_destino` por operação.
 
 Faça o backup antes, como em qualquer alteração de dados reais.
+
+## Preencher ativo e tipo de renda dos lançamentos existentes
+
+`preencher_investimentos` lê a descrição dos lançamentos (e a do extrato
+conciliado com eles) e grava em `EntryInvestmentDetail` o ativo, o tipo de renda,
+o papel da linha e a liquidação de pregão (regras em `docs/domain.md`). Lançamento
+novo conciliado com uma linha de extrato já nasce preenchido; o comando existe
+para o que veio antes. Simula por padrão, em qualquer conta:
+
+```bash
+docker compose --env-file .env.docker -f compose.yaml run --rm web \
+  python manage.py preencher_investimentos --dry-run
+```
+
+O relatório lista, lançamento a lançamento, o que seria criado ou atualizado,
+com os totais por papel, e não grava nada. Só então repita com `--aplicar`.
+É idempotente, não apaga linha já gravada e não muda valor, data, categoria nem
+saldo. Em produção, rode depois do deploy da migração `transactions/0011` e com
+backup validado, como em qualquer alteração de dados reais.

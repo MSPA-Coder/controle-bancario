@@ -337,6 +337,33 @@ def status_efetivo(entry: CashFlowEntry, referencia: date) -> str:
     return STATUS_PENDING if entry.due_date < referencia else STATUS_PROJECTED
 
 
+def _investimento_v4(entry: CashFlowEntry) -> dict:
+    """Acréscimo opcional (18/10/2026): o dado de investimento lido do extrato.
+
+    Só as chaves preenchidas entram, e o lançamento sem nada não ganha nenhuma:
+    quem não conhece os campos os ignora, e quem os conhece trata ausência como
+    "o CB não sabe". `settlement` agrupa a liquidação de pregão da corretora.
+    """
+    detalhe = getattr(entry, "investment_detail", None)
+    if detalhe is None:
+        return {}
+    campos: dict = {}
+    if detalhe.instrument_code:
+        campos["instrument"] = detalhe.instrument_code
+    if detalhe.income_kind:
+        campos["income_kind"] = detalhe.income_kind
+    if detalhe.income_role:
+        campos["income_role"] = detalhe.income_role
+    liquidacao: dict = {}
+    if detalhe.settlement_pregao_date:
+        liquidacao["pregao_date"] = detalhe.settlement_pregao_date.isoformat()
+    if detalhe.settlement_note:
+        liquidacao["note"] = detalhe.settlement_note
+    if liquidacao:
+        campos["settlement"] = liquidacao
+    return campos
+
+
 def _lancamento_v4(entry: CashFlowEntry, referencia: date) -> dict:
     return {
         "source_id": _source_id_v4("cash-entry", entry.id),
@@ -370,6 +397,7 @@ def _lancamento_v4(entry: CashFlowEntry, referencia: date) -> dict:
         "is_recurring": entry.is_recurring,
         "created_at": entry.created_at.isoformat() if entry.created_at else None,
         "updated_at": entry.updated_at.isoformat() if entry.updated_at else None,
+        **_investimento_v4(entry),
     }
 
 
@@ -506,7 +534,7 @@ def snapshot_v4_view(request):
         )
         categorias = list(CashFlowCategory.objects.select_related("group").order_by("id"))
         lancamentos = list(
-            CashFlowEntry.objects.select_related("account", "category")
+            CashFlowEntry.objects.select_related("account", "category", "investment_detail")
             .order_by("id")
         )
         operacoes = list(

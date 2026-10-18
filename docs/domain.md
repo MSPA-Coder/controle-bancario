@@ -509,6 +509,33 @@ saídas), que é exatamente a diferença que Saldo Aplicações lança.
   com extrato), fora o mês corrente e os já fechados; pula, listando, o mês cujo
   saldo de extrato diverge do CB.
 
+### Ativo, tipo de renda e liquidação de pregão
+
+O lançamento de uma conta de corretora (Genial, SCP XP, Avenue, Nomad, Revolut
+são instituições do tipo "Corretora") guarda, além do valor, o que a descrição do
+extrato diz sobre o papel (`EntryInvestmentDetail`; ver `docs/architecture.md`).
+O parser lê, por palavra inteira e sem acento:
+
+- **ativo**: o ticker escrito (`EALT4`; `S/ 6,300` não é ativo) ou o código tipo
+  ISIN que a corretora imprime. A classe dá o final: `ACNOR` = 3, `ACNPR` = 4 e
+  `CTF` = 11 (`Brraizacnpr6` = RAIZ4, `Brhodlctf005` = HODL11). Unit e BDR não têm
+  regra e ficam sem ativo, em vez de um ticker chutado;
+- **tipo de renda**: `aluguel` ("Taxa de Remuneração Emprestimo"), `jcp` ("Juros
+  S/ Capital") ou `dividendo` ("Dividendos", "Cred Reembolso Jcp-Btc");
+- **papel da linha**: `credito` é a renda que entrou. No aluguel de ações a conta
+  também recebe `irrf_aluguel` ("Irrf S/Rendimentos Empréstimos de Ações"),
+  `corretagem_aluguel` ("Corretagem Executor - Btc") e `taxa_aluguel` ("Taxa de
+  Remuneração Btc", "Tx de Liquidação de Emprest."). O "Estorno * Prov * ..." é
+  `estorno`, à parte, com o tipo da linha que ele desfaz;
+- **liquidação de pregão** ("Operações Bolsa D+2 Pr 27/01/2026 Nc. 543216"): a
+  data do pregão e o número da nota; nota mascarada (`Nc. *`) fica sem número.
+
+Não recebem campos: o IRRF de pregão e de day trade ("Irrf S/ Resultado Bolsa",
+"Irrf S/ Operações D+2", "Irrf S/ Day Trade"), que **não** é `irrf_aluguel`; a
+corretagem e o ajuste de mini-contrato ("Operações Bm&F"); e o lançamento único
+sem ativo ("Atualização de saldo: rendimentos"). O dado é só acréscimo: não muda
+valor, data, categoria nem saldo, e vale para qualquer conta cuja descrição case.
+
 ### Dados já gravados
 
 Dois comandos de manutenção, ambos com simulação por padrão e backup antes de
