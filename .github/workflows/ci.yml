@@ -27,7 +27,9 @@ concurrency:
 jobs:
   quality:
     name: Qualidade
-    runs-on: ubuntu-24.04
+    # Produção é linux/arm64. Testar e publicar o mesmo artefato nativo,
+    # sem QEMU nem uma segunda imagem não exercitada no VPS.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     permissions:
       contents: read
@@ -102,6 +104,8 @@ jobs:
       - name: Construir uma única imagem operacional e PostgreSQL
         run: |
           docker compose build --pull --no-cache web postgres
+          test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' controle-bancario:local)" = linux/arm64
+          test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' mspa-postgres:17-alpine)" = linux/arm64
           echo "DELIVERY_APP_ID=$(docker image inspect --format '{{.Id}}' controle-bancario:local)" >> "$GITHUB_ENV"
           echo "DELIVERY_POSTGRES_ID=$(docker image inspect --format '{{.Id}}' mspa-postgres:17-alpine)" >> "$GITHUB_ENV"
 

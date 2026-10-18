@@ -1,5 +1,10 @@
 # Operação, dados e backup
 
+O VPS é `linux/arm64`. O job `Qualidade` usa runner ARM64 nativo e confere a
+arquitetura das duas imagens antes de smoke, Chromium, Trivy e publicação.
+Não se publica uma variante reconstruída e não testada para produção; o
+desenvolvimento local AMD64 continua usando seu próprio build Docker.
+
 ## Configuração e serviços
 
 O Compose exige os arquivos secretos `django_secret_key`, `postgres_password`,
