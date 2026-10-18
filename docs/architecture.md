@@ -110,7 +110,10 @@ urls -> views -> services -> models -> PostgreSQL
   (conciliar, criar, transferência pareada), `regras.py` aplica as regras
   explícitas, `saldo.py` é o Saldo Aplicações (antes Atualizar saldo), `painel_de_extratos.py`
   e `situacao.py` são as telas só de leitura Extratos e Situação das Contas, e
-  `pares_proprios.py` e `familias.py` são as manutenções de dados com simulação;
+  `pares_proprios.py` e `familias.py` são as manutenções de dados com simulação,
+  e `investimentos.py` (parser puro) e `investimentos_preenchimento.py` leem o
+  ativo e o tipo de renda do texto da corretora (ver "Dado de investimento no
+  lançamento");
 - `management/`: tags, projetos e orçamentos;
 - `reports/` e `dashboard/`: consultas e apresentação analítica;
 - `core/`: configuração da aplicação, auditoria, segurança e serviços comuns;
@@ -330,6 +333,38 @@ A quebra deixa de aparecer em produção, no leitor, e passa a reprovar a
 migração na suíte, que aplica todas as migrações num banco vazio. Uma view nova
 só chega ao usuário de leitura depois de rodar de novo
 `python -m financas_mcp.usuario_leitura` (ver o FinancasMCP).
+
+### Dado de investimento no lançamento
+
+A corretora imprime o ativo e o tipo de renda só no texto do extrato. O
+Controle de Renda Variável (dono dos papéis; este sistema é dono de todo o
+movimento de dinheiro, inclusive o das contas de corretora) precisa desses dados
+sem reinterpretar texto, então o CB os extrai uma vez e os guarda em
+`transactions.EntryInvestmentDetail` (`cash_flow_entry_investment`), tabela 1:1
+com o lançamento: `instrument_code`, `income_kind`, `income_role`,
+`settlement_pregao_date` e `settlement_note`, todos opcionais. Fica à parte de
+`CashFlowEntry` para não inflar o lançamento nem tocar as colunas que o esquema
+`leitura` lê (a migração `transactions/0011` é só aditiva). O esquema `leitura`
+não expõe os campos novos: o consumidor é o contrato v4.
+
+- `bank_statements/investimentos.py` é o parser puro (descrição -> `Detalhe`),
+  testado contra as descrições reais de 2026;
+- `bank_statements/investimentos_preenchimento.py` grava. Um `post_save` de
+  `BankStatementLine` (ligado em `apps.py`) preenche o lançamento quando uma linha
+  de extrato, de qualquer adaptador, passa a conciliada com ele: criar a partir da
+  linha, conciliar com existente, motor do extrato. O vínculo é o único ponto por
+  onde todos os caminhos passam;
+- `manage.py preencher_investimentos [--dry-run | --aplicar]` preenche os
+  lançamentos existentes de qualquer conta. Simula por padrão, é idempotente e
+  nunca apaga uma linha já gravada;
+- um gatilho em `cash_flow_entry_investment` (só INSERT e UPDATE) alimenta a
+  outbox do v4, porque gravar o detalhe muda o `cash_entry` publicado.
+
+No contrato v4 o `cash_entry` ganha, **só quando preenchidos**, `instrument`
+(ticker), `income_kind` (`aluguel`, `jcp`, `dividendo`), `income_role`
+(`credito`, `irrf_aluguel`, `corretagem_aluguel`, `taxa_aluguel`, `estorno`) e
+`settlement` (`pregao_date`, `note`). É acréscimo opcional: o schema aceita
+propriedades a mais e a versão continua v4.
 
 ### Snapshot de integração v4
 

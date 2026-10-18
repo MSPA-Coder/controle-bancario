@@ -47,6 +47,7 @@ from transactions.models import (
     CashFlowCategory,
     CashFlowCategoryGroup,
     CashFlowEntry,
+    EntryInvestmentDetail,
 )
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -122,6 +123,18 @@ def cenario(com_token):
     lancar(corrente, gerencial, ENTRY_TYPE_EXPENSE, "Por vir", "10.00", hoje + timedelta(days=9), is_recurring=True)
     lancar(corrente, movimentacao, ENTRY_TYPE_EXPENSE, "Aporte em ações", "300.00", date(2026, 3, 1), realizado="300.00")
     lancar(dolar, sem_grupo, ENTRY_TYPE_INCOME, "Dividendo no exterior", "12.34", date(2026, 4, 2), realizado="12.34")
+    EntryInvestmentDetail.objects.create(
+        entry=lancar(corrente, sem_grupo, ENTRY_TYPE_INCOME, "Dividendos Brwegeacnor0", "8.00", date(2026, 6, 2), realizado="8.00"),
+        instrument_code="WEGE3", income_kind="dividendo", income_role="credito",
+    )
+    EntryInvestmentDetail.objects.create(
+        entry=lancar(corrente, gerencial, ENTRY_TYPE_EXPENSE, "Operações Bolsa D+2 Pr 20/03/2026 Nc. *", "40.00", date(2026, 3, 24), realizado="40.00"),
+        settlement_pregao_date=date(2026, 3, 20),
+    )
+    EntryInvestmentDetail.objects.create(
+        entry=lancar(corrente, gerencial, ENTRY_TYPE_EXPENSE, "Operações Bolsa D+2 Pr 27/01/2026 Nc. 543216", "50.00", date(2026, 1, 29), realizado="50.00"),
+        settlement_pregao_date=date(2026, 1, 27), settlement_note="543216",
+    )
 
     operacao = BankOperation.objects.create(
         operation_key="transferencia-contrato-v4", operation_type=OPERATION_INTERNAL_TRANSFER
@@ -167,6 +180,21 @@ def test_snapshot_cumpre_o_contrato_com_todos_os_recursos(snapshot):
     assert recursos == {"account", "category", "cash_entry", "transfer"}
 
 
+def test_lancamento_de_investimento_publica_so_os_campos_preenchidos(snapshot):
+    validar("cb_snapshot", snapshot)
+    por_descricao = {
+        i["payload"]["description"]: i["payload"] for i in snapshot["items"] if i["resource"] == "cash_entry"
+    }
+    renda = por_descricao["Dividendos Brwegeacnor0"]
+    assert (renda["instrument"], renda["income_kind"], renda["income_role"]) == ("WEGE3", "dividendo", "credito")
+    assert "settlement" not in renda
+    assert por_descricao["Operações Bolsa D+2 Pr 20/03/2026 Nc. *"]["settlement"] == {"pregao_date": "2026-03-20"}
+    assert por_descricao["Operações Bolsa D+2 Pr 27/01/2026 Nc. 543216"]["settlement"] == {
+        "pregao_date": "2026-01-27", "note": "543216",
+    }
+    assert not {"instrument", "income_kind", "income_role", "settlement"} & set(por_descricao["Salário"])
+
+
 def test_conta_que_ainda_nao_existe_leva_saldo_nulo_e_nao_zero(snapshot):
     contas = {i["payload"]["name"]: i["payload"] for i in snapshot["items"] if i["resource"] == "account"}
     futura = contas["Conta que ainda não existe"]
@@ -207,6 +235,32 @@ def _primeiro(snapshot, recurso):
 
 def _sem_effective_status(s):
     del _primeiro(s, "cash_entry")["payload"]["effective_status"]
+
+
+def _lancamento_com(s, campo):
+    return next(
+        i["payload"] for i in s["items"] if i["resource"] == "cash_entry" and campo in i["payload"]
+    )
+
+
+def _ativo_em_minuscula(s):
+    _lancamento_com(s, "instrument")["instrument"] = "wege3"
+
+
+def _tipo_de_renda_fora_do_vocabulario(s):
+    _lancamento_com(s, "income_kind")["income_kind"] = "bonificacao"
+
+
+def _papel_fora_do_vocabulario(s):
+    _lancamento_com(s, "income_role")["income_role"] = "outro"
+
+
+def _liquidacao_com_data_fora_do_iso(s):
+    _lancamento_com(s, "settlement")["settlement"]["pregao_date"] = "20/03/2026"
+
+
+def _liquidacao_vazia(s):
+    _lancamento_com(s, "settlement")["settlement"] = {}
 
 
 def _valor_vira_numero(s):
@@ -255,7 +309,9 @@ def _saldo_como_zero_de_texto_vazio(s):
     [
         _sem_effective_status, _valor_vira_numero, _status_fora_do_vocabulario, _moeda_em_minuscula,
         _id_sem_prefixo_da_fonte, _campo_renomeado, _sistema_errado, _sem_high_watermark, _data_fora_do_iso,
-        _recurso_desconhecido, _saldo_como_zero_de_texto_vazio,
+        _recurso_desconhecido, _saldo_como_zero_de_texto_vazio, _ativo_em_minuscula,
+        _tipo_de_renda_fora_do_vocabulario, _papel_fora_do_vocabulario, _liquidacao_com_data_fora_do_iso,
+        _liquidacao_vazia,
     ],
     ids=lambda f: f.__name__.strip("_"),
 )
