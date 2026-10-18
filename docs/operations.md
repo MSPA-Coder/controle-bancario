@@ -236,6 +236,9 @@ O estado em `~/.local/state/mspa-deploy/controle-bancario.images` registra os
 digests saudáveis. Rollback usa os IDs locais capturados antes da mudança,
 incluindo migrate/provisionamento, sem novo pull/build; nunca desfaz banco.
 
+O serviço `postgres` declara `mspa.backup.postgres=true`, contrato de
+descoberta do backup central mesmo quando a imagem é identificada por digest.
+
 **Antes do primeiro deploy**, crie `.secrets/patrimonio_integration_token` no
 servidor (o token do contrato v4 e da projeção). O Compose recusa subir com um
 arquivo de segredo declarado e ausente, e o `deploy.sh` faria rollback de uma

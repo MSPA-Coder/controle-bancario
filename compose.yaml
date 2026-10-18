@@ -114,6 +114,8 @@ x-postgres-hardening: &postgres-hardening
 
 services:
   postgres:
+    labels:
+      mspa.backup.postgres: "true"
     <<: *postgres-hardening
     image: mspa-postgres:17-alpine
     build:
