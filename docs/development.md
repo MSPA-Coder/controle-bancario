@@ -26,11 +26,19 @@ Verificação da configuração Django:
 docker compose --env-file .env.docker -f compose.yaml run --rm web python manage.py check
 ```
 
-Ruff e suíte automatizada:
+Ruff, piloto mypy e suíte automatizada:
 
 ```powershell
 docker compose --env-file .env.docker -f compose.yaml --profile quality run --build --rm quality
 ```
+
+O mypy verifica em modo estrito somente os arquivos de `[tool.mypy]`: vocabulário
+de domínio, contratos imutáveis de importação/comandos e cálculos de parcelas.
+Imports fora da fronteira não são analisados (`follow_imports=skip`); não é uma
+promessa de verificar os models dinâmicos do Django. `django-stubs` fica apenas
+no extra de desenvolvimento, sem plugin que inicialize o ORM. Não foram
+adicionados `Any` ou supressões para deixar o piloto verde. Execução isolada:
+`docker compose --env-file .env.docker --profile quality run --build --rm quality mypy`.
 
 **`--build` não é opcional.** O serviço `quality` não monta o código do
 host: o que ele executa é o que foi copiado para a imagem. `docker compose
@@ -54,6 +62,31 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.dev.yaml run --
 Revise toda migration gerada. Uma mudança de schema só está pronta depois de
 validar `manage.py migrate` em PostgreSQL vazio e no caminho de atualização
 aplicável.
+
+## Piloto de navegador (dados descartáveis)
+
+Além do `quality`, `compose.browser.yaml` executa Chromium com PostgreSQL
+efêmero. O piloto confirma o lançamento pelo modal, envia decimais regionais,
+confere saldo após HTMX e reload, renovação da chave de envio e preservação
+dos filtros. Não substitui testes de domínio, autorização e concorrência.
+Contas e senha são sintéticas; não há portas publicadas, segredos ou volumes
+operacionais montados.
+
+```powershell
+New-Item -ItemType Directory -Force .browser-results
+docker compose -f compose.browser.yaml down
+docker compose -f compose.browser.yaml build --pull
+docker compose -f compose.browser.yaml up --no-build --abort-on-container-exit --exit-code-from browser-tests
+# Guarde o código de saída anterior; depois encerre somente essa pilha:
+docker compose -f compose.browser.yaml down
+```
+
+Usa a CA local documentada no README; `BROWSER_CA_FILE` permite indicar outro
+caminho. Em Linux, dê escrita a `.browser-results` para o usuário do runner
+(`chmod 777` em CI descartável). Capturas de falhas contêm apenas os dados
+fictícios e ficam nesse diretório ignorado. A CI `Navegador` usa o mesmo fluxo,
+sem instalar Node ou navegadores no host. Recrie a pilha para cada execução:
+o bootstrap recusa reaproveitar um banco que já tenha usuários.
 
 ## Textos da interface (idioma)
 

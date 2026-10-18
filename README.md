@@ -83,3 +83,5 @@ exceções nunca carregam o valor lido. Um rótulo novo a reconhecer entra em
 - [Operação, dados e backup](docs/operations.md): configuração, persistência,
   implantação, backup e restauração.
 - `AGENTS.md`: regras operacionais para quem mantém o repositório.
+- [Decisões da evolução incremental](docs/decisoes-evolucao.md): medições e
+  limites para timer, mídia e abstrações adicionais.

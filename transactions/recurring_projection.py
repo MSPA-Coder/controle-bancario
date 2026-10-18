@@ -39,6 +39,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from itertools import groupby
+from time import perf_counter
 
 from django.db import connection, transaction
 from django.utils import timezone
@@ -156,11 +157,13 @@ def executar_projecao_mensal_se_devido(hoje: date | None = None) -> DecisaoProje
     if hoje.day < dia_devido:
         return DecisaoProjecaoMensal(False, False, f"antes do dia {dia_devido}")
 
+    started = perf_counter()
     resultado = ensure_recurring_projection_horizon(today=hoje, update_last_run=True)
     logger.info(
-        "Projecao recorrente automatica: %s lancamento(s) ate %s.",
+        "Projecao recorrente automatica: %s lancamento(s) ate %s. duration_ms=%.1f",
         resultado.generated_count,
         resultado.horizon_end.isoformat(),
+        (perf_counter() - started) * 1000,
     )
     return DecisaoProjecaoMensal(True, True, "executada", resultado)
 

@@ -43,6 +43,7 @@ from .adapters import (
     max_statement_rows,
     read_statement_upload,
 )
+from .document import StatementDocument
 
 FORMATO_C6 = "c6"
 FORMATO_XP = "xp"
@@ -258,5 +259,6 @@ class CartaoCsvAdapter:
     def __init__(self, dia_de_fechamento: int | None = None) -> None:
         self.dia_de_fechamento = dia_de_fechamento
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        return ler_fatura(read_statement_upload(file, label="CSV"), account_id, self.dia_de_fechamento)
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="CSV")
+        return ler_fatura(raw, account_id, self.dia_de_fechamento)

@@ -43,8 +43,8 @@ RUN apt-get update \
 #
 # POR QUE `uv` E NAO `pip install`: o `pip` resolvia as faixas do
 # `pyproject.toml` no instante do build, entao dois builds do MESMO commit
-# podiam produzir imagens diferentes -- e o `deploy.sh` reconstroi no VPS, de
-# modo que a imagem servida nunca foi exatamente a que a CI testou. O
+# podiam produzir imagens diferentes. O deploy agora recebe a imagem testada
+# por digest; o lock também mantém a coerência entre quality e runtime. O
 # `uv.lock` fixa versao e hash SHA-256 de cada dependencia.
 #
 # O FLAG E `--locked`, E A DIFERENCA IMPORTA. `--frozen` apenas usa o lock sem
@@ -147,13 +147,18 @@ RUN DJANGO_SECRET_KEY=build-only-nao-usada-em-execucao \
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "ruff check . && pytest"]
+CMD ["sh", "-c", "ruff check . && mypy && pytest"]
 
 
 # Estagio de producao: somente dependencias e arquivos de runtime. Codigo fica
 # como root:root e legivel pelo usuario da aplicacao; apenas volumes declarados
 # pelo Compose sao gravaveis em execucao.
 FROM base AS runtime
+ARG ARTIFACT_REVISION=local
+ARG ARTIFACT_RUN=local
+LABEL org.opencontainers.image.source="https://github.com/MSPA-Coder/sistema-financeiro" \
+      org.opencontainers.image.revision=$ARTIFACT_REVISION \
+      br.com.mspa.ci-run=$ARTIFACT_RUN
 
 # O venv vem do `builder`; sem isto, `python`, `gunicorn` e `manage.py`
 # resolveriam para o interpretador do sistema, que nao tem as dependencias.

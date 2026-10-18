@@ -82,3 +82,4 @@ staticfiles/
 
 # Catalogo de traducao compilado (nasce no build)
 locale/**/*.mo
+.browser-results/

@@ -123,7 +123,29 @@ schema e suas restrições. Consultas triviais podem permanecer na view; o
 projeto evita repositories pass-through, mas permite query objects ou
 repositories quando reduzirem duplicação, acoplamento ou custo de consulta.
 
+Na importação, `bank_statements/queries.py` concentra as leituras e a conferência
+agrupada; `services.py` mantém a escrita do lote. Os contratos imutáveis ficam
+em `bank_statements/contracts.py`. Em lançamentos, `transactions/contracts.py`
+define a entrada do comando e `calculations.py` calcula parcelas com `Decimal`,
+sem ORM. Os caminhos antigos em `services`/`adapters` continuam reexportados
+para não exigir migração simultânea dos consumidores. São fronteiras concretas,
+não um repository por model nem uma nova hierarquia de serviços.
+
 ### Leituras memorizadas por requisição
+
+A importação usa `bank_statements/document.py`: um contexto local conserva os
+bytes, o texto extraído do PDF e, para XP, as linhas geométricas. Detecção e
+importação recebem o resultado imutável `ParsedStatement` (linhas, saldo,
+período e indicação da conta). Não há cache entre requisições nem resultado
+persistido: a confirmação relê o arquivo salvo. As funções `parse(file, conta)`
+continuam aceitas por compatibilidade. Hashes não incorporam metadados, e
+saldo ilegível continua opcional; arquivo sem movimento mas com saldo zero
+continua importável.
+
+A lista de importações reúne a conferência por data e contas distintas: lotes
+da mesma conta/data reutilizam o saldo dentro da chamada. Não soma moedas nem
+guarda valores entre requisições; o custo cresce com datas distintas, não com
+cópias do mesmo par conta/data.
 
 Não há cache de processo nem externo. Duas leituras repetidas em quase toda
 tela são guardadas **só durante a requisição**, porque um cache de processo

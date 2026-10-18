@@ -27,32 +27,21 @@ from django.utils.translation import gettext, ngettext
 
 from core import regional
 
+from .contracts import ParsedStatementLine as ParsedStatementLine
+from .document import StatementDocument
+
 
 class ValorZeradoError(ValueError):
     """Valor 0,00 no extrato: a fatura em CSV trata como linha ignorável, não como erro."""
 
 
-@dataclass(frozen=True)
-class ParsedStatementLine:
-    """Linha de extrato já normalizada para o domínio interno."""
-
-    statement_date: date
-    description: str
-    amount: Decimal
-    line_hash: str
-    # Só a fatura de cartão preenche os campos abaixo (ver `fatura_csv`).
-    purchase_date: date | None = None
-    installment_current: int | None = None
-    installment_total: int | None = None
-    card_holder: str = ""
-    bank_category: str = ""
 
 
 @runtime_checkable
 class StatementAdapter(Protocol):
     """Adapter para converter um formato externo em linhas normalizadas."""
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
         """Lê o arquivo externo e devolve linhas normalizadas."""
 
 
@@ -191,8 +180,8 @@ def numerar_repeticoes(linhas: list[ParsedStatementLine], account_id: int) -> li
 class CsvStatementAdapter:
     """Adapter padrão para arquivos CSV de extrato."""
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        raw = read_statement_upload(file, label="CSV")
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="CSV")
         text = raw.decode("utf-8-sig", errors="replace")
         sample = text[:2048]
         try:
@@ -336,8 +325,8 @@ class OfxStatementAdapter:
     em vez de depender de um identificador que o banco não garante estável.
     """
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        raw = read_statement_upload(file, label="OFX")
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="OFX")
         try:
             content = raw.decode("utf-8")
         except UnicodeDecodeError:
@@ -557,9 +546,9 @@ def _parse_genial_lines(text: str, account_id: int) -> list[ParsedStatementLine]
 class GenialPdfStatementAdapter:
     """Adapter para o extrato de conta corrente em PDF da Genial Investimentos."""
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        raw = read_statement_upload(file, label="PDF")
-        text = extract_pdf_text(raw)
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="PDF")
+        text = document.pdf_text if document is not None else extract_pdf_text(raw)
         return _parse_genial_lines(text, account_id)
 
 
@@ -701,9 +690,9 @@ def _parse_mercadopago_lines(text: str, account_id: int) -> list[ParsedStatement
 class MercadoPagoPdfStatementAdapter:
     """Adapter para o extrato de conta em PDF da Mercado Pago."""
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        raw = read_statement_upload(file, label="PDF")
-        text = extract_pdf_text(raw)
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="PDF")
+        text = document.pdf_text if document is not None else extract_pdf_text(raw)
         return _parse_mercadopago_lines(text, account_id)
 
 
@@ -826,9 +815,9 @@ def _parse_itau_lines(text: str, account_id: int) -> list[ParsedStatementLine]:
 class ItauPdfStatementAdapter:
     """Adapter para o extrato de conta em PDF do Itaú."""
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        raw = read_statement_upload(file, label="PDF")
-        text = extract_pdf_text(raw)
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="PDF")
+        text = document.pdf_text if document is not None else extract_pdf_text(raw)
         return _parse_itau_lines(text, account_id)
 
 
@@ -924,9 +913,9 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
 class AvenuePdfStatementAdapter:
     """Adapter para o extrato em PDF da conta brasileira (R$) da Avenue."""
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        raw = read_statement_upload(file, label="PDF")
-        text = extract_pdf_text(raw)
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="PDF")
+        text = document.pdf_text if document is not None else extract_pdf_text(raw)
         return _parse_avenue_lines(text, account_id)
 
 
@@ -1159,10 +1148,13 @@ def _parse_xp_linhas(linhas: list[_LinhaXp], account_id: int) -> list[ParsedStat
 class XpPdfStatementAdapter:
     """Adapter para o extrato da conta de investimento em PDF da XP Investimentos."""
 
-    def parse(self, file: UploadedFile, account_id: int) -> list[ParsedStatementLine]:
-        raw = read_statement_upload(file, label="PDF")
-        with _xp_abrir(raw) as pdf:
-            linhas = _xp_ler(pdf.pages)
+    def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
+        raw = document.raw if document is not None else read_statement_upload(file, label="PDF")
+        if document is not None:
+            linhas = document.xp_lines
+        else:
+            with _xp_abrir(raw) as pdf:
+                linhas = _xp_ler(pdf.pages)
         return _parse_xp_linhas(linhas, account_id)
 
 

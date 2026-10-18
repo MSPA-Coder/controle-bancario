@@ -13,6 +13,9 @@ x-app-build: &app-build
     pull: true
     no_cache: true
     target: runtime
+    args:
+      ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
+      ARTIFACT_RUN: ${ARTIFACT_RUN:-local}
     secrets:
       - local_ca
 
@@ -111,6 +114,8 @@ x-postgres-hardening: &postgres-hardening
 
 services:
   postgres:
+    labels:
+      mspa.backup.postgres: "true"
     <<: *postgres-hardening
     image: mspa-postgres:17-alpine
     build:

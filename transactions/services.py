@@ -16,8 +16,6 @@ from banking.models import FinancialAccount
 from banking.services import can_access_account, currency_blocks
 from core.currency_filter import ALL_CURRENCIES, selected_currency
 from core.domain.finance import (
-    CALC_DIVIDE,
-    CALC_REPEAT,
     CATEGORY_KIND_MANAGERIAL,
     ENTRY_TYPE_EXPENSE,
     ENTRY_TYPE_INCOME,
@@ -35,6 +33,9 @@ from core.domain.finance import (
     STATUS_REALIZED,
     VALID_CATEGORY_KINDS,
 )
+from transactions.calculations import MONEY_QUANT, _monthly_amount_for
+from transactions.calculations import installment_amount_for as installment_amount_for
+from transactions.contracts import TransactionRequest as TransactionRequest
 from transactions.models import (
     AccountMonthClose,
     BankOperation,
@@ -663,37 +664,6 @@ def delete_category(category: CashFlowCategory) -> None:
 # `transactions/operations.py`).
 # ============================================================================
 
-MONEY_QUANT = Decimal("0.01")
-
-
-@dataclass(frozen=True)
-class TransactionRequest:
-    """Payload validado de criação/edição de lançamento.
-
-    Frozen de propósito: o caso de uso não deve reescrever a entrada enquanto
-    a processa."""
-
-    account_id: int
-    category_id: int
-    entry_type: str
-    description: str
-    entry_amount: Decimal
-    installments: int
-    due_date: date
-    calc_mode: str = CALC_REPEAT
-    is_recurring: bool = False
-    status: str = STATUS_PROJECTED
-    realized_date: date | None = None
-    realized_amount: Decimal | None = None
-    counterparty_account_id: int | None = None
-    # Só existe quando a transferência atravessa moedas: é o que entra na conta
-    # destino, em vez do espelho do valor que saiu da origem. Ver
-    # `counterparty_amount_for_transfer`.
-    counterparty_amount: Decimal | None = None
-    # Parcelado que já vem andando: a fatura de cartão mostra a compra pela
-    # primeira vez na parcela 10 de 12, e só as parcelas 10 a 12 são criadas,
-    # numeradas como no banco. `due_date` é a da parcela `first_installment`.
-    first_installment: int = 1
 
 
 def _opposite_entry_type(entry_type: str) -> str:
@@ -706,21 +676,6 @@ def _account_label(account: FinancialAccount | None) -> str:
     return rotulo_da_conta(account)
 
 
-def _monthly_amount_for(entry_amount: Decimal, installments: int, calc_mode: str) -> Decimal:
-    """Valor-base de uma parcela, usado também para validar o payload."""
-    amount = entry_amount if isinstance(entry_amount, Decimal) else Decimal(str(entry_amount))
-    if calc_mode == CALC_DIVIDE and installments > 1:
-        return (amount / Decimal(installments)).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
-    return amount.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
-
-
-def installment_amount_for(entry_amount: Decimal, installments: int, calc_mode: str, installment: int) -> Decimal:
-    """Devolve a parcela, concentrando na última o resíduo de arredondamento."""
-    amount = entry_amount if isinstance(entry_amount, Decimal) else Decimal(str(entry_amount))
-    base = _monthly_amount_for(amount, installments, calc_mode)
-    if calc_mode != CALC_DIVIDE or installments <= 1 or installment < installments:
-        return base
-    return (amount - (base * (installments - 1))).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
 
 
 def _parcelas_e_valor(req: TransactionRequest, *, recorrente: bool | None = None) -> tuple[int, Decimal]:
