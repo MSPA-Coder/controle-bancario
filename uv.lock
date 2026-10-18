@@ -204,7 +204,7 @@ wheels = [
 
 [[package]]
 name = "controle-bancario"
-version = "2.2.0"
+version = "3.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "django" },
