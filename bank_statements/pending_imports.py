@@ -35,13 +35,12 @@ from banking.models import FinancialAccount, FinancialInstitution
 from .adapters import (
     extract_conta_label,
     extract_ofx_account_hint,
-    extract_pdf_text,
-    extract_statement_balance,
     get_statement_adapter,
     pdf_institution_names,
     read_statement_upload,
     sniff_pdf_format,
 )
+from .document import StatementDocument, parse_statement
 from .fatura_csv import FORMATO_C6, FORMATO_XP, formato_da_fatura
 from .models import BankStatementImport, PendingStatementUpload
 from .pdf_senha import pede_senha, sem_senha
@@ -107,16 +106,16 @@ def _account_lookup(user) -> dict[str, list[FinancialAccount]]:
     return lookup
 
 
-def _erro_de_leitura(file_like: UploadedFile, institution=None) -> str:
+def _erro_de_leitura(file_like: UploadedFile, institution=None, *, document: StatementDocument | None = None) -> str:
     """O erro que a importação daria ao ler o arquivo, ou "".
 
     Sem movimento só é erro se o arquivo também não traz saldo: com saldo, é um
     mês sem movimentação e importa (ver `import_statement_file`)."""
     try:
-        linhas = get_statement_adapter(file_like, institution=institution).parse(file_like, account_id=0)
+        result = parse_statement(file_like, 0, adapter=get_statement_adapter(file_like, institution=institution), document=document)
     except ValueError as exc:
         return str(exc)
-    if not linhas and extract_statement_balance(file_like) is None:
+    if not result.lines and result.balance is None:
         return gettext("O extrato não tem movimento nem saldo: não há o que importar.")
     return ""
 
@@ -137,10 +136,11 @@ def detect_account(
     lowered_name = (filename or "").lower()
     lowered_type = (content_type or "").lower()
     file_like = SimpleUploadedFile(filename or "extrato", raw, content_type=content_type or "")
+    document = StatementDocument(raw, filename or "extrato", content_type or "")
 
     if _eh_pdf(filename, content_type):
         try:
-            text = extract_pdf_text(raw)
+            text = document.pdf_text
         except ValueError as exc:
             return None, "", str(exc)
 
@@ -160,7 +160,7 @@ def detect_account(
         if conta:
             label = gettext("%(label)s · conta %(conta)s") % {"label": label, "conta": conta}
         if institution is not None:
-            erro = _erro_de_leitura(file_like, institution)
+            erro = _erro_de_leitura(file_like, institution, document=document)
             if erro:
                 return None, label, erro
         digits = _only_digits(conta) if conta else ""
@@ -181,7 +181,7 @@ def detect_account(
             content = raw.decode("latin-1")
         hint = extract_ofx_account_hint(content)
         label = gettext("OFX · conta %(conta)s") % {"conta": hint} if hint else "OFX"
-        erro = _erro_de_leitura(file_like)
+        erro = _erro_de_leitura(file_like, document=document)
         if erro:
             return None, label, erro
         digits = _only_digits(hint) if hint else ""

@@ -205,7 +205,7 @@ def test_a_conta_e_detectada_pelo_numero_mesmo_com_o_nome_antigo_da_instituicao(
     from bank_statements import pending_imports
 
     user, conta = conta_scp
-    monkeypatch.setattr(pending_imports, "extract_pdf_text", lambda raw: TEXTO_XP)
+    monkeypatch.setattr(adapters, "extract_pdf_text", lambda raw: TEXTO_XP)
     monkeypatch.setattr(adapters, "_xp_abrir", lambda raw: _PdfFalso([_pagina(LINHAS)]))
     detectada, rotulo, erro = pending_imports.detect_account(
         user, filename="extrato_de_01-04-2026_ate_30-06-2026.pdf", content_type="application/pdf", raw=b"%PDF"

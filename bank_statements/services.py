@@ -22,11 +22,10 @@ from banking.models import FinancialAccount
 from banking.services import accessible_account_ids, can_access_account
 
 from .adapters import (
-    extract_statement_balance,
-    extract_statement_period_end,
     get_statement_adapter,
     read_statement_upload,
 )
+from .document import StatementDocument, parse_statement
 from .fatura_csv import CartaoCsvAdapter, formato_da_fatura
 from .models import BankStatementImport, BankStatementLine
 
@@ -72,7 +71,7 @@ def _clean_account_id(raw_account_id) -> int:
     return account_id
 
 
-def _adapter_for(account: FinancialAccount, uploaded_file: UploadedFile):
+def _adapter_for(account: FinancialAccount, uploaded_file: UploadedFile, *, document: StatementDocument | None = None):
     """Fatura só entra em cartão, e cartão só recebe fatura.
 
     Os dois erros são de sinal: uma fatura lida como extrato grava compra como
@@ -85,7 +84,8 @@ def _adapter_for(account: FinancialAccount, uploaded_file: UploadedFile):
         if not eh_csv:
             raise ValueError(gettext("Conta de cartão de crédito recebe a fatura em CSV (C6 ou XP)."))
         return CartaoCsvAdapter(account.card_closing_day)
-    if eh_csv and formato_da_fatura(read_statement_upload(uploaded_file, label="CSV")) is not None:
+    raw = document.raw if document is not None else None
+    if eh_csv and formato_da_fatura(raw if raw is not None else read_statement_upload(uploaded_file, label="CSV")) is not None:
         raise ValueError(gettext(
             "Este arquivo é uma fatura de cartão de crédito. Importe-o na conta do cartão "
             "(tipo “Cartão de crédito” em Cadastros > Contas)."
@@ -112,9 +112,14 @@ def import_statement_file(
     except FinancialAccount.DoesNotExist as exc:
         raise ValueError(gettext("Conta não encontrada.")) from exc
 
-    parsed = _adapter_for(account, uploaded_file).parse(uploaded_file, clean_account_id)
+    document = StatementDocument.from_upload(uploaded_file)
+    result = parse_statement(
+        uploaded_file, clean_account_id,
+        adapter=_adapter_for(account, uploaded_file, document=document), document=document,
+    )
+    parsed = result.lines
     # Fatura de cartão não traz saldo; extrato de conta traz, às vezes.
-    saldo = None if account.is_credit_card else extract_statement_balance(uploaded_file)
+    saldo = None if account.is_credit_card else result.balance
     if not parsed and saldo is None:
         raise ValueError(gettext("O extrato não tem movimento nem saldo: não há o que importar."))
     # Sem movimento mas com saldo é um mês sem movimentação de verdade: o lote
@@ -130,7 +135,7 @@ def import_statement_file(
             row_count=0,
             statement_balance=saldo[0] if saldo else None,
             statement_balance_date=saldo[1] if saldo else None,
-            statement_period_end=None if account.is_credit_card else extract_statement_period_end(uploaded_file),
+            statement_period_end=None if account.is_credit_card else result.period_end,
         )
         existing_hashes = _existing_line_hashes(
             clean_account_id, {line.line_hash for line in parsed}
@@ -217,9 +222,38 @@ def statement_imports_for_user(user, limit: int = 20) -> Iterable[BankStatementI
             account_id__in=account_ids
         )[:limit]
     )
-    for lote in lotes:
-        lote.conferencia = conferencia_de_saldo(lote)
+    conferir_saldos(lotes)
     return lotes
+
+
+def conferir_saldos(lotes: Iterable[BankStatementImport]) -> None:
+    """Uma leitura por data distinta, reunindo as contas sem misturar moedas.
+
+    O mesmo saldo pode conferir vários arquivos da mesma conta/data. Não há
+    cache entre requisições: uma conciliação nova já aparece na próxima leitura.
+    """
+    from core.domain.finance import VIEW_REALIZED
+    from reports.services import decimal_balances_before_by_account
+
+    lotes = list(lotes)
+    contas_por_data: dict[date, set[int]] = {}
+    for lote in lotes:
+        if lote.statement_balance is not None and lote.statement_balance_date is not None:
+            contas_por_data.setdefault(lote.statement_balance_date, set()).add(lote.account_id)
+    saldos_por_data = {
+        dia: decimal_balances_before_by_account(sorted(contas), dia + timedelta(days=1), VIEW_REALIZED)
+        for dia, contas in contas_por_data.items()
+    }
+    for lote in lotes:
+        lote.conferencia = (
+            ConferenciaDeSaldo(
+                saldo_do_extrato=lote.statement_balance,
+                data=lote.statement_balance_date,
+                saldo_no_cb=saldos_por_data[lote.statement_balance_date].get(lote.account_id, Decimal("0.00")),
+            )
+            if lote.statement_balance is not None and lote.statement_balance_date is not None
+            else None
+        )
 
 
 def statement_import_status(user, batch_id: int) -> dict[str, object] | None:

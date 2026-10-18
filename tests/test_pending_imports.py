@@ -80,9 +80,7 @@ VERSION:102
 
 
 def _stub_pdf_text(monkeypatch, text: str) -> None:
-    """`extract_pdf_text` é importado em dois módulos; sem pdfplumber de
-    verdade nos testes, as duas ligações precisam ser substituídas."""
-    monkeypatch.setattr("bank_statements.pending_imports.extract_pdf_text", lambda raw: text)
+    """Substitui só a fronteira externa de extração do PDF."""
     monkeypatch.setattr("bank_statements.adapters.extract_pdf_text", lambda raw: text)
 
 
