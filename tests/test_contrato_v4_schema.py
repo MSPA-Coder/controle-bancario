@@ -152,6 +152,12 @@ def cenario(com_token):
             realized_amount=Decimal("200.00"), status=STATUS_REALIZED, operation_type=OPERATION_INTERNAL_TRANSFER,
             bank_operation=operacao, source_entry=origem,
         )
+    # Extrato importado: a conta corrente ganha o `statement_covered_until` opcional.
+    from bank_statements.models import BankStatementImport
+
+    BankStatementImport.objects.create(
+        account=corrente, source_filename="extrato.ofx", statement_period_end=date(2026, 9, 30)
+    )
     return {"corrente": corrente, "cartao": cartao, "futura": futura, "operacao": operacao}
 
 
