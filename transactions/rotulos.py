@@ -41,7 +41,13 @@ def rotulo_da_conta(account) -> str:
 
 def rotulo_da_ponta(entrada, conta_da_outra_ponta) -> str:
     """A descrição que o sistema dá a uma ponta de transferência."""
-    prefixo = PREFIXO_DESTINO if entrada.entry_type == ENTRY_TYPE_EXPENSE else PREFIXO_ORIGEM
+    return rotulo_por_tipo(entrada.entry_type, conta_da_outra_ponta)
+
+
+def rotulo_por_tipo(entry_type: str, conta_da_outra_ponta) -> str:
+    """O mesmo rótulo, para a ponta que ainda não existe: a despesa diz para onde
+    o dinheiro foi; a receita, de onde veio."""
+    prefixo = PREFIXO_DESTINO if entry_type == ENTRY_TYPE_EXPENSE else PREFIXO_ORIGEM
     return f"{prefixo}{rotulo_da_conta(conta_da_outra_ponta)}"[:255]
 
 

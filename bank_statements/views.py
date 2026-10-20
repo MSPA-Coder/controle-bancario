@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -555,11 +556,73 @@ def create_entry_from_line_view(request):
 @login_required
 @permission_required('banking.reconcile', fallback='bank_statements:reconciliation_view')
 @require_POST
+def transfer_from_line_view(request):
+    """Lança uma linha de extrato como transferência para (ou de) outra conta sua."""
+    try:
+        reconciliation.transfer_from_line(
+            request.user,
+            line_id=request.POST.get('line_id'),
+            other_account_id=request.POST.get('other_account_id'),
+            other_amount=_valor_opcional(request.POST.get('other_amount')),
+            audit_context=audit_request_context(request),
+        )
+        messages.success(request, gettext("Transferência lançada e conciliada com a linha do extrato."))
+    except ValueError as exc:
+        messages.error(request, str(exc))
+
+    if quer_fragmento(request):
+        return render(request, 'banking/_reconciliation_tables.html', _reconciliation_context(request))
+    return redirect('bank_statements:reconciliation_view')
+
+
+def _valor_opcional(texto):
+    """Valor digitado num campo opcional: vazio é `None`; o resto precisa ser número finito."""
+    texto = (texto or "").strip()
+    if not texto:
+        return None
+    try:
+        valor = Decimal(texto.replace(",", "."))
+    except InvalidOperation:
+        valor = None
+    if valor is None or not valor.is_finite():
+        raise ValueError(gettext("Valor monetário inválido: %(valor)s.") % {"valor": texto})
+    return valor
+
+
+def _categorias_escolhidas(post) -> dict[int, int]:
+    """O seletor de categoria de cada linha (`categoria_<id da linha>`), quando preenchido."""
+    escolhidas = {}
+    for chave, valor in post.items():
+        if chave.startswith('categoria_') and chave[len('categoria_'):].isdigit() and valor.isdigit():
+            escolhidas[int(chave[len('categoria_'):])] = int(valor)
+    return escolhidas
+
+
+@login_required
+@permission_required('banking.reconcile', fallback='bank_statements:reconciliation_view')
+@require_POST
 def bulk_action_lines_view(request):
-    """Concilia, cria lançamentos ou ignora várias linhas de extrato selecionadas de uma vez."""
-    action = request.POST.get('bulk_action')
+    """Concilia, cria lançamentos ou ignora várias linhas de extrato selecionadas de uma vez.
+
+    O "Criar" de uma linha também chega aqui (`criar:<id da linha>`): o seletor
+    de categoria de cada linha pertence a este formulário, para que o lote use o
+    que foi escolhido nele."""
+    action = request.POST.get('bulk_action') or ''
     line_ids = request.POST.getlist('line_ids')
-    if not line_ids:
+    categorias = _categorias_escolhidas(request.POST)
+    if action.startswith('criar:'):
+        line_id = action[len('criar:'):]
+        try:
+            reconciliation.create_entry_from_line(
+                request.user,
+                line_id=line_id,
+                category_id=categorias.get(int(line_id)) if line_id.isdigit() else None,
+                audit_context=audit_request_context(request),
+            )
+            messages.success(request, gettext("Lançamento criado e conciliado com a linha do extrato."))
+        except ValueError as exc:
+            messages.error(request, str(exc))
+    elif not line_ids:
         messages.warning(request, gettext("Selecione ao menos uma linha do extrato."))
     elif action == 'reconcile':
         reconciled, errors = reconciliation.bulk_reconcile_lines(
@@ -587,7 +650,7 @@ def bulk_action_lines_view(request):
             ).select_related("account__owner", "account__institution")
         )
         feitas, errors = extrato.aplicar(
-            request.user, linhas, audit_context=audit_request_context(request)
+            request.user, linhas, audit_context=audit_request_context(request), categorias=categorias
         )
         if feitas:
             detalhe = ", ".join(
@@ -605,6 +668,7 @@ def bulk_action_lines_view(request):
             request.user,
             line_ids=line_ids,
             audit_context=audit_request_context(request),
+            categorias=categorias,
         )
         if created:
             messages.success(request, ngettext(

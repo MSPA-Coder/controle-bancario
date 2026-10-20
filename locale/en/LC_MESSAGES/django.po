@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-19 07:28-0300\n"
+"POT-Creation-Date: 2026-10-20 02:39-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -868,7 +868,7 @@ msgstr "%(texto)s #%(id)s; corrects the settlement: %(correcao)s"
 msgid "%(texto)s #%(id)s: previsto %(previsto)s, no extrato %(extrato)s"
 msgstr "%(texto)s #%(id)s: expected %(previsto)s, statement shows %(extrato)s"
 
-#: bank_statements/extrato.py
+#: bank_statements/extrato.py bank_statements/reconciliation.py
 msgid "Linha de cartão: use a tela de Faturas."
 msgstr "Credit card line: use the Card statements screen."
 
@@ -1201,9 +1201,26 @@ msgid "Selecione uma categoria para criar o lançamento."
 msgstr "Select a category to create the entry."
 
 #: bank_statements/reconciliation.py
+msgid "Transferência tem outra ponta: use “Transferir”, que pede a outra conta."
+msgstr "A transfer has another side: use “Transfer”, which asks for the other account."
+
+#: bank_statements/reconciliation.py
 #, python-format
 msgid "Não é possível criar lançamento: mês %(mes)02d/%(ano)s fechado para a conta %(conta)s."
 msgstr "Cannot create entry: month %(mes)02d/%(ano)s is closed for account %(conta)s."
+
+#: bank_statements/reconciliation.py
+msgid "Escolha a outra conta da transferência."
+msgstr "Choose the other account of the transfer."
+
+#: bank_statements/reconciliation.py
+msgid "A outra conta da transferência precisa ser diferente da conta do extrato."
+msgstr "The other account of the transfer must be different from the statement account."
+
+#: bank_statements/reconciliation.py
+#, python-format
+msgid "Informe quanto saiu de %(conta)s, na moeda dela: as moedas são diferentes."
+msgstr "Enter how much left %(conta)s, in its own currency: the currencies are different."
 
 #: bank_statements/reconciliation.py
 msgid "Apenas linhas novas e não conciliadas podem ser ignoradas."
@@ -1504,6 +1521,15 @@ msgstr "Line reconciled and entry marked as settled."
 #: bank_statements/views.py
 msgid "Lançamento criado e conciliado com a linha do extrato."
 msgstr "Entry created and reconciled with the statement line."
+
+#: bank_statements/views.py
+msgid "Transferência lançada e conciliada com a linha do extrato."
+msgstr "Transfer recorded and reconciled with the statement line."
+
+#: bank_statements/views.py transactions/views.py
+#, python-format
+msgid "Valor monetário inválido: %(valor)s."
+msgstr "Invalid monetary amount: %(valor)s."
 
 #: bank_statements/views.py
 msgid "Selecione ao menos uma linha do extrato."
@@ -3257,8 +3283,8 @@ msgid "Conciliar com lançamento"
 msgstr "Reconcile with entry"
 
 #: templates/banking/_reconciliation_tables.html
-msgid "Ou criar lançamento"
-msgstr "Or create entry"
+msgid "Ou criar lançamento ou transferir"
+msgstr "Or create entry or transfer"
 
 #: templates/banking/_reconciliation_tables.html
 msgid "Sugestões seguras: candidato único, transferência pareada, regra ou categoria com confiança alta. Confira se quiser."
@@ -3293,6 +3319,10 @@ msgid "Status: %(status)s"
 msgstr "Status: %(status)s"
 
 #: templates/banking/_reconciliation_tables.html
+msgid "Categoria do lançamento"
+msgstr "Entry category"
+
+#: templates/banking/_reconciliation_tables.html
 msgid "Categoria…"
 msgstr "Category…"
 
@@ -3303,6 +3333,38 @@ msgstr "Create a settled entry from this statement line?"
 #: templates/banking/_reconciliation_tables.html
 msgid "Criar lançamento"
 msgstr "Create entry"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Conta que recebeu"
+msgstr "Account that received it"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Conta de onde veio"
+msgstr "Account it came from"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Transferir para…"
+msgstr "Transfer to…"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Recebido de…"
+msgstr "Received from…"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Valor na outra moeda"
+msgstr "Amount in the other currency"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Só quando a outra conta é de outra moeda: o valor que ela registrou, na moeda dela."
+msgstr "Only when the other account is in another currency: the amount it recorded, in its own currency."
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Lançar esta linha como transferência entre contas suas e conciliá-la?"
+msgstr "Record this line as a transfer between your accounts and reconcile it?"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Transferir"
+msgstr "Transfer"
 
 #: templates/banking/_reconciliation_tables.html
 msgid "Ignorar esta linha do extrato?"
@@ -6429,11 +6491,6 @@ msgstr "Internal transfer requires a category of the transfer type."
 #: transactions/services.py
 msgid "Não é possível excluir: ao menos um lançamento ainda está protegido por um vínculo que não foi possível desfazer automaticamente."
 msgstr "Cannot delete: at least one entry is still protected by a link that could not be undone automatically."
-
-#: transactions/views.py
-#, python-format
-msgid "Valor monetário inválido: %(valor)s."
-msgstr "Invalid monetary amount: %(valor)s."
 
 #: transactions/views.py
 msgid "Escolha o escopo da operação antes de confirmar."

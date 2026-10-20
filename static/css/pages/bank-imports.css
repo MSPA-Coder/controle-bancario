@@ -25,3 +25,7 @@
 .fatura-bloco > summary:hover { background: rgba(148, 163, 184, 0.14); }
 .fatura-bloco .tx-table { margin: 0; }
 .conciliacao-separador > td { background: var(--bg-header); font-size: 0.85rem; color: var(--muted); }
+
+/* "Transferir" da linha de extrato: abaixo do "Criar", com o valor da outra moeda curto. */
+.conciliacao-transferir { margin-top: 0.4rem; }
+.conciliacao-transferir input[type="number"] { width: 9rem; }

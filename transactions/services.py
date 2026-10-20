@@ -43,7 +43,7 @@ from transactions.models import (
     CashFlowCategoryGroup,
     CashFlowEntry,
 )
-from transactions.rotulos import rotulo_da_conta
+from transactions.rotulos import rotulo_da_conta, rotulo_por_tipo
 
 
 def is_month_closed(account: FinancialAccount, year: int, month: int) -> bool:
@@ -1122,8 +1122,8 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
     original_description = description
     counterparty_description = description
     if eh_transferencia:
-        original_description = f"Conta Destino: {_account_label(counterparty_account)}"
-        counterparty_description = f"Conta Origem: {_account_label(account)}"
+        original_description = rotulo_por_tipo(req.entry_type, counterparty_account)
+        counterparty_description = rotulo_por_tipo(_opposite_entry_type(req.entry_type), account)
 
     entries: list[CashFlowEntry] = []
 
@@ -1171,8 +1171,13 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
                 realized_amount=_counterparty_side_amount(realized_amount, counterparty_amount),
                 operation_type=operation_type,
                 bank_operation=bank_operation,
-                source_entry=original,
+                source_entry=original if req.entry_type == ENTRY_TYPE_EXPENSE else None,
             )
+            if req.entry_type != ENTRY_TYPE_EXPENSE:
+                # Lançada pela conta que recebe: a origem continua sendo a
+                # despesa (ver `_orientar_par`), e é a receita que aponta para ela.
+                original.source_entry = counterparty_entry
+                original.save(update_fields=["source_entry", "updated_at"])
             entries.append(counterparty_entry)
 
     if req.is_recurring:
@@ -1416,12 +1421,9 @@ def _convert_single_to_internal_transfer(tx: CashFlowEntry, req: TransactionRequ
             responsible_user=user,
         )
 
-    original_description = f"Conta Destino: {_account_label(counterparty_account)}"
-    counterparty_description = f"Conta Origem: {_account_label(account)}"
-
     _apply_fields(
         tx, req, due_date=req.due_date, monthly_amount=monthly_amount, installments=installments,
-        description=original_description, clear_source_entry=True,
+        description=rotulo_por_tipo(req.entry_type, counterparty_account), clear_source_entry=True,
     )
     tx.operation_type = OPERATION_INTERNAL_TRANSFER
     tx.current_installment = 1
@@ -1432,7 +1434,7 @@ def _convert_single_to_internal_transfer(tx: CashFlowEntry, req: TransactionRequ
         account=counterparty_account,
         category_id=req.category_id,
         entry_type=_opposite_entry_type(req.entry_type),
-        description=counterparty_description,
+        description=rotulo_por_tipo(_opposite_entry_type(req.entry_type), account),
         entry_amount=_counterparty_side_amount(monthly_amount, counterparty_amount),
         installments=installments,
         current_installment=1,
@@ -1443,9 +1445,27 @@ def _convert_single_to_internal_transfer(tx: CashFlowEntry, req: TransactionRequ
         realized_amount=_counterparty_side_amount(tx.realized_amount, counterparty_amount),
         operation_type=OPERATION_INTERNAL_TRANSFER,
         bank_operation=bank_operation,
-        source_entry=tx,
     )
+    _orientar_par(tx, counterpart)
     return [tx, counterpart]
+
+
+def _orientar_par(uma: CashFlowEntry, outra: CashFlowEntry) -> None:
+    """Grava o vínculo do par na orientação de sempre: a despesa é a origem, sem
+    `source_entry`, e a receita aponta para ela.
+
+    Quem lê o par conta com isso -- o valor da operação é o da origem, na moeda
+    da origem, e `rotulos.atualizar_rotulos` refaz "Conta Destino"/"Conta
+    Origem" pelo tipo. Converter ou editar pela ponta que recebe deixava a
+    receita como origem. A despesa é gravada primeiro, sem vínculo, para que o
+    par nunca aponte um para o outro."""
+    origem, destino = (uma, outra) if uma.entry_type == ENTRY_TYPE_EXPENSE else (outra, uma)
+    if origem.source_entry_id is not None:
+        origem.source_entry = None
+        origem.save(update_fields=["source_entry", "updated_at"])
+    if destino.source_entry_id != origem.id:
+        destino.source_entry = origem
+        destino.save(update_fields=["source_entry", "updated_at"])
 
 
 def _replace_current_future_block(
@@ -1616,8 +1636,14 @@ def _update_internal_transfer(
     counterparty_amount = counterparty_amount_for_transfer(
         req, account, counterparty_account, installments=installments
     )
-    original_description = f"Conta Destino: {_account_label(counterparty_account)}"
-    counterparty_description = f"Conta Origem: {_account_label(account)}"
+    tipo_da_outra_ponta = _opposite_entry_type(req.entry_type)
+    descricao_do_formulario = rotulo_por_tipo(req.entry_type, counterparty_account)
+    descricao_da_outra_ponta = rotulo_por_tipo(tipo_da_outra_ponta, account)
+    # O formulário descreve a ponta que se abriu para editar: a conta dele é a
+    # dessa ponta. Editar pela ponta que recebe aplicava a conta do formulário à
+    # origem, e as duas linhas trocavam de conta -- a linha de extrato
+    # conciliada passava a apontar para um lançamento da outra conta.
+    pelo_destino = tx.source_entry_id is not None
 
     pairs = _origin_counterparty_pairs(scoped_entries(tx, entries, scope))
     deslocar = _group_due_date_shift(tx.due_date, req.due_date)
@@ -1647,25 +1673,26 @@ def _update_internal_transfer(
             current_installment,
         )
 
+        do_formulario, outra_ponta = (counterpart, origin) if pelo_destino else (origin, counterpart)
         _apply_fields(
-            origin, req, due_date=due_date, monthly_amount=entry_amount, installments=installments,
-            description=original_description, entry_type=req.entry_type, account_id=account.id,
-            clear_source_entry=True, keep_realization=keep_realization,
+            do_formulario, req, due_date=due_date, monthly_amount=entry_amount, installments=installments,
+            description=descricao_do_formulario, entry_type=req.entry_type, account_id=account.id,
+            keep_realization=keep_realization,
         )
         _apply_fields(
-            counterpart, req, due_date=due_date,
+            outra_ponta, req, due_date=due_date,
             monthly_amount=_counterparty_side_amount(entry_amount, counterparty_amount),
             installments=installments,
-            description=counterparty_description, entry_type=_opposite_entry_type(req.entry_type),
-            account_id=counterparty_account.id, source_entry=origin,
+            description=descricao_da_outra_ponta, entry_type=tipo_da_outra_ponta,
+            account_id=counterparty_account.id,
             keep_realization=keep_realization,
         )
         if not keep_realization:
-            # `_apply_fields` espelha o realizado da origem, que é o certo para
-            # duas contas na mesma moeda. Quando não são, o realizado da ponta
-            # destino é o dela: copiar gravaria reais numa conta em dólar.
-            counterpart.realized_amount = _counterparty_side_amount(
-                counterpart.realized_amount, counterparty_amount
+            # `_apply_fields` espelha o realizado do formulário, que é o certo
+            # para duas contas na mesma moeda. Quando não são, o realizado da
+            # outra ponta é o dela: copiar gravaria reais numa conta em dólar.
+            outra_ponta.realized_amount = _counterparty_side_amount(
+                outra_ponta.realized_amount, counterparty_amount
             )
         origin.operation_type = OPERATION_INTERNAL_TRANSFER
         counterpart.operation_type = OPERATION_INTERNAL_TRANSFER
@@ -1674,6 +1701,7 @@ def _update_internal_transfer(
 
         origin.save()
         counterpart.save()
+        _orientar_par(origin, counterpart)
         updated.extend([origin, counterpart])
     return updated
 

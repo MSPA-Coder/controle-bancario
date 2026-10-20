@@ -1,6 +1,6 @@
 {% load i18n static regional_filters %}
 {% load icons %}
-{% load money_filters %}
+{% load money_filters contas %}
 {% if rendimentos_agrupados %}
 <div class="table-container u-mb-1">
     <h3 class="u-mb-075">{% trans "Rendimentos pendentes, por conta e mês" %}</h3>
@@ -72,7 +72,7 @@
                 <th>{% trans "Valor" %}</th>
                 <th>{% trans "Sugestão" %}</th>
                 <th>{% trans "Conciliar com lançamento" %}</th>
-                <th>{% trans "Ou criar lançamento" %}</th>
+                <th>{% trans "Ou criar lançamento ou transferir" %}</th>
                 <th>{% trans "Ações" %}</th>
             </tr>
         </thead>
@@ -127,25 +127,55 @@
                 </td>
                 <td>
                     {% if line.status == "novo" %}
-                    <form method="post" action="{% url 'bank_statements:create_entry_from_line' %}"
-                          hx-post="{% url 'bank_statements:create_entry_from_line' %}"
-                          hx-target="#reconciliation-results"
-                          hx-swap="innerHTML"
-                          class="edit-form u-d-flex u-gap-05 u-items-center">
-                        {% csrf_token %}
-                        <input type="hidden" name="line_id" value="{{ line.id }}">
-                        <select name="category_id" required>
+                    {% comment %}
+                    O seletor e o "Criar" pertencem ao formulário do lote (atributo
+                    `form`): assim "Criar selecionadas" e "Aplicar sugestões" usam a
+                    categoria escolhida em cada linha, em vez de ignorá-la.
+                    {% endcomment %}
+                    <div class="edit-form u-d-flex u-gap-05 u-items-center">
+                        <select name="categoria_{{ line.id }}" form="bulkPendingLinesForm" aria-label="{% trans 'Categoria do lançamento' %}">
                             <option value="">{% trans "Categoria…" %}</option>
                             {% for category in categories %}
                             <option value="{{ category.id }}" {% if category.id == line.suggested_category_id %}selected{% endif %}>{{ category.category_name }}</option>
                             {% endfor %}
                         </select>
-                        <button type="submit" class="btn-sm btn-action-edit"
+                        <button type="submit" form="bulkPendingLinesForm" name="bulk_action" value="criar:{{ line.id }}" class="btn-sm btn-action-edit"
                                 data-sa-confirmar="{% trans 'Criar um lançamento realizado a partir desta linha do extrato?' %}"
                                 data-sa-titulo="{% trans 'Criar lançamento' %}"
                                 data-sa-severidade="info"
                                 data-sa-ok="{% trans 'Criar' %}">{% trans "Criar" %}</button>
+                    </div>
+                    {% if line.contas_para_transferir and not line.account.is_credit_card %}
+                    <form method="post" action="{% url 'bank_statements:transfer_from_line' %}"
+                          hx-post="{% url 'bank_statements:transfer_from_line' %}"
+                          hx-target="#reconciliation-results"
+                          hx-swap="innerHTML"
+                          class="edit-form conciliacao-transferir u-d-flex u-gap-05 u-items-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="line_id" value="{{ line.id }}">
+                        <select name="other_account_id" required aria-label="{% if line.amount < 0 %}{% trans 'Conta que recebeu' %}{% else %}{% trans 'Conta de onde veio' %}{% endif %}">
+                            <option value="">{% if line.amount < 0 %}{% trans "Transferir para…" %}{% else %}{% trans "Recebido de…" %}{% endif %}</option>
+                            {% for titular, contas in line.contas_para_transferir|por_titular %}
+                            <optgroup label="{{ titular }}">
+                                {% for conta in contas %}
+                                <option value="{{ conta.id }}">{{ conta.institution.institution_name }} / {{ conta.account_name }}{% if conta.currency != line.account.currency %} ({{ conta.currency }}){% endif %}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
+                        {% if line.transfere_entre_moedas %}
+                        <input type="number" step="0.01" min="0.01" name="other_amount"
+                               placeholder="{% trans 'Valor na outra moeda' %}"
+                               title="{% trans 'Só quando a outra conta é de outra moeda: o valor que ela registrou, na moeda dela.' %}"
+                               aria-label="{% trans 'Valor na outra moeda' %}">
+                        {% endif %}
+                        <button type="submit" class="btn-sm btn-action-edit"
+                                data-sa-confirmar="{% trans 'Lançar esta linha como transferência entre contas suas e conciliá-la?' %}"
+                                data-sa-titulo="{% trans 'Transferir' %}"
+                                data-sa-severidade="info"
+                                data-sa-ok="{% trans 'Transferir' %}">{% trans "Transferir" %}</button>
                     </form>
+                    {% endif %}
                     {% else %}
                     <span class="empty-state">-</span>
                     {% endif %}

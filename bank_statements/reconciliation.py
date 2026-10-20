@@ -32,14 +32,21 @@ from django.db import transaction as db_transaction
 from django.db.models import Q
 from django.utils.translation import gettext
 
+from banking.models import FinancialAccount
 from banking.services import accessible_account_ids, can_access_account
 from core import regional
-from core.domain.finance import ENTRY_TYPE_EXPENSE, ENTRY_TYPE_INCOME, STATUS_REALIZED
+from core.domain.finance import (
+    CATEGORY_KIND_TRANSFER,
+    ENTRY_TYPE_EXPENSE,
+    ENTRY_TYPE_INCOME,
+    STATUS_REALIZED,
+)
 from transactions.models import CashFlowCategory, CashFlowEntry
 from transactions.services import (
     TransactionRequest,
     assert_entry_period_open,
     assert_transfer_destination_authorized,
+    counterparty_accounts_for_transfer,
     create_transaction_batch,
     is_month_closed,
     list_categories,
@@ -397,7 +404,20 @@ def reconciliation_view_data(user, target_line_id: int | None = None) -> dict:
 
     candidates_by_line = candidate_entries_for_lines(lines)
     planos = {plano.linha.id: plano for plano in extrato.planejar(user, lines)}
+    # "Transferir": a saída vai para uma conta que o usuário pode receber; a
+    # entrada vem de uma conta em que ele pode lançar.
+    contas_de_destino = counterparty_accounts_for_transfer(user)
+    contas_de_origem = list(
+        FinancialAccount.objects.select_related("owner", "institution")
+        .filter(id__in=accessible_account_ids(user, "create"))
+        .order_by("owner__name", "institution__institution_name", "account_name")
+    )
     for line in lines:
+        contas = contas_de_destino if line.amount < 0 else contas_de_origem
+        line.contas_para_transferir = [conta for conta in contas if conta.id != line.account_id]
+        line.transfere_entre_moedas = any(
+            conta.currency != line.account.currency for conta in line.contas_para_transferir
+        )
         line.reconcile_candidates = candidates_by_line.get(line.id, [])
         plano = planos.get(line.id)
         line.plano = plano
@@ -417,7 +437,8 @@ def reconciliation_view_data(user, target_line_id: int | None = None) -> dict:
         "reconciled_batches": reconciled_batches,
         "target_line_id": target_line.id if target_line else None,
         "target_batch_id": target_batch_id,
-        "categories": list(list_categories().order_by("category_name")),
+        # Transferência fica fora do "Criar": ela tem outra ponta e sai por "Transferir".
+        "categories": list(list_categories().exclude(kind=CATEGORY_KIND_TRANSFER).order_by("category_name")),
     }
 
 
@@ -686,6 +707,10 @@ def _create_entry_from_locked_line(user, *, line, category_id, audit_context=Non
         raise ValueError(gettext("Linha de extrato já conciliada ou ignorada."))
     if not category_id:
         raise ValueError(gettext("Selecione uma categoria para criar o lançamento."))
+    if CashFlowCategory.objects.filter(id=category_id, kind=CATEGORY_KIND_TRANSFER).exists():
+        raise ValueError(gettext(
+            "Transferência tem outra ponta: use “Transferir”, que pede a outra conta."
+        ))
 
     if is_month_closed(line.account, line.statement_date.year, line.statement_date.month):
         raise ValueError(
@@ -722,6 +747,76 @@ def _create_entry_from_locked_line(user, *, line, category_id, audit_context=Non
     return line
 
 
+@db_transaction.atomic
+def transfer_from_line(
+    user, *, line_id, other_account_id, other_amount=None, audit_context=None,
+) -> BankStatementLine:
+    """Lança a linha como transferência entre contas suas e a concilia com a
+    ponta desta conta.
+
+    É o caminho para o que o plano do extrato não resolve sozinho: a outra
+    ponta não tem extrato (ou ainda não foi importada) ou está em outra moeda
+    -- a remessa de câmbio da conta em real para a conta em dólar. A linha diz
+    o lado dela: saída é a origem; entrada, o destino. As duas pontas nascem
+    realizadas na data da linha.
+
+    `other_amount` só existe entre moedas diferentes: é o valor que a outra
+    conta registrou, na moeda dela, porque o sistema não inventa taxa de
+    câmbio. Na mesma moeda as pontas são espelhadas e ele é recusado (ver
+    `counterparty_amount_for_transfer`)."""
+    from .extrato import _categoria_de_transferencia
+
+    line = _get_line_in_scope(user, line_id, "update", for_update=True)
+    if line.status != LINE_STATUS_NEW or line.matched_entry_id is not None:
+        raise ValueError(gettext("Linha de extrato já conciliada ou ignorada."))
+    if line.account.is_credit_card:
+        raise ValueError(gettext("Linha de cartão: use a tela de Faturas."))
+    try:
+        other = FinancialAccount.objects.get(id=int(other_account_id))
+    except (TypeError, ValueError, FinancialAccount.DoesNotExist) as exc:
+        raise ValueError(gettext("Escolha a outra conta da transferência.")) from exc
+    if other.id == line.account_id:
+        raise ValueError(gettext("A outra conta da transferência precisa ser diferente da conta do extrato."))
+
+    valor_da_linha = abs(line.amount)
+    saida = line.amount < 0
+    origem, destino = (line.account, other) if saida else (other, line.account)
+    if other.currency == line.account.currency or saida:
+        valor_da_origem, valor_do_destino = valor_da_linha, other_amount
+    else:
+        # A linha é o crédito em moeda estrangeira; quanto saiu da origem, na
+        # moeda dela, só o usuário sabe.
+        if other_amount is None:
+            raise ValueError(
+                gettext("Informe quanto saiu de %(conta)s, na moeda dela: as moedas são diferentes.")
+                % {"conta": other.account_name}
+            )
+        valor_da_origem, valor_do_destino = other_amount, valor_da_linha
+
+    criadas = create_transaction_batch(
+        TransactionRequest(
+            account_id=origem.id,
+            category_id=_categoria_de_transferencia().id,
+            entry_type=ENTRY_TYPE_EXPENSE,
+            description="",
+            entry_amount=valor_da_origem,
+            installments=1,
+            due_date=line.statement_date,
+            status=STATUS_REALIZED,
+            realized_date=line.statement_date,
+            realized_amount=valor_da_origem,
+            counterparty_account_id=destino.id,
+            counterparty_amount=valor_do_destino,
+        ),
+        audit_context=audit_context,
+        user=user,
+    )
+    line.matched_entry = next(entry for entry in criadas if entry.account_id == line.account_id)
+    line.status = LINE_STATUS_RECONCILED
+    line.save(update_fields=["matched_entry", "status", "updated_at"])
+    return line
+
+
 def ignore_statement_line(user, *, line_id) -> BankStatementLine:
     """Marca uma linha nova como ignorada (não deve ser conciliada)."""
     with db_transaction.atomic():
@@ -735,21 +830,28 @@ def ignore_statement_line(user, *, line_id) -> BankStatementLine:
         return line
 
 
-def bulk_create_entries_from_lines(user, *, line_ids: Iterable, audit_context=None) -> tuple[int, list[tuple[str, str]]]:
-    """Cria lançamentos para várias linhas de uma vez, cada uma com a
-    categoria sugerida pelo prefixo do extrato (ver `suggested_category_for_line`)
-    - não há seleção manual de categoria em lote. Cada linha é processada em
-    sua própria transação (via `create_entry_from_line`), então uma falha
-    isolada não desfaz as demais."""
+def bulk_create_entries_from_lines(
+    user, *, line_ids: Iterable, audit_context=None, categorias: dict | None = None,
+) -> tuple[int, list[tuple[str, str]]]:
+    """Cria lançamentos para várias linhas de uma vez. Cada linha usa a
+    categoria escolhida no seletor dela (`categorias`, id da linha -> id da
+    categoria) e, sem escolha, a sugerida (ver `suggested_category_for_line`).
+    Antes o lote ignorava o seletor, e o que o usuário tinha escolhido virava
+    "Outros" sem aviso. Cada linha é processada em sua própria transação (via
+    `create_entry_from_line`), então uma falha isolada não desfaz as demais."""
+    categorias = categorias or {}
     created = 0
     errors: list[tuple[str, str]] = []
     for line_id in line_ids:
         try:
             line = _get_line_in_scope(user, line_id, "update")
-            suggested = suggested_category_for_line(line)
-            if suggested is None:
-                raise ValueError(gettext("Nenhuma categoria disponível para sugerir (nem “Outros”)."))
-            create_entry_from_line(user, line_id=line_id, category_id=suggested.id, audit_context=audit_context)
+            category_id = categorias.get(line.id)
+            if category_id is None:
+                suggested = suggested_category_for_line(line)
+                if suggested is None:
+                    raise ValueError(gettext("Nenhuma categoria disponível para sugerir (nem “Outros”)."))
+                category_id = suggested.id
+            create_entry_from_line(user, line_id=line_id, category_id=category_id, audit_context=audit_context)
             created += 1
         except ValueError as exc:
             errors.append((str(line_id), str(exc)))

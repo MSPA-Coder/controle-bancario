@@ -98,6 +98,15 @@ de restrição postergado: a gravação transitória da origem antes do destino 
 permitida dentro da transação, mas nenhum par incompleto ou cruzado entre
 operações é persistido.
 
+A orientação do par é fixa: a **despesa é a origem** (sem `source_entry`) e a
+receita aponta para ela; a despesa diz "Conta Destino: …" e a receita, "Conta
+Origem: …". Vale ao criar, ao converter um lançamento simples e ao editar,
+inclusive pela ponta que recebe (`transactions.services._orientar_par`). O
+formulário descreve a ponta aberta para edição: a conta e o valor dele são dessa
+ponta, e o "valor creditado no destino" é o da outra. Até 20/10/2026 editar pela
+ponta que recebe aplicava a conta do formulário à origem, e as duas linhas
+trocavam de conta.
+
 Realizar é um fato de uma ocorrência, não do grupo. Criar um parcelado ou um
 recorrente como realizado realiza só a primeira ocorrência, com a data
 informada; as demais seguem o vencimento, como a projeção mensal já fazia. Na
@@ -426,6 +435,18 @@ que `fatura.planejar` faz para o cartão). Na ordem em que é decidido:
    foi importada. Fica pendente, porque criar receita e despesa para uma
    transferência própria infla as duas pontas do mês;
 7. **criar** lançamento com a categoria sugerida.
+
+O que o plano não resolve, a linha resolve à mão. O seletor de categoria de cada
+linha pertence ao formulário do lote: "Criar selecionadas", "Aplicar sugestões"
+(nas linhas que o plano manda criar) e o "Criar" da própria linha usam a
+categoria escolhida nele, e a sugestão só quando nada foi escolhido. Transferência
+não está nesse seletor, porque tem outra ponta: **Transferir** lança a linha como
+transferência para (saída) ou de (entrada) outra conta do usuário, as duas pontas
+realizadas na data da linha, e concilia a ponta da conta do extrato
+(`reconciliation.transfer_from_line`). É o caminho entre moedas diferentes (a
+remessa de câmbio da conta em real para a conta em dólar), que o plano não faz:
+o valor que a outra conta registrou, na moeda dela, é digitado, porque o sistema
+não inventa taxa. Na mesma moeda as pontas são espelhadas e esse valor é recusado.
 
 A categoria sugerida (`classificacao.py`) vem, nesta ordem, da regra explícita,
 da categoria mais frequente que o usuário deu à mesma descrição (sem contar

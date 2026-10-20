@@ -24,6 +24,7 @@ urlpatterns = [
     path('banking/reconciliation/refresh/', views.reconciliation_refresh_view, name='reconciliation_refresh'),
     path('banking/reconcile/', views.reconcile_view, name='reconcile'),
     path('banking/reconcile/create-entry/', views.create_entry_from_line_view, name='create_entry_from_line'),
+    path('banking/reconcile/transfer/', views.transfer_from_line_view, name='transfer_from_line'),
     path('banking/reconcile/bulk/', views.bulk_action_lines_view, name='bulk_action_lines'),
     path('banking/reconcile/undo/', views.undo_reconciliation_view, name='undo_reconciliation'),
     path('banking/ignore/', views.ignore_line_view, name='ignore_line'),

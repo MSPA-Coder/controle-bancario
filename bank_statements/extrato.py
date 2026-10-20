@@ -660,13 +660,16 @@ def _aplicar_com_lancamento(user, plano: Plano, audit_context, autorizar_meses: 
 
 
 def aplicar(
-    user, linhas, audit_context=None, *, autorizar_meses: bool = False
+    user, linhas, audit_context=None, *, autorizar_meses: bool = False, categorias: dict | None = None,
 ) -> tuple[Counter, list[tuple[str, str]]]:
     """Executa o plano das linhas dadas. Cada item é uma transação própria: uma
     falha isolada (mês fechado, acesso negado) não desfaz as demais.
 
     `autorizar_meses` só vale para transferir com lançamento já gravado: permite
     reabrir o mês fechado do lançamento existente (ver `meses`).
+
+    `categorias` (id da linha -> id da categoria) é o que o usuário escolheu no
+    seletor da linha; numa linha que o plano manda criar, vence a sugestão.
 
     Devolve a contagem por ação e a lista `(descrição, erro)`."""
     feitas: Counter = Counter()
@@ -688,7 +691,8 @@ def aplicar(
                     )
                 elif plano.acao == CRIA:
                     reconciliation.create_entry_from_line(
-                        user, line_id=linha.id, category_id=plano.sugestao.categoria.id,
+                        user, line_id=linha.id,
+                        category_id=(categorias or {}).get(linha.id) or plano.sugestao.categoria.id,
                         audit_context=audit_context,
                     )
                 elif plano.acao == IGNORA:
