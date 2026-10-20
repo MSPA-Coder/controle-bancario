@@ -26,3 +26,9 @@ htmlcov
 .mypy_cache
 .ruff_cache
 .browser-results
+
+# Resíduos aninhados e ferramentas locais não pertencem ao contexto.
+**/__pycache__
+.coverage.*
+CodexTemp
+.codex
