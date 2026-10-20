@@ -16,7 +16,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import IntegrityError
 from django.db.models import DecimalField, Sum, Value
@@ -141,7 +141,7 @@ def _resolve_owned_entry(user, entry_id) -> CashFlowEntry:
     entry = CashFlowEntry.objects.filter(id=entry_id_int).select_related("account").first()
     if entry is None:
         raise ValueError(gettext("Lançamento não encontrado."))
-    if not can_access_entry(user, entry):
+    if not can_access_entry(user, entry, "update"):
         raise ValueError(gettext("Acesso negado: você não tem permissão para vincular este lançamento."))
     return entry
 
@@ -210,15 +210,29 @@ def save_budget(user, *, owner_id, category_id, year, month, planned_amount) -> 
         amount = Decimal(str(planned_amount).strip().replace(",", "."))
     except Exception as exc:  # noqa: BLE001 - entrada de formulário livre
         raise ValueError(gettext("Valor orçado inválido.")) from exc
+    if not amount.is_finite():
+        raise ValueError(gettext("Valor orçado inválido."))
     if amount < 0:
         raise ValueError(gettext("Valor orçado não pode ser negativo."))
+
+    campo = MonthlyBudget._meta.get_field("planned_amount")
+    assert isinstance(campo, DecimalField)
+    limite = Decimal(10) ** (campo.max_digits - campo.decimal_places)
+    if amount >= limite:
+        raise ValueError(gettext("Valor orçado inválido."))
+    try:
+        amount = amount.quantize(MONEY_QUANT)
+    except InvalidOperation as exc:
+        raise ValueError(gettext("Valor orçado inválido.")) from exc
+    if amount >= limite:
+        raise ValueError(gettext("Valor orçado inválido."))
 
     budget, _created = MonthlyBudget.objects.update_or_create(
         owner_id=owner_id_int,
         category_id=category_id_int,
         year=year_int,
         month=month_int,
-        defaults={"planned_amount": amount.quantize(MONEY_QUANT), "active": True},
+        defaults={"planned_amount": amount, "active": True},
     )
     return budget
 

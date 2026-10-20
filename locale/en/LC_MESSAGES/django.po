@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 10:26-0300\n"
+"POT-Creation-Date: 2026-10-19 07:28-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -6203,6 +6203,10 @@ msgstr "Showing the operation related to the selected entry."
 #: templates/transactions/operations.html
 msgid "Limpar seleção"
 msgstr "Clear selection"
+
+#: transactions/calculations.py
+msgid "O valor do lançamento deve ser finito."
+msgstr "The entry amount must be finite."
 
 #: transactions/models.py
 msgid "Única"

@@ -35,6 +35,7 @@ dist/
 .env.*
 !.env.example
 !.env.docker.example
+!.env.vps.example
 .certs/
 .secrets/
 

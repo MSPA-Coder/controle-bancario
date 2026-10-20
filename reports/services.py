@@ -1740,6 +1740,9 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
         description=gettext("contas"),
     )
     candidate_ids = [account.id for account in candidate_accounts]
+    # Este relatório produz um total; contas de moedas diferentes não formam
+    # um saldo somável sem conversão. As telas já o solicitam por moeda.
+    currency_of_accounts(candidate_ids)
     entries = _list_upcoming_movement_entries(candidate_ids, start_date, end_exclusive, mode)
 
     movement_account_ids = {entry.account_id for entry in entries}

@@ -2,6 +2,8 @@
 
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.utils.translation import gettext
+
 from core.domain.finance import CALC_DIVIDE
 
 MONEY_QUANT = Decimal("0.01")
@@ -10,6 +12,8 @@ MONEY_QUANT = Decimal("0.01")
 def _monthly_amount_for(entry_amount: Decimal, installments: int, calc_mode: str) -> Decimal:
     """Valor-base de uma parcela, usado também para validar o payload."""
     amount = entry_amount if isinstance(entry_amount, Decimal) else Decimal(str(entry_amount))
+    if not amount.is_finite():
+        raise ValueError(gettext("O valor do lançamento deve ser finito."))
     if calc_mode == CALC_DIVIDE and installments > 1:
         return (amount / Decimal(installments)).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
     return amount.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
