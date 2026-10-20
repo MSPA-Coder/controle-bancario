@@ -218,9 +218,9 @@ O `deploy.sh` (de `_manutencao`) monta as imagens no próprio VPS a partir do
 código do `main`, sem esperar a CI nem baixar nada do GHCR. Ele aguarda os
 health checks, valida o endereço público e, se a nova versão não ficar
 saudável, volta sozinho para o código e a imagem anteriores; nunca desfaz
-banco. Na quarta-feira, o `reconstruir-bases.timer` reconstrói só a versão que
-já está no ar, para pegar correções de segurança das imagens-base, sem trazer
-commits novos.
+banco. Nada muda em produção sem o usuário mandar. As correções de
+segurança das imagens-base (Debian/Python) entram só quando ele pedir: testa
+localmente com as bases novas e depois roda `~/deploy.sh bancario --refresh`.
 
 O serviço `postgres` declara `mspa.backup.postgres=true`, contrato de
 descoberta do backup central.

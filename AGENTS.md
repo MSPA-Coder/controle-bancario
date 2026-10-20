@@ -225,9 +225,10 @@ auto-merge.
 O deploy (`~/deploy.sh bancario`) só roda quando o usuário mandar. O servidor
 monta a imagem a partir do código do `main`, sem esperar nem baixar nada da
 CI, confere a saúde e volta sozinho para a versão anterior se falhar.
-`~/deploy.sh --status` compara VPS × GitHub. Na quarta-feira, o
-`reconstruir-bases.timer` reconstrói só a versão que já está no ar, para pegar
-correções de segurança das imagens-base, sem trazer commits novos.
+`~/deploy.sh --status` compara VPS × GitHub. Nada muda em produção sem o
+usuário mandar. As correções de segurança das imagens-base (Debian/Python)
+entram só quando ele pedir: testa localmente com as bases novas e depois roda
+`~/deploy.sh bancario --refresh`.
 
 As versões suportadas são Python 3.15, PostgreSQL 17 e **Django 6.1**; faixas
 completas ficam em `pyproject.toml` e as versões exatas em `uv.lock`.
