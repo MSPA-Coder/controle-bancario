@@ -23,6 +23,11 @@ from .models import (
 )
 from .password_validators import current_min_length
 
+# Sorteios da senha temporária antes de desistir (ver
+# `reset_managed_user_password`). Uma recusa por acaso ocorre em ~1 de 20 mil;
+# cinco seguidas, nunca na prática.
+TENTATIVAS_DE_SORTEIO: Final = 5
+
 # Catálogo de permissões funcionais em uso pela aplicação. Cada chave aqui
 # precisa existir como linha em AppPermission (ver migration
 # 0003_seed_permission_catalog) para que `user.has_perm(chave)` funcione via
@@ -488,18 +493,31 @@ def reset_managed_user_password(user: AppUser) -> str:
     redefinicao rejeitaria a propria senha que acabou de sortear. Ja exigencia
     de caractere especial nao tem como o sorteio atender -- ai a recusa e dita
     na hora, em vez de virar um erro obscuro.
+
+    Uma recusa por acaso se resolve sorteando de novo. O validador de
+    similaridade do Django compara as LETRAS em comum, sem ordem nem caixa
+    (`quick_ratio`): `DN4eiHsREDJa` tem oito letras de "redefinida" e e
+    recusada para esse usuario. Isso acontece em ~1 de 20 mil sorteios -- raro,
+    mas bastava para a redefinicao falhar com "ajuste a politica" sem nada de
+    errado na politica. Ja uma exigencia que o alfabeto nao cumpre recusa todas
+    as tentativas, e a mensagem e a mesma de antes.
     """
-    senha = gerar_senha_temporaria(max(TAMANHO_SENHA_TEMPORARIA, current_min_length()))
-    try:
-        validate_password(senha, user=user)
-    except ValidationError as exc:
+    tamanho = max(TAMANHO_SENHA_TEMPORARIA, current_min_length())
+    for _tentativa in range(TENTATIVAS_DE_SORTEIO):
+        senha = gerar_senha_temporaria(tamanho)
+        try:
+            validate_password(senha, user=user)
+            break
+        except ValidationError as exc:
+            recusa = exc
+    else:
         raise ValueError(
             gettext(
                 "A senha sorteada não atende à política configurada em "
                 "Configurações > Parâmetros: %(erros)s "
                 "Ajuste a política ou defina a senha pela edição do usuário."
-            ) % {"erros": " ".join(exc.messages)}
-        ) from exc
+            ) % {"erros": " ".join(recusa.messages)}
+        ) from recusa
 
     user.set_password(senha)
     user.password_updated_at = timezone.now()

@@ -165,6 +165,54 @@ def test_o_sorteio_respeita_o_tamanho_minimo_configurado(monkeypatch):
     assert len(senha) >= 20
 
 
+# Recusada para "redefinida" pelo validador de similaridade do Django: ele
+# compara as letras em comum, sem ordem nem caixa, e esta tem oito delas.
+_PARECIDA_COM_REDEFINIDA = "DN4eiHsREDJa"
+
+
+@pytest.mark.django_db
+def test_recusa_por_acaso_sorteia_de_novo(monkeypatch):
+    # Foi assim que o teste do sorteio falhava de vez em quando: 1 em ~20 mil
+    # sorteios sai parecido com o usuario, e a redefinicao desistia na hora.
+    from accounts import services
+
+    sorteios = []
+
+    def sortear(tamanho):
+        senha = _PARECIDA_COM_REDEFINIDA if not sorteios else gerar_real(tamanho)
+        sorteios.append(senha)
+        return senha
+
+    gerar_real = services.gerar_senha_temporaria
+    monkeypatch.setattr(services, "gerar_senha_temporaria", sortear)
+    usuario = _conta()
+
+    senha = services.reset_managed_user_password(usuario)
+
+    assert sorteios[0] == _PARECIDA_COM_REDEFINIDA and senha == sorteios[1]
+    usuario.refresh_from_db()
+    assert usuario.check_password(senha)
+
+
+@pytest.mark.django_db
+def test_politica_que_o_sorteio_nao_cumpre_desiste_sem_trocar_a_senha(monkeypatch):
+    from accounts import services
+
+    sorteios = []
+    monkeypatch.setattr(
+        services, "gerar_senha_temporaria", lambda _tamanho: sorteios.append(1) or _PARECIDA_COM_REDEFINIDA
+    )
+    usuario = _conta()
+
+    with pytest.raises(ValueError, match="Ajuste a política"):
+        services.reset_managed_user_password(usuario)
+
+    assert len(sorteios) == services.TENTATIVAS_DE_SORTEIO
+    usuario.refresh_from_db()
+    assert usuario.check_password("Senha-Atual-Longa-1")
+    assert usuario.must_change_password is False
+
+
 def test_o_tamanho_minimo_tem_fallback_sem_banco():
     # Lido em toda redefinicao; um banco fora do ar nao pode transformar isso
     # em erro 500 no meio da tela de permissoes.

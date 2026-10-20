@@ -27,6 +27,13 @@ def main():
         owner=owner, institution=institution, account_name="Conta browser",
         initial_balance=Decimal("1000.00"), initial_balance_date=date.today().replace(day=1),
     )
+    # Filtros em cascata: o titular browser tem conta em dois bancos, e um
+    # segundo titular divide um deles. Saldo zero para não mexer nos totais.
+    segundo_banco = FinancialInstitution.objects.create(institution_name="Banco dois", institution_type="Banco")
+    FinancialAccount.objects.create(owner=owner, institution=segundo_banco, account_name="Conta dois")
+    FinancialAccount.objects.create(
+        owner=AccountOwner.objects.create(name="Titular dois"), institution=segundo_banco, account_name="Conta três",
+    )
     CashFlowCategory.objects.create(category_name="Despesa browser")
     call_command("runserver", "0.0.0.0:8000", use_reloader=False)
 
