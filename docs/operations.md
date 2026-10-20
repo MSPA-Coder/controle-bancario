@@ -184,12 +184,15 @@ implantação recusa uma árvore suja.
 
 Publique por branch, pull request com checks obrigatórios verdes e squash merge
 (com auto-merge: `gh pr merge <n> --auto --squash`); só então o `main` remoto é
-elegível para o deploy. Não faça push direto ao `main`. O deploy é automático:
-o `atualizar-stacks.timer` roda a cada 5 minutos e, quando o `main` avança,
-espera em silêncio a CI do `main`, faz backup verificado e roda
-`~/deploy.sh bancario`. Ele alerta uma vez se a CI reprovar ou o deploy for
-revertido, e não repete aquele commit até o `main` andar de novo. Não é preciso
-aguardar a CI do `main` nem rodar o deploy à mão depois do merge.
+elegível para o deploy. Não faça push direto ao `main`. Depois do merge, a CI
+do `main` roda e publica a imagem que o deploy usa. O deploy de commits novos é
+só à mão, com autorização do usuário: quando a mudança estiver pronta e só
+faltar o deploy, o agente avisa o usuário e roda `~/deploy.sh bancario`
+somente com o sim dele. Ninguém precisa vigiar a CI do `main`: o script recusa
+sozinho enquanto ela não estiver verde; se ainda estiver rodando, tenta-se de
+novo minutos depois. O `reconstruir-bases.timer` (quartas, 12:00 UTC) continua
+reconstruindo as imagens-base e, se o `main` tiver avançado, aplica também os
+commits ainda não implantados.
 
 Configuração esperada em `.env.vps`:
 
@@ -209,10 +212,8 @@ curl -I https://bancario-mspa.duckdns.org/
 ~/deploy.sh --status
 ```
 
-Uma atualização só deve ocorrer depois dos backups necessários; o timer faz o
-backup verificado antes de cada deploy automático. O comando operacional,
-chamado pelo timer e à mão para adiantar ou repetir um deploy, é
-`~/deploy.sh bancario`; ele confere o commit elegível, atualiza
+Uma atualização só deve ocorrer depois dos backups necessários. O comando
+operacional é `~/deploy.sh bancario`; ele confere o commit elegível, atualiza
 o espelho, usa as imagens validadas por digest, aguarda os health checks e valida o endereço
 público. `~/deploy.sh --status` é diagnóstico transversal, não pré-requisito
 do deploy. `.env.vps`,
