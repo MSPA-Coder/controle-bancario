@@ -205,6 +205,29 @@
         }
     });
 
+    /* Titular > Instituição > Conta. Trocar um filtro de cima é pedir para
+       ver por ele: a conta escolhida sai, e a lista de contas reabre com tudo
+       o que os filtros restantes permitem. Sem isto, "Todos os titulares" com
+       uma conta escolhida continuava mostrando só aquela conta. No
+       Planejamento anual (seleção múltipla) é o mesmo: trocar titulares
+       desmarca as contas, e nenhuma marcada vale "todas" no servidor. Fase de
+       captura: roda antes do `change` do HTMX no formulário, que já envia a
+       conta vazia. */
+    var _contaAbaixoDe = {
+        owner_id: 'account_id',
+        institution_id: 'account_id',
+        owner_ids: 'account_ids'
+    };
+    document.addEventListener('change', function (event) {
+        var campo = event.target;
+        if (!campo.matches || !campo.matches('form.top-filter-row select')) return;
+        var abaixo = _contaAbaixoDe[campo.name];
+        var conta = abaixo && campo.form.querySelector('select[name="' + abaixo + '"]');
+        if (!conta) return;
+        if (!conta.multiple) { conta.value = ''; return; }
+        Array.prototype.forEach.call(conta.options, function (opcao) { opcao.selected = false; });
+    }, true);
+
     /* Tabelas cadastrais (contas, bancos, categorias, titulares): incluir,
        editar e excluir saem por HTMX, sem recarregar a página. O servidor
        responde 204 e, se deu certo, `tabelaAtualizar` -- o `<tbody>` da

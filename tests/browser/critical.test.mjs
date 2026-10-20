@@ -2,16 +2,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
+const base = process.env.BASE_URL ?? 'http://browser-web:8000';
+
+async function entrar(page) {
+  await page.goto(`${base}/login`);
+  await page.getByLabel('Usuário', { exact: true }).fill('browser');
+  await page.getByLabel('Senha', { exact: true }).fill('Synthetic-browser-only-2026!');
+  await Promise.all([page.waitForURL(url => !url.pathname.includes('login')), page.getByRole('button', { name: 'Entrar', exact: true }).click()]);
+}
+
 test('gravação HTMX atualiza saldo, renova a chave e preserva filtros', { timeout: 60000 }, async () => {
-  const base = process.env.BASE_URL ?? 'http://browser-web:8000';
   const browser = await chromium.launch();
   const page = await browser.newPage();
   page.setDefaultTimeout(15000);
   try {
-    await page.goto(`${base}/login`);
-    await page.getByLabel('Usuário', { exact: true }).fill('browser');
-    await page.getByLabel('Senha', { exact: true }).fill('Synthetic-browser-only-2026!');
-    await Promise.all([page.waitForURL(url => !url.pathname.includes('login')), page.getByRole('button', { name: 'Entrar', exact: true }).click()]);
+    await entrar(page);
     await page.goto(`${base}/transactions/?currency=ALL&grupos=bancos&mode=realizado`);
     await page.getByRole('button', { name: 'Incluir', exact: true }).click();
     const form = page.locator('#newTransactionCard form');
@@ -44,6 +49,60 @@ test('gravação HTMX atualiza saldo, renova a chave e preserva filtros', { time
     assert.equal(await page.locator('#transactions-table-container').getByText('Browser HTMX', { exact: true }).count(), 1);
   } catch (error) {
     await page.screenshot({ path: '/results/cb-htmx.png', fullPage: true });
+    throw error;
+  } finally { await browser.close(); }
+});
+
+// Titular > Instituição > Conta (tests/test_filtros_em_cascata.py tem o lado
+// do servidor). Aqui, o que só o navegador faz: trocar um filtro de cima limpa
+// a conta antes de a requisição sair.
+test('trocar titular ou instituição reabre a lista de contas', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  page.setDefaultTimeout(15000);
+  const filtros = page.locator('#contextForm');
+  // Espera a troca de #appMain terminar, não a URL: o endereço muda antes de
+  // o cabeçalho ser trocado, e um filtro escolhido nesse intervalo cai no
+  // formulário antigo, com a requisição anterior ainda em andamento.
+  const escolher = async (rotulo, opcao) => {
+    const trocou = page.evaluate(() => new Promise(resolve => {
+      document.addEventListener('htmx:afterSettle', function fim(ev) {
+        if (ev.target.id !== 'appMain') return;
+        document.removeEventListener('htmx:afterSettle', fim);
+        resolve();
+      });
+    }));
+    await filtros.getByLabel(rotulo, { exact: true }).selectOption(opcao);
+    await trocou;
+  };
+  const parametro = nome => new URL(page.url()).searchParams.get(nome);
+  const contas = async () => (await filtros.getByLabel('Conta', { exact: true }).locator('option').allTextContents()).map(texto => texto.trim());
+  try {
+    await entrar(page);
+    await page.goto(`${base}/transactions/?currency=ALL&grupos=bancos`);
+
+    await escolher('Titular', { label: 'Titular browser' });
+    await escolher('Conta', { label: 'Banco browser / Conta browser' });
+    assert.ok(parametro('owner_id') && parametro('account_id'));
+    // O relato: com a conta escolhida, as outras contas do titular sumiam.
+    assert.deepEqual(await contas(), ['Todas as contas', 'Banco browser / Conta browser', 'Banco dois / Conta dois']);
+    assert.ok((await filtros.getByLabel('Instituição', { exact: true }).locator('option').allTextContents()).includes('Banco dois'));
+
+    await escolher('Titular', { label: 'Todos os titulares' });
+    assert.equal(parametro('owner_id'), null);
+    assert.equal(parametro('account_id'), null);
+    assert.equal(await filtros.getByLabel('Conta', { exact: true }).inputValue(), '');
+    assert.ok((await contas()).includes('Banco dois / Conta três'));
+
+    // Conta compatível com a instituição escolhida também sai: escolher a
+    // instituição é pedir para ver por ela.
+    await escolher('Conta', { label: 'Banco dois / Conta três' });
+    await escolher('Instituição', { label: 'Banco dois' });
+    assert.ok(parametro('institution_id'));
+    assert.equal(parametro('account_id'), null);
+    assert.deepEqual(await contas(), ['Todas as contas', 'Banco dois / Conta dois', 'Banco dois / Conta três']);
+  } catch (error) {
+    await page.screenshot({ path: '/results/cb-filtros.png', fullPage: true });
     throw error;
   } finally { await browser.close(); }
 });

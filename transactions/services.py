@@ -2275,16 +2275,31 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
     current_txs, blocos = compute_statement(scope, view_mode)
     _decorate_rows_for_editing(current_txs)
 
-    # As opções saem das linhas já filtradas, mas o valor ESCOLHIDO fica
-    # sempre entre elas: quando a combinação de filtros não traz linha, o
-    # seletor sumia com o próprio filtro e mostrava "Todos" com o filtro ainda
-    # valendo na URL (auditoria de 09/10/2026, reteste R1.1).
+    # As opções de Tipo e Data saem das linhas filtradas por todos os OUTROS
+    # filtros, não por elas mesmas: com "Despesa" escolhida a lista de tipos
+    # mostrava só "Despesa", e trocar para "Receita" exigia passar por "Todos".
+    # O valor ESCOLHIDO fica sempre entre elas: quando a combinação de filtros
+    # não traz linha, o seletor sumia com o próprio filtro e mostrava "Todos"
+    # com o filtro ainda valendo na URL (auditoria de 09/10/2026, reteste R1.1).
+    facet_txs = current_txs
+    if scope.filter_type or scope.filter_date:
+        facet_txs = list_transactions_for_view(
+            account_ids=sorted(account_id for bloco in blocos for account_id in bloco["account_ids"]),
+            view_mode=view_mode, start_selected=scope.start_selected, end_selected=scope.end_selected,
+            filter_category=scope.filter_category, operation_key=scope.operation_key, entry_id=scope.entry_id,
+            exclude_internal=scope.exclude_internal, filter_group=scope.filter_group,
+        )
     available_types = sorted(
-        {tx.entry_type for tx in current_txs} | ({scope.filter_type} if scope.filter_type else set())
+        {
+            tx.entry_type for tx in facet_txs
+            if scope.filter_date is None or _entry_date_for_view_mode(tx, view_mode) == scope.filter_date
+        } | ({scope.filter_type} if scope.filter_type else set())
     )
     available_dates = sorted({
         _entry_date_for_view_mode(tx, view_mode).isoformat()
-        for tx in current_txs if _entry_date_for_view_mode(tx, view_mode)
+        for tx in facet_txs
+        if _entry_date_for_view_mode(tx, view_mode)
+        and (not scope.filter_type or tx.entry_type == scope.filter_type)
     } | ({resolved.filter_date_raw} if resolved.filter_date_raw else set()))
     available_categories = list_category_names(include_internal=not scope.exclude_internal)
 

@@ -63,6 +63,17 @@ continuam listadas mesmo fora do filtro, para o seletor mostrar o que vale. O
 Planejamento anual, que tem seletor próprio, aplica os mesmos dois filtros às
 suas opções.
 
+Entre si, os seletores seguem uma hierarquia: Titular > Instituição > Conta.
+Cada lista é recortada só pelos filtros acima dela, nunca pela própria escolha
+nem pelas de baixo -- com uma conta escolhida, a lista de contas continua
+mostrando as demais do titular. O servidor descarta o filtro de baixo que ficou
+incoerente (instituição em que o titular não tem conta, conta de outro titular)
+e limpa a barra de endereços. No navegador, trocar Titular ou Instituição limpa
+a Conta antes de a requisição sair (`static/js/core/application.js`); no
+Planejamento anual, trocar titulares desmarca as contas, e nenhuma marcada vale
+todas. Os filtros de coluna da tabela de Lançamentos (Tipo e Data) são pares:
+cada lista é recortada pelo outro filtro, não por si.
+
 No menu, marcar uma caixa não aplica nada: moeda e grupos mudam juntos no
 botão Aplicar, para se mexer em várias caixas sem reabrir o menu. A última
 caixa marcada de cada bloco não desmarca.

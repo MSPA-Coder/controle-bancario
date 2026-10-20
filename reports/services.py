@@ -298,6 +298,19 @@ def selected_context(user, params, *, request=None) -> FinancialContext:
         owner_id = None
         _descartar("owner_id")
 
+    # Instituição em que o titular escolhido não tem conta: trocar o titular
+    # deixava a instituição anterior valendo e a tela vazia, sem conta nenhuma
+    # para escolher. Ela cai como cai a conta de outro titular.
+    if institution_id is not None:
+        contas_da_instituicao = FinancialAccount.objects.filter(
+            institution_id=institution_id, owner_id__in=allowed_owner_ids
+        )
+        if owner_id:
+            contas_da_instituicao = contas_da_instituicao.filter(owner_id=owner_id)
+        if not contas_da_instituicao.exists():
+            institution_id = None
+            _descartar("institution_id")
+
     account = None
     if account_id is not None:
         account = (
@@ -348,6 +361,12 @@ def context_options(user, ctx: FinancialContext) -> ContextOptions:
     instituições é a das instituições que têm um. A conta e a instituição já
     escolhidas continuam na lista mesmo fora do filtro -- o seletor tem de
     mostrar o que está valendo.
+
+    Cada seletor é recortado só pelos que estão ACIMA dele -- titular, depois
+    instituição, depois conta --, nunca por si mesmo nem pelos de baixo. As
+    listas eram recortadas pela conta escolhida: com uma conta, Instituição e
+    Conta mostravam só ela, e voltar para "Todas as instituições" não reabria
+    as outras contas do titular.
     """
     allowed_owner_ids = accessible_owner_ids(user)
     if not allowed_owner_ids:
@@ -361,15 +380,12 @@ def context_options(user, ctx: FinancialContext) -> ContextOptions:
     # podem ser escolhidas em seguida. Sem essa base comum, o seletor de conta
     # oferecia contas de outro titular ou instituição; `selected_context` as
     # descartava na requisição seguinte e a escolha parecia não surtir efeito.
-    selected_qs = base_qs
-    if ctx.owner_id:
-        selected_qs = selected_qs.filter(owner_id=ctx.owner_id)
-    if ctx.institution_id:
-        selected_qs = selected_qs.filter(institution_id=ctx.institution_id)
+    owner_qs = base_qs.filter(owner_id=ctx.owner_id) if ctx.owner_id else base_qs
+    scope_qs = owner_qs.filter(institution_id=ctx.institution_id) if ctx.institution_id else owner_qs
     if ctx.account_id:
-        selected_qs = selected_qs.filter(pk=ctx.account_id)
+        selected_qs = scope_qs.filter(pk=ctx.account_id)
     else:
-        selected_qs = selected_qs.filter(account_group_q(ctx.account_groups))
+        selected_qs = scope_qs.filter(account_group_q(ctx.account_groups))
 
     account_ids = list(selected_qs.order_by("account_name").values_list("id", flat=True))
 
@@ -379,14 +395,13 @@ def context_options(user, ctx: FinancialContext) -> ContextOptions:
     in_filters = account_group_q(ctx.account_groups) & currency_q(ctx.currency)
     if ctx.account_id:
         in_filters |= Q(pk=ctx.account_id)
-    listed_qs = selected_qs.filter(in_filters)
-    institution_filter = Q(id__in=listed_qs.values_list("institution_id", flat=True))
+    institution_filter = Q(id__in=owner_qs.filter(in_filters).values_list("institution_id", flat=True))
     if ctx.institution_id:
         institution_filter |= Q(id=ctx.institution_id, id__in=base_qs.values_list("institution_id", flat=True))
     institutions = list(
         FinancialInstitution.objects.filter(institution_filter).distinct().order_by("institution_name")
     )
-    accounts = list(listed_qs.order_by("owner__name", "institution__institution_name", "account_name"))
+    accounts = list(scope_qs.filter(in_filters).order_by("owner__name", "institution__institution_name", "account_name"))
 
     return ContextOptions(owners=owners, institutions=institutions, accounts=accounts, account_ids=account_ids)
 
