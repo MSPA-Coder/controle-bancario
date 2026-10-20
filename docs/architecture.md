@@ -384,6 +384,14 @@ categoria publica `group` (nome do grupo ou `null`), como acréscimos opcionais
 que não mudam a versão do contrato; quem não os conhece os ignora. Renomear um
 grupo toca as categorias dele, para o feed de mudanças pedir um novo snapshot.
 
+Desde 19/10/2026 a conta publica também, no snapshot e só quando há extrato
+importado, `statement_covered_until`: o último dia que o extrato cobre, o maior
+entre a data da última linha, a data do saldo que o arquivo informou e o fim de
+período declarado (`core.patrimonio.coberturas_de_extrato`). O Controle de Renda
+Variável o usa na conferência por pregão: pregão depois dessa data aparece como
+"aguardando extrato", e não como diferença. Importar extrato não toca a outbox;
+o consumidor relê o snapshot.
+
 Desde 03/10/2026 o lançamento (`cash_entry`) publica também `effective_status`:
 o status que vale em `snapshot_as_of`, derivado da data. `realizado` continua
 `realizado`; em aberto com vencimento anterior a `snapshot_as_of` é `vencidos`,

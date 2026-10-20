@@ -73,6 +73,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 from sharedauth.secrets import SegredoInvalidoError, resolver_segredo
 
+from bank_statements.models import BankStatementImport, BankStatementLine
 from banking.models import FinancialAccount
 from core.domain.finance import (
     CATEGORY_KIND_MOVEMENT,
@@ -286,8 +287,43 @@ def _conta_v3(conta: FinancialAccount) -> dict:
 
 
 
-def _conta_v4(conta: FinancialAccount, referencia: date, saldos: dict[int, Decimal]) -> dict:
+def coberturas_de_extrato(conta_ids: list[int]) -> dict[int, date]:
+    """Último dia que o extrato importado cobre, por conta.
+
+    É o maior entre a data da última linha, a data do saldo que o arquivo
+    informou e o fim de período que ele declarou (um mês sem movimento chega como
+    lote sem linhas, com saldo). Conta que nunca teve extrato não aparece.
+    """
+    coberturas: dict[int, date] = {}
+
+    def considerar(conta_id: int, dia: date | None) -> None:
+        if dia is not None and (conta_id not in coberturas or dia > coberturas[conta_id]):
+            coberturas[conta_id] = dia
+
+    linhas = (
+        BankStatementLine.objects.filter(account_id__in=conta_ids)
+        .values("account_id")
+        .annotate(ultima=Max("statement_date"))
+    )
+    for item in linhas:
+        considerar(item["account_id"], item["ultima"])
+    lotes = (
+        BankStatementImport.objects.filter(account_id__in=conta_ids)
+        .values("account_id")
+        .annotate(saldo=Max("statement_balance_date"), periodo=Max("statement_period_end"))
+    )
+    for item in lotes:
+        considerar(item["account_id"], item["saldo"])
+        considerar(item["account_id"], item["periodo"])
+    return coberturas
+
+
+def _conta_v4(
+    conta: FinancialAccount, referencia: date, saldos: dict[int, Decimal], coberturas: dict[int, date] | None = None
+) -> dict:
     existe_na_data = conta.initial_balance_date <= referencia
+    cobertura = (coberturas or {}).get(conta.id)
+    opcionais = {"statement_covered_until": cobertura.isoformat()} if cobertura is not None else {}
     return {
         "source_id": _source_id_v4("account", conta.id),
         "name": conta.account_name,
@@ -308,6 +344,9 @@ def _conta_v4(conta: FinancialAccount, referencia: date, saldos: dict[int, Decim
         "balance": str(saldos.get(conta.id, Decimal("0.00")).quantize(MONEY_QUANT)) if existe_na_data else None,
         "balance_as_of": referencia.isoformat() if existe_na_data else None,
         "deep_link": endereco_da_conta(conta, referencia),
+        # Acréscimo opcional (19/10/2026): até que dia o extrato importado cobre.
+        # O CRV o usa para dizer "aguardando extrato" em vez de "só no CRV".
+        **opcionais,
     }
 
 
@@ -532,6 +571,7 @@ def snapshot_v4_view(request):
         saldos = decimal_balances_before_by_account(
             contas_ativas, referencia + timedelta(days=1), VIEW_REALIZED
         )
+        coberturas = coberturas_de_extrato([conta.id for conta in contas])
         categorias = list(CashFlowCategory.objects.select_related("group").order_by("id"))
         lancamentos = list(
             CashFlowEntry.objects.select_related("account", "category", "investment_detail")
@@ -543,7 +583,7 @@ def snapshot_v4_view(request):
             .order_by("id")
         )
         items = [
-            {"resource": "account", "source_id": _source_id_v4("account", conta.id), "payload": _conta_v4(conta, referencia, saldos)}
+            {"resource": "account", "source_id": _source_id_v4("account", conta.id), "payload": _conta_v4(conta, referencia, saldos, coberturas)}
             for conta in contas
         ]
         items.extend(

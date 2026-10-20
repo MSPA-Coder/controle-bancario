@@ -308,3 +308,34 @@ def test_v4_publica_o_status_efetivo_derivado_da_data_e_nao_do_gravado(
     assert efetivo["pago ha 30 dias"] == (STATUS_REALIZED, "realizado")
     # Os lançamentos da fixture são realizados e continuam realizados.
     assert efetivo["Salário"] == (STATUS_REALIZED, "realizado")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_v4_publica_ate_quando_o_extrato_da_conta_foi_importado(contas, monkeypatch, tmp_path):
+    """A cobertura é o maior entre a última linha, o saldo do arquivo e o fim do
+    período declarado; conta sem extrato não ganha o campo (nunca uma data inventada)."""
+    from bank_statements.models import BankStatementImport, BankStatementLine
+
+    conta = contas["em_reais"]
+    lote = BankStatementImport.objects.create(
+        account=conta, source_filename="setembro.pdf", statement_balance=Decimal("10.00"),
+        statement_balance_date=date(2026, 9, 29),
+    )
+    BankStatementLine.objects.create(
+        import_batch=lote, account=conta, statement_date=date(2026, 9, 26), description="Pix",
+        amount=Decimal("5.00"), line_hash="cobertura-1",
+    )
+    # Mês parado: lote sem linha, só com o fim do período declarado.
+    BankStatementImport.objects.create(account=conta, source_filename="outubro.ofx", statement_period_end=date(2026, 10, 31))
+
+    assert patrimonio.coberturas_de_extrato([conta.id, contas["em_dolar"].id]) == {conta.id: date(2026, 10, 31)}
+
+    token_v4 = configurar_token_v4(monkeypatch, tmp_path)
+    resposta = Client().get("/patrimonio/v4/snapshot", HTTP_AUTHORIZATION=f"Bearer {token_v4}")
+
+    assert resposta.status_code == 200
+    contas_publicadas = {
+        item["payload"]["name"]: item["payload"] for item in resposta.json()["items"] if item["resource"] == "account"
+    }
+    assert contas_publicadas["Conta corrente"]["statement_covered_until"] == "2026-10-31"
+    assert "statement_covered_until" not in contas_publicadas["Conta em dólar"]
