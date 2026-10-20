@@ -188,11 +188,16 @@ da biblioteca.
 Mudança documental exige `git diff --check`, verificação de links/caminhos e
 busca por referências obsoletas. Para template, HTMX ou JavaScript, percorra a
 tela afetada. Para regra, rota ou service, execute testes focados e o fluxo
-completo. Para autenticação, autorização, sessão ou CSRF, execute `quality`.
-Para schema, valide backup e revise a migration; o bootstrap em PostgreSQL
-vazio não é passo manual, porque o `quality` aplica a cadeia inteira de
-migrações a um banco vazio a cada execução. Para dependências, Dockerfile ou
-Compose, reconstrua a imagem, valide o Compose e faça smoke test da pilha.
+completo. Para autenticação, autorização, sessão ou CSRF, execute os testes
+focados dessas camadas. Para schema, valide backup e revise a migration; o
+bootstrap em PostgreSQL vazio não é passo manual, porque o `quality` aplica a
+cadeia inteira de migrações a um banco vazio a cada execução. Para
+dependências, Dockerfile ou Compose, reconstrua a imagem, valide o Compose e
+faça smoke test da pilha.
+
+O `quality` completo não roda mais na máquina antes do PR: a CI do PR executa
+exatamente o mesmo contêiner. Localmente, rode só os testes focados no que
+mudou, e o `quality` completo apenas para reproduzir uma falha da CI.
 
 A CI valida Compose, Ruff, pytest, dependências Python, imagem operacional e
 fronteira de escrita do runtime. O Dependabot acompanha o `uv.lock`, a imagem
@@ -214,10 +219,21 @@ qualquer operação de produção.
 O `main` é protegido no GitHub (regra "Proteção do main"): **push direto é
 recusado**. Toda mudança entra por branch própria (`feat/`, `fix/`, `docs/`,
 `chore/`) e pull request com squash merge, depois das verificações obrigatórias
-`Qualidade` e `CodeQL` verdes e com a branch atualizada em relação ao `main`
-(atrás dele, atualize com merge do `main`, nunca rebase nem push forçado). O
-deploy (`~/deploy.sh bancario`) só começa com a CI do commit de merge no `main`
-verde: são duas esperas de CI por mudança, a do PR e a do `main`.
+`Qualidade` e `CodeQL` verdes, com histórico linear. A branch não precisa
+estar atualizada em relação ao `main`: não faça merge do `main` nela só para o
+PR entrar. O auto-merge está ligado: depois de `gh pr create`, rode
+`gh pr merge <n> --auto --squash`, e o PR entra sozinho quando os checks
+passarem. Nunca `--admin`, nunca push forçado, nunca rebase em branch
+publicada.
+
+A combinação de PRs é verificada pela CI do `main` depois do merge. O VPS
+implanta sozinho: o `atualizar-stacks.timer` roda a cada 5 minutos e, quando o
+`main` avança, espera a CI do `main`, faz backup verificado e roda
+`~/deploy.sh bancario`. Ele alerta uma vez se a CI reprovar ou o deploy for
+revertido, e não repete aquele commit até o `main` andar de novo. Não é preciso
+esperar a CI nem rodar o deploy à mão depois do merge; `~/deploy.sh bancario`
+continua servindo para adiantar ou repetir um deploy, e `~/deploy.sh --status`
+mostra VPS × GitHub.
 
 As versões suportadas são Python 3.15, PostgreSQL 17 e **Django 6.1**; faixas
 completas ficam em `pyproject.toml` e as versões exatas em `uv.lock`.
@@ -238,8 +254,8 @@ Ao atualizar dependências, alargue o teto e preserve o piso compatível já
 verificado; só eleve o piso quando uma incompatibilidade for comprovada. Depois
 rode `uv lock` e commite o resultado — o build usa `uv sync --locked`, que
 **reprova** se o lock não corresponder ao `pyproject.toml`. O Dependabot
-acompanha o `uv.lock` pelo ecossistema `uv`. Reconstrua do zero, execute
-`quality` e valide o fluxo afetado.
+acompanha o `uv.lock` pelo ecossistema `uv`. Reconstrua do zero, execute os
+testes focados e valide o fluxo afetado; o `quality` completo roda na CI do PR.
 
 Ao concluir uma tarefa, informe comandos executados no host e nos contêineres,
 resultados e validações omitidas com o motivo.

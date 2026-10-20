@@ -120,13 +120,17 @@ português. Tela nova entra na lista `TELAS` dele.
 - template, HTMX ou JavaScript: fluxo afetado no navegador;
 - regra, view ou service: testes focados e fluxo completo com dados
   representativos;
-- autenticação, autorização, sessão ou CSRF: serviço `quality` completo;
+- autenticação, autorização, sessão ou CSRF: testes focados dessas camadas;
 - schema ou transformação de dados: backup validado e revisão da migration.
   O bootstrap em PostgreSQL vazio não é mais passo manual: o serviço
   `quality` sobe o `postgres-teste` e o pytest-django aplica a cadeia
   inteira de migrações a um banco vazio para construir o banco de teste;
 - dependências, Dockerfile ou Compose: build sem cache quando pertinente,
-  `docker compose config`, serviço `quality` e smoke test da pilha.
+  `docker compose config` e smoke test da pilha.
+
+O serviço `quality` completo não roda mais na máquina antes do PR: a CI do PR
+executa exatamente o mesmo contêiner. Rode-o localmente só para reproduzir uma
+falha da CI.
 
 A CI valida o Compose, executa Ruff e pytest, audita as dependências Python,
 varre a imagem operacional e confere a fronteira de escrita do runtime. Isso

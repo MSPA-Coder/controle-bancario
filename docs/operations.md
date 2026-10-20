@@ -182,10 +182,14 @@ nascem na estação de desenvolvimento, seguem para o GitHub e chegam ao VPS por
 `~/deploy.sh bancario`. Não edite nem faça commit no servidor. O script de
 implantação recusa uma árvore suja.
 
-Publique por branch, pull request com checks obrigatórios verdes e squash merge;
-só então o `main` remoto é elegível para o deploy. Não faça push direto ao
-`main` nem aguarde uma segunda rodada de CI manualmente: o script confere o
-commit que vai aplicar.
+Publique por branch, pull request com checks obrigatórios verdes e squash merge
+(com auto-merge: `gh pr merge <n> --auto --squash`); só então o `main` remoto é
+elegível para o deploy. Não faça push direto ao `main`. O deploy é automático:
+o `atualizar-stacks.timer` roda a cada 5 minutos e, quando o `main` avança,
+espera em silêncio a CI do `main`, faz backup verificado e roda
+`~/deploy.sh bancario`. Ele alerta uma vez se a CI reprovar ou o deploy for
+revertido, e não repete aquele commit até o `main` andar de novo. Não é preciso
+aguardar a CI do `main` nem rodar o deploy à mão depois do merge.
 
 Configuração esperada em `.env.vps`:
 
@@ -205,8 +209,10 @@ curl -I https://bancario-mspa.duckdns.org/
 ~/deploy.sh --status
 ```
 
-Uma atualização só deve ocorrer depois dos backups necessários. O comando
-operacional é `~/deploy.sh bancario`; ele confere o commit elegível, atualiza
+Uma atualização só deve ocorrer depois dos backups necessários; o timer faz o
+backup verificado antes de cada deploy automático. O comando operacional,
+chamado pelo timer e à mão para adiantar ou repetir um deploy, é
+`~/deploy.sh bancario`; ele confere o commit elegível, atualiza
 o espelho, usa as imagens validadas por digest, aguarda os health checks e valida o endereço
 público. `~/deploy.sh --status` é diagnóstico transversal, não pré-requisito
 do deploy. `.env.vps`,
