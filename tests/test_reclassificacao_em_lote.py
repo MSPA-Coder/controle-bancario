@@ -277,3 +277,27 @@ def test_filtros_globais_sozinhos_nao_desligam_so_importados(cenario):
 
     resposta = client.get("/banking/reclassification/", {"currency": "BRL", "grupos": "bancos,cartoes"})
     assert "SEM EXTRATO" not in resposta.content.decode()
+
+
+@pytest.mark.django_db
+def test_primeira_abertura_filtra_a_categoria_outros(cenario):
+    """Aberta pelo menu, a lista começa em "Outros"; os globais não contam como filtro."""
+    from django.http import QueryDict
+
+    assert reclassificacao.Filtros.do_get(QueryDict("")).categoria_id == cenario["outros"].id
+    assert reclassificacao.Filtros.do_get(QueryDict("currency=BRL&grupos=cartoes")).categoria_id == cenario["outros"].id
+    # "Todas" escolhido no formulário vem vazio e vale; outro filtro próprio também desliga o padrão.
+    assert reclassificacao.Filtros.do_get(QueryDict("categoria=&texto=")).categoria_id is None
+    assert reclassificacao.Filtros.do_get(QueryDict("texto=DROGA")).categoria_id is None
+    escolhida = reclassificacao.Filtros.do_get(QueryDict(f"categoria={cenario['saude'].id}"))
+    assert escolhida.categoria_id == cenario["saude"].id
+
+
+@pytest.mark.django_db
+def test_tela_abre_com_outros_selecionado(cenario):
+    client = Client()
+    client.force_login(cenario["usuario"])
+
+    html = client.get("/banking/reclassification/").content.decode()
+
+    assert f'<option value="{cenario["outros"].id}" selected>Outros</option>' in html

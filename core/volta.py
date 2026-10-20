@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
-from django.http import HttpRequest, HttpResponse, QueryDict
+from django.http import HttpRequest, HttpResponse, QueryDict, RawPostDataException
 from django.shortcuts import redirect
 from django.urls import reverse
 
@@ -96,6 +96,52 @@ def resposta_de_cadastro(request: HttpRequest, nome_url: str, *, sucesso: bool =
             response["HX-Trigger"] = json.dumps({"tabelaAtualizar": True, "cadastroGravado": True})
         return response
     return redirect(url_de_volta(request, reverse(nome_url)))
+
+
+class FiltrosGlobaisNaVoltaMiddleware:
+    """Toda escrita volta com a moeda e os grupos de conta da tela de origem.
+
+    Os filtros globais vivem só na URL. `url_de_volta` os repõe, mas só nas
+    views que a usam; as demais redirecionavam para o endereço limpo, e a
+    pessoa voltava à moeda e aos grupos padrão depois de gravar (Saldo
+    aplicações, Importações, Conciliação, Anexos, Configurações...). Aqui o
+    destino de qualquer POST que redireciona (``Location`` ou ``HX-Redirect``)
+    ganha os globais da origem que ele não trouxer. O que a view escreveu no
+    destino vence, e destino de outro host fica como está.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        response = self.get_response(request)
+        if request.method != "POST":
+            return response
+        for cabecalho in ("Location", "HX-Redirect"):
+            if response.has_header(cabecalho):
+                response[cabecalho] = _com_filtros_globais(request, response[cabecalho])
+        return response
+
+
+def _com_filtros_globais(request: HttpRequest, destino: str) -> str:
+    partes = urlsplit(destino)
+    if partes.netloc and partes.netloc != request.get_host():
+        return destino
+    try:
+        origem = query_de_origem(request)
+    except RawPostDataException:
+        # A view leu o corpo como fluxo: sem `volta`, fica a query do request.
+        origem = request.GET
+    query = QueryDict(partes.query, mutable=True)
+    mudou = False
+    for chave in PARAMETROS_GLOBAIS:
+        valores = [v for v in origem.getlist(chave) if v != ""]
+        if chave not in query and valores:
+            query.setlist(chave, valores)
+            mudou = True
+    if not mudou:
+        return destino
+    return urlunsplit((partes.scheme, partes.netloc, partes.path, query.urlencode(), partes.fragment))
 
 
 def voltar_para(request: HttpRequest, nome_url: str, **kwargs) -> HttpResponse:

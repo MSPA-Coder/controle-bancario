@@ -154,22 +154,38 @@ class Filtros:
             except ValueError:
                 return None
 
+        # A primeira abertura (sem filtro próprio algum; moeda e grupos são
+        # globais e viajam em toda URL) mostra só importados e começa em
+        # "Outros", que é o que costuma pedir reclassificação. O formulário
+        # sempre envia `categoria`, então "Todas" escolhido vem vazio e vale.
+        primeira_abertura = not any(valor for chave, valor in get.items() if chave not in PARAMETROS_GLOBAIS)
+        if "categoria" not in get and primeira_abertura:
+            categoria_id = _id_da_categoria_padrao()
+        else:
+            categoria_id = inteiro("categoria")
+
         return cls(
             conta_id=inteiro("conta"),
             de=data("de"),
             ate=data("ate"),
-            categoria_id=inteiro("categoria"),
+            categoria_id=categoria_id,
             texto=(get.get("texto") or "").strip()[:100],
             categoria_do_banco=(get.get("banco") or "").strip()[:100],
-            # Checkbox desmarcado não vem no GET; a primeira abertura (sem
-            # filtro próprio algum) mostra só importados. Moeda e grupos são
-            # globais e viajam em toda URL, então não contam como filtro.
-            so_importados=get.get("importados") == "1" or not any(
-                valor for chave, valor in get.items() if chave not in PARAMETROS_GLOBAIS
-            ),
+            # Checkbox desmarcado não vem no GET.
+            so_importados=get.get("importados") == "1" or primeira_abertura,
             moeda=parse_currency_filter(get),
             grupos=parse_account_groups(get),
         )
+
+
+def _id_da_categoria_padrao() -> int | None:
+    from .classificacao import CATEGORIA_PADRAO
+
+    return (
+        CashFlowCategory.objects.filter(kind=CATEGORY_KIND_MANAGERIAL, category_name__iexact=CATEGORIA_PADRAO)
+        .values_list("id", flat=True)
+        .first()
+    )
 
 
 def categorias_do_banco() -> list[str]:

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 02:39-0300\n"
+"POT-Creation-Date: 2026-10-20 16:32-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -3561,6 +3561,10 @@ msgstr "Enter the actual balance of an account on a date. The difference from th
 msgid "1. Informe o saldo"
 msgstr "1. Enter the balance"
 
+#: templates/banking/atualizar_saldo.html
+msgid "Em aplicação, informe o valor <strong>líquido para resgate</strong>, já sem IR e IOF: é o que entra na conta ao resgatar. O valor bruto só se o IR for lançado à parte, com o destino IR/IOF."
+msgstr "For an investment, enter the <strong>net amount on redemption</strong>, after income tax and IOF: it is what reaches the account when you redeem. Use the gross amount only if the income tax is recorded separately, with the IR/IOF destination."
+
 #: templates/banking/atualizar_saldo.html templates/tables/accounts.html
 msgid "Data do saldo"
 msgstr "Balance date"
@@ -3568,6 +3572,10 @@ msgstr "Balance date"
 #: templates/banking/atualizar_saldo.html
 msgid "Saldo real"
 msgstr "Actual balance"
+
+#: templates/banking/atualizar_saldo.html
+msgid "Aplicação: líquido para resgate, já sem IR e IOF."
+msgstr "Investment: net amount on redemption, after income tax and IOF."
 
 #: templates/banking/atualizar_saldo.html
 msgid "Comparar"

@@ -202,6 +202,25 @@
                 form.appendChild(volta);
             }
             volta.value = window.location.search.replace(/^\?/, '');
+            /* A resposta de um POST que redesenha a tela (sem redirecionar)
+               fica no endereço do `action`: sem a moeda e os grupos nele, a
+               tela seguinte voltava aos globais padrão. Só os dois globais
+               que estão na barra, e só se o `action` não os trouxer. O
+               redirecionamento depois de gravar é coberto no servidor
+               (`core.volta.FiltrosGlobaisNaVoltaMiddleware`). */
+            try {
+                var destino = new URL(form.getAttribute('action') || window.location.href, window.location.href);
+                var atual = new URL(window.location.href).searchParams;
+                var mudou = false;
+                if (destino.origin === window.location.origin) {
+                    ['currency', 'grupos'].forEach(function (nome) {
+                        if (!atual.get(nome) || destino.searchParams.has(nome)) return;
+                        destino.searchParams.set(nome, atual.get(nome));
+                        mudou = true;
+                    });
+                }
+                if (mudou) form.setAttribute('action', destino.pathname + destino.search);
+            } catch (_) { /* action ilegível: segue como veio */ }
         }
     });
 

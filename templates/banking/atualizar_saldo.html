@@ -21,6 +21,8 @@
 {% block content %}
 <div class="chart-card u-mb-1">
     <h3>{% trans "1. Informe o saldo" %}</h3>
+    <p class="help-text">{% blocktrans trimmed %}Em aplicação, informe o valor <strong>líquido para resgate</strong>, já sem IR e IOF: é o que entra na conta ao resgatar.
+        O valor bruto só se o IR for lançado à parte, com o destino IR/IOF.{% endblocktrans %}</p>
     <form method="post" action="{% url 'bank_statements:atualizar_saldo' %}" class="top-filter-row">
         {% csrf_token %}
         <input type="hidden" name="acao" value="previa">
@@ -40,7 +42,8 @@
             <input type="date" name="data" value="{{ data|date:'Y-m-d' }}" required>
         </label>
         <label>{% trans "Saldo real" %}
-            <input type="text" name="saldo" inputmode="decimal" value="{{ escolhas.saldo }}" placeholder="0,00" required>
+            <input type="text" name="saldo" inputmode="decimal" value="{{ escolhas.saldo }}" placeholder="0,00" required
+                   title="{% trans 'Aplicação: líquido para resgate, já sem IR e IOF.' %}">
         </label>
         <button type="submit" class="btn-sm btn-primary">{% trans "Comparar" %}</button>
     </form>

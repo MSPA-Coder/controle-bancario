@@ -83,6 +83,14 @@ URL atual para links, formulários GET e requisições HTMX, completando só o q
 o destino não traz. O menu lateral e a faixa "Mostrando só..." ficam fora de
 `#appMain`, porque os filtros globais trocam de página e não de fragmento.
 
+Gravar também não os perde. O formulário POST leva `currency` e `grupos` da barra
+no `action` (para a tela que se redesenha sem redirecionar) e a query inteira no
+campo `volta`. No servidor, `core.volta.FiltrosGlobaisNaVoltaMiddleware` repõe os
+dois no destino de todo POST que redireciona (`Location` ou `HX-Redirect`), sem
+trocar o que a view escreveu; antes de 20/10/2026 só as views que usam
+`url_de_volta` faziam isso, e Saldo aplicações, Importações, Conciliação, Anexos
+e Configurações voltavam à moeda e aos grupos padrão.
+
 ### Menu lateral
 
 A árvore sai de `_build_menu_items()` em `core/context_processors.py`, e cada item
