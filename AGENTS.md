@@ -194,6 +194,9 @@ vazio não é passo manual, porque o `quality` aplica a cadeia inteira de
 migrações a um banco vazio a cada execução. Para dependências, Dockerfile ou
 Compose, reconstrua a imagem, valide o Compose e faça smoke test da pilha.
 
+Em qualquer mudança de código, rode o `quality` completo na máquina antes do
+commit: é essa verificação que vale. A CI depois do push é só aviso.
+
 A CI valida Compose, Ruff, pytest, dependências Python, imagem operacional e
 fronteira de escrita do runtime. O Dependabot acompanha o `uv.lock`, a imagem
 base e as GitHub Actions. Não enfraqueça verificações de vulnerabilidade para fazer uma falha
@@ -211,13 +214,20 @@ O VPS e seus volumes são independentes do ambiente local. O código no servidor
 edite, faça commit ou merge no VPS. Consulte `docs/operations.md` antes de
 qualquer operação de produção.
 
-O `main` é protegido no GitHub (regra "Proteção do main"): **push direto é
-recusado**. Toda mudança entra por branch própria (`feat/`, `fix/`, `docs/`,
-`chore/`) e pull request com squash merge, depois das verificações obrigatórias
-`Qualidade` e `CodeQL` verdes e com a branch atualizada em relação ao `main`
-(atrás dele, atualize com merge do `main`, nunca rebase nem push forçado). O
-deploy (`~/deploy.sh bancario`) só começa com a CI do commit de merge no `main`
-verde: são duas esperas de CI por mudança, a do PR e a do `main`.
+Depois da verificação completa na máquina (o `quality`, ver "Validação
+proporcional"), faça commit direto no `main` e `git push`, sem PR e sem esperar
+nada. A regra "Proteção do main" continua impedindo apagar o `main` ou
+reescrever o histórico: nada de push forçado nem de rebase do `main`. A CI do
+GitHub roda depois de cada push só como aviso e não bloqueia nada; se falhar,
+investigue. O Dependabot continua por PR, com os checks obrigatórios e
+auto-merge.
+
+O deploy (`~/deploy.sh bancario`) só roda quando o usuário mandar. O servidor
+monta a imagem a partir do código do `main`, sem esperar nem baixar nada da
+CI, confere a saúde e volta sozinho para a versão anterior se falhar.
+`~/deploy.sh --status` compara VPS × GitHub. Na quarta-feira, o
+`reconstruir-bases.timer` reconstrói só a versão que já está no ar, para pegar
+correções de segurança das imagens-base, sem trazer commits novos.
 
 As versões suportadas são Python 3.15, PostgreSQL 17 e **Django 6.1**; faixas
 completas ficam em `pyproject.toml` e as versões exatas em `uv.lock`.

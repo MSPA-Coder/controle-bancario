@@ -128,9 +128,14 @@ português. Tela nova entra na lista `TELAS` dele.
 - dependências, Dockerfile ou Compose: build sem cache quando pertinente,
   `docker compose config`, serviço `quality` e smoke test da pilha.
 
+Em qualquer mudança de código, o serviço `quality` completo roda na máquina
+antes do commit: é essa verificação que vale. O commit vai direto ao `main`.
+
 A CI valida o Compose, executa Ruff e pytest, audita as dependências Python,
-varre a imagem operacional e confere a fronteira de escrita do runtime. Isso
-não substitui a validação manual do fluxo alterado nem um ensaio de restauração.
+varre a imagem operacional e confere a fronteira de escrita do runtime. Ela
+roda depois de cada push só como aviso e não bloqueia nada; se falhar,
+investigue. Isso não substitui a validação manual do fluxo alterado nem um
+ensaio de restauração.
 
 ## Antes de alterar dados reais
 
