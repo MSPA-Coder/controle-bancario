@@ -371,7 +371,13 @@ def resolve_pending_uploads(
                 user, account_id=account_id, uploaded_file=file_like
             )
             resultados.append((upload.original_filename, inserted, skipped))
-            lotes.append(batch)
+            if inserted == 0 and batch.statement_balance is None:
+                # Só duplicatas e sem saldo: o lote não guarda nada e ficaria no
+                # histórico como uma importação de 0 linhas. A mensagem do
+                # resultado já diz que tudo era repetido.
+                batch.delete()
+            else:
+                lotes.append(batch)
         except ValueError as exc:
             erros.append((upload.original_filename, str(exc)))
         _delete_pending(upload)

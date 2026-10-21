@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from decimal import Decimal
 from typing import Final
 
 from django.utils.translation import gettext, gettext_lazy
@@ -128,6 +129,19 @@ class MixedCurrencyError(ValueError):
 
 MAX_TRANSACTION_INSTALLMENTS: Final = 48
 MAX_TRANSACTION_DESCRIPTION_LENGTH: Final = 255
+# As colunas de valor são numeric(12,2): o que passa de 10 dígitos inteiros o
+# PostgreSQL recusa com um erro de banco. A tela tem de recusar antes, com texto.
+MAX_MONEY_VALUE: Final = Decimal("9999999999.99")
+
+
+def assert_money_in_range(value: Decimal | None) -> None:
+    """Recusa valor que não é número finito ou que não cabe na coluna do banco."""
+    if value is None:
+        return
+    if not value.is_finite():
+        raise ValueError(gettext("Valor monetário inválido."))
+    if abs(value) > MAX_MONEY_VALUE:
+        raise ValueError(gettext("Valor acima do limite permitido (9.999.999.999,99)."))
 MAX_PROJECTION_RANGE_MONTHS: Final = 120
 
 VIEW_PROJECTED: Final = STATUS_PROJECTED

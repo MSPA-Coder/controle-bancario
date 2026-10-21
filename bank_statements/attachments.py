@@ -11,8 +11,10 @@ Os arquivos ficam sob `MEDIA_ROOT`, em volume operacional separado do banco.
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
+import unicodedata
 from contextlib import suppress
 from pathlib import Path
 from uuid import uuid4
@@ -37,6 +39,8 @@ ATTACHMENT_MIME_TYPES = {
     ".csv": "text/csv",
     ".txt": "text/plain",
 }
+logger = logging.getLogger(__name__)
+
 _MAX_FILENAME_LENGTH = 255
 _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 _MAX_SAFE_STEM_LENGTH = 180
@@ -54,6 +58,9 @@ def max_attachment_size_bytes() -> int:
 
 def _sanitize_filename(raw_name: str | None) -> str:
     name = os.path.basename((raw_name or "").strip()) or "anexo"
+    # "comprovante ação.pdf" vira "comprovante_acao.pdf", e não "comprovante_a_o.pdf":
+    # as letras acentuadas perdem só o acento, que o nome seguro não comporta.
+    name = "".join(c for c in unicodedata.normalize("NFKD", name) if not unicodedata.combining(c))
     name = _UNSAFE_FILENAME_CHARS.sub("_", name)
     return name[:_MAX_FILENAME_LENGTH] or "anexo"
 
@@ -101,6 +108,29 @@ def _unlink_attachment_file(path: Path) -> None:
     if candidate.is_symlink():
         raise ValueError(gettext("Arquivo de anexo inválido."))
     candidate.unlink(missing_ok=True)
+
+
+def remover_arquivo_do_anexo(sender, instance: EntryAttachment, **kwargs) -> None:
+    """Apaga o arquivo quando o registro some, qualquer que seja o caminho.
+
+    Excluir um lançamento apaga os anexos dele em cascata, e só o registro
+    ia embora: o comprovante ficava no disco, fora do alcance da tela. Este
+    gancho (`post_delete`) cobre o cascata e a exclusão direta. A remoção só
+    acontece depois do commit, e um arquivo já ausente não é erro.
+    """
+    try:
+        caminho = _attachment_removal_path(instance)
+    except ValueError:
+        logger.warning("anexo_fora_do_armazenamento id=%s", instance.pk)
+        return
+
+    def _remover() -> None:
+        try:
+            _unlink_attachment_file(caminho)
+        except (OSError, ValueError):
+            logger.warning("anexo_nao_removido id=%s", instance.pk)
+
+    db_transaction.on_commit(_remover)
 
 
 def attachment_download_path(attachment: EntryAttachment) -> Path:

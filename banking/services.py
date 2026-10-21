@@ -23,6 +23,7 @@ from core.domain.finance import (
     VALID_ACCOUNT_PURPOSES,
     VALID_CURRENCIES,
     MixedCurrencyError,
+    assert_money_in_range,
 )
 
 from .models import FinancialAccount, FinancialInstitution
@@ -151,9 +152,13 @@ def _parse_initial_balance(raw_value: str | None) -> Decimal:
     if raw_value is None or str(raw_value).strip() == "":
         return Decimal("0.00")
     try:
-        return Decimal(str(raw_value).strip().replace(',', '.'))
+        valor = Decimal(str(raw_value).strip().replace(',', '.'))
     except InvalidOperation as exc:
         raise ValueError(gettext("Saldo inicial inválido.")) from exc
+    if not valor.is_finite():
+        raise ValueError(gettext("Saldo inicial inválido."))
+    assert_money_in_range(valor)
+    return valor
 
 
 def currencies_of_accounts(account_ids) -> tuple[str, ...]:
@@ -254,9 +259,32 @@ def _parse_initial_balance_date(raw_value: str | None) -> date:
     if not raw_text:
         return localdate()
     try:
-        return date.fromisoformat(raw_text)
+        data = date.fromisoformat(raw_text)
     except ValueError as exc:
         raise ValueError(gettext("Data do saldo inicial inválida.")) from exc
+    if data > localdate():
+        # Saldo "inicial" de uma data que ainda não chegou entraria hoje nos
+        # saldos e nos totais como se a conta já existisse.
+        raise ValueError(gettext("A data do saldo inicial não pode ser depois de hoje."))
+    return data
+
+
+def _assert_account_unique(
+    owner_id: int, institution_id: int, name: str, statement_identifier: str, *, exclude_id: int | None = None
+) -> None:
+    """Nome e identificador de extrato não se repetem onde a importação procura a conta.
+
+    A importação acha a conta pelo identificador que vem no arquivo, dentro da
+    instituição: dois cadastros com o mesmo identificador deixam a escolha
+    ambígua. O nome repetido para o mesmo titular na mesma instituição
+    é indistinguível nos seletores.
+    """
+    others = FinancialAccount.objects.exclude(id=exclude_id) if exclude_id else FinancialAccount.objects.all()
+    if others.filter(owner_id=owner_id, institution_id=institution_id, account_name__iexact=name).exists():
+        raise ValueError(gettext("Este titular já tem uma conta com esse nome nesta instituição."))
+    identifier = (statement_identifier or "").strip()
+    if identifier and others.filter(institution_id=institution_id, statement_identifier=identifier).exists():
+        raise ValueError(gettext("Já existe uma conta desta instituição com esse identificador de extrato."))
 
 
 def _clean_account_fields(owner_id: str, institution_id: str, account_name: str, initial_balance: str):
@@ -314,6 +342,7 @@ def _parse_estimated_spend(raw_value: str | None) -> Decimal | None:
         raise ValueError(gettext("Gasto mensal estimado do cartão inválido.")) from exc
     if valor < 0:
         raise ValueError(gettext("Gasto mensal estimado do cartão não pode ser negativo."))
+    assert_money_in_range(valor)
     return valor
 
 
@@ -433,6 +462,7 @@ def create_account(
         raise ValueError(gettext("Acesso negado: você não tem permissão para criar contas para este titular."))
     if not FinancialInstitution.objects.filter(id=clean_institution_id).exists():
         raise ValueError(gettext("Instituição não encontrada."))
+    _assert_account_unique(clean_owner_id, clean_institution_id, clean_name, statement_identifier)
     card = _clean_card_fields(
         user,
         account_kind=account_kind,
@@ -491,6 +521,7 @@ def update_account(
         raise ValueError(gettext("Acesso negado: você não tem permissão para transferir a conta para este titular."))
     if not FinancialInstitution.objects.filter(id=clean_institution_id).exists():
         raise ValueError(gettext("Instituição não encontrada."))
+    _assert_account_unique(clean_owner_id, clean_institution_id, clean_name, statement_identifier, exclude_id=account.id)
     # Trocar a moeda de uma conta com lançamento reescreveria em silêncio o
     # significado de todo o passado dela: os mesmos valores passariam a valer
     # em outra moeda, sem nenhum registro de conversão. Conta com histórico não

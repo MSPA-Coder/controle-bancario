@@ -139,6 +139,8 @@ def test_transaction_payload_rejects_invalid_realized_amount(amount):
     # dele que tem de recusar.
     request = SimpleNamespace(
         description="válido",
+        entry_type="despesa",
+        entry_amount=Decimal("10.00"),
         status=STATUS_REALIZED,
         realized_date=date(2026, 8, 1),
         realized_amount=amount,
@@ -152,6 +154,8 @@ def test_transaction_payload_rejects_realized_without_date():
     """O saldo realizado filtra pela data: sem ela, o lançamento some dele."""
     request = SimpleNamespace(
         description="válido",
+        entry_type="despesa",
+        entry_amount=Decimal("10.00"),
         status=STATUS_REALIZED,
         realized_date=None,
         realized_amount=Decimal("10.00"),

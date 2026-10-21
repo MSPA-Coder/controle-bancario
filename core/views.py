@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import calendar
 from datetime import date, timedelta
 
 from django.contrib import messages
@@ -11,6 +12,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import translation
 from django.utils.http import urlencode
+from django.utils.timezone import localdate
 from django.utils.translation import gettext, ngettext
 from django.views.decorators.http import require_POST
 
@@ -618,6 +620,12 @@ def settings_close_month_view(request):
         account = FinancialAccount.objects.get(id=account_id)
         if not can_access_account(request.user, account.id, "update"):
             raise ValueError(gettext("Acesso negado: você não tem permissão para fechar este mês."))
+        # Mês que ainda não acabou não tem extrato nem fatura completos para
+        # conferir, e fechá-lo travaria o que ainda vai acontecer nele.
+        if 1 <= month <= 12 and date(year, month, calendar.monthrange(year, month)[1]) >= localdate():
+            raise ValueError(gettext(
+                "O mês %(mes)02d/%(ano)s ainda não terminou: só se fecha um mês depois do último dia dele."
+            ) % {"mes": month, "ano": year})
         # O saldo é calculado dentro de `close_month`, depois do lock da conta.
         closed = close_month(
             account,
@@ -756,6 +764,9 @@ def settings_home_view(request):
         "password_policy_settings": get_password_policy_settings(),
         "login_lockout_policy_settings": get_login_lockout_policy_settings(),
         "current_system_start_date": system_start_date(),
+        # Quem não pode gravar não vê o formulário: o servidor recusaria o envio.
+        "can_manage_password_policy": request.user.has_perm("settings.password_policy.manage"),
+        "can_manage_projection": request.user.has_perm("settings.projection.manage"),
     })
 
 

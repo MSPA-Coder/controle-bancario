@@ -1,5 +1,6 @@
 """Serviços de domínio para transações e fluxo de caixa."""
 import calendar
+import unicodedata
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -32,6 +33,8 @@ from core.domain.finance import (
     STATUS_PROJECTED,
     STATUS_REALIZED,
     VALID_CATEGORY_KINDS,
+    VALID_ENTRY_TYPES,
+    assert_money_in_range,
 )
 from transactions.calculations import MONEY_QUANT, _monthly_amount_for
 from transactions.calculations import installment_amount_for as installment_amount_for
@@ -59,7 +62,7 @@ def is_month_closed(account: FinancialAccount, year: int, month: int) -> bool:
 def validate_month_not_closed(account: FinancialAccount, due_date: date) -> None:
     """Valida que o mês da data de vencimento não está fechado."""
     if is_month_closed(account, due_date.year, due_date.month):
-        raise ValueError(gettext("Mês %(mes)s/%(ano)s está fechado para a conta %(conta)s.") % {"mes": due_date.month, "ano": due_date.year, "conta": account})
+        raise ValueError(gettext("Mês %(mes)02d/%(ano)s está fechado para a conta %(conta)s.") % {"mes": due_date.month, "ano": due_date.year, "conta": account})
 
 
 def assert_entry_period_open(entry: CashFlowEntry, action_label: str = "alterar") -> None:
@@ -244,6 +247,7 @@ def realize_transaction(
         assert_transfer_destination_authorized(user, entry, "update")
 
     final_date = realized_date or date.today()
+    _recusa_realizacao_no_futuro(final_date)
     # Os dois meses precisam estar abertos: o do vencimento e o da data de
     # realização informada agora. Fechar um mês tem de impedir tanto mexer no
     # que vencia nele quanto lançar realização dentro dele.
@@ -261,6 +265,7 @@ def realize_transaction(
         validate_month_not_closed(counterpart.account, final_date)
 
     final_amount = entry.entry_amount if realized_amount is None else realized_amount
+    assert_money_in_range(final_amount)
     if final_amount <= 0:
         raise ValueError(gettext("O valor realizado deve ser positivo."))
 
@@ -419,7 +424,7 @@ def close_month(
         )
     else:
         if month_close.active:
-            raise ValueError(gettext("Mês %(mes)s/%(ano)s já está fechado para esta conta.") % {"mes": month, "ano": year})
+            raise ValueError(gettext("Mês %(mes)02d/%(ano)s já está fechado para esta conta.") % {"mes": month, "ano": year})
         month_close.active = True
         month_close.closing_balance = closing_balance
         month_close.closed_at = timezone.now()
@@ -465,7 +470,7 @@ def reopen_month(
             active=True,
         )
     except AccountMonthClose.DoesNotExist as err:
-        raise ValueError(gettext("Mês %(mes)s/%(ano)s não está fechado para esta conta.") % {"mes": month, "ano": year}) from err
+        raise ValueError(gettext("Mês %(mes)02d/%(ano)s não está fechado para esta conta.") % {"mes": month, "ano": year}) from err
 
     month_close.active = False
     month_close.reopened_at = timezone.now()
@@ -529,12 +534,29 @@ def _clean_category_group(raw_value) -> CashFlowCategoryGroup | None:
         raise ValueError(gettext("Grupo de categoria inválido.")) from exc
 
 
+def _chave_do_nome(name: str) -> str:
+    """Nome sem caixa nem acento: "Saúde", "SAUDE" e "saude" são a mesma categoria para quem lê."""
+    decomposto = unicodedata.normalize("NFKD", name.strip())
+    return "".join(c for c in decomposto if not unicodedata.combining(c)).casefold()
+
+
+def _assert_nome_livre(queryset, field: str, name: str, mensagem: str, *, exclude_id: int | None = None) -> None:
+    """O banco só recusa nome idêntico byte a byte; a pessoa vê nomes iguais pela leitura."""
+    chave = _chave_do_nome(name)
+    for existing_id, existing in queryset.values_list("id", field):
+        if existing_id != exclude_id and _chave_do_nome(existing) == chave:
+            raise ValueError(mensagem)
+
+
 def create_category(name: str, kind: str, group_id=None) -> CashFlowCategory:
     from django.db import IntegrityError
 
     clean_name = _clean_category_name(name)
     clean_kind = _clean_category_kind(kind)
     group = _clean_category_group(group_id)
+    _assert_nome_livre(
+        CashFlowCategory.objects.all(), "category_name", clean_name, gettext("Já existe uma categoria com este nome.")
+    )
     try:
         return CashFlowCategory.objects.create(category_name=clean_name, kind=clean_kind, group=group)
     except IntegrityError as exc:
@@ -548,6 +570,10 @@ def update_category(
 
     clean_name = _clean_category_name(name)
     clean_kind = _clean_category_kind(kind)
+    _assert_nome_livre(
+        CashFlowCategory.objects.all(), "category_name", clean_name,
+        gettext("Já existe uma categoria com este nome."), exclude_id=category.id,
+    )
     # Trocar o tipo de uma categoria com histórico muda o significado do passado
     # inteiro dela: o que era despesa vira movimentação em todos os meses de uma
     # vez, inclusive nos fechados. É uma reclassificação, e reclassificação tem
@@ -603,10 +629,15 @@ def _clean_group_position(raw_value) -> int:
 def create_category_group(name: str, position=None, in_charts: bool = True) -> CashFlowCategoryGroup:
     from django.db import IntegrityError
 
+    clean_name = _clean_group_name(name)
+    clean_position = _clean_group_position(position)
+    _assert_nome_livre(
+        CashFlowCategoryGroup.objects.all(), "group_name", clean_name, gettext("Já existe um grupo com este nome.")
+    )
     try:
         return CashFlowCategoryGroup.objects.create(
-            group_name=_clean_group_name(name),
-            position=_clean_group_position(position),
+            group_name=clean_name,
+            position=clean_position,
             in_charts=in_charts,
         )
     except IntegrityError as exc:
@@ -618,8 +649,14 @@ def update_category_group(
 ) -> CashFlowCategoryGroup:
     from django.db import IntegrityError
 
-    group.group_name = _clean_group_name(name)
-    group.position = _clean_group_position(position)
+    clean_name = _clean_group_name(name)
+    clean_position = _clean_group_position(position)
+    _assert_nome_livre(
+        CashFlowCategoryGroup.objects.all(), "group_name", clean_name,
+        gettext("Já existe um grupo com este nome."), exclude_id=group.id,
+    )
+    group.group_name = clean_name
+    group.position = clean_position
     group.in_charts = in_charts
     try:
         with db_transaction.atomic():
@@ -748,6 +785,7 @@ def counterparty_amount_for_transfer(
     amount = req.counterparty_amount
     if not isinstance(amount, Decimal):
         amount = Decimal(str(amount))
+    assert_money_in_range(amount)
     amount = amount.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
     if amount <= 0:
         raise ValueError(gettext("O valor creditado na conta destino deve ser positivo."))
@@ -1012,6 +1050,10 @@ def _apply_fields(
     entry.category_id = req.category_id
     entry.entry_type = entry_type if entry_type is not None else req.entry_type
     entry.description = (req.description if description is None else description)[:255]
+    if entry.current_installment and installments < entry.current_installment:
+        raise ValueError(gettext(
+            "A parcela %(atual)s não cabe em %(total)s parcelas: informe pelo menos %(atual)s."
+        ) % {"atual": entry.current_installment, "total": installments})
     entry.entry_amount = monthly_amount
     entry.installments = installments
     entry.due_date = due_date
@@ -1026,7 +1068,21 @@ def _apply_fields(
         entry.status, entry.realized_date, entry.realized_amount = kept
 
 
+def _recusa_realizacao_no_futuro(realized_date: date | None) -> None:
+    """Realizado é o que já aconteceu: data de realização depois de hoje não vale."""
+    if realized_date is not None and realized_date > date.today():
+        raise ValueError(gettext(
+            "A data de realização não pode ser depois de hoje: realizado é o que já aconteceu. "
+            "Deixe o lançamento a vencer até a data."
+        ))
+
+
 def _validate_common_payload(req: TransactionRequest, monthly_amount: Decimal, installments: int) -> None:
+    if req.entry_type not in VALID_ENTRY_TYPES:
+        raise ValueError(gettext("Tipo de lançamento inválido."))
+    assert_money_in_range(monthly_amount)
+    assert_money_in_range(req.entry_amount)
+    assert_money_in_range(req.realized_amount)
     if monthly_amount <= 0:
         raise ValueError(gettext("O valor do lançamento deve ser positivo."))
     # O saldo realizado é filtrado pela data de realização: sem ela, o
@@ -1037,6 +1093,8 @@ def _validate_common_payload(req: TransactionRequest, monthly_amount: Decimal, i
             "Informe a data de realização: sem ela o lançamento realizado "
             "não aparece no saldo realizado."
         ))
+    if req.status == STATUS_REALIZED:
+        _recusa_realizacao_no_futuro(req.realized_date)
     if req.realized_amount is not None and req.realized_amount <= 0:
         raise ValueError(gettext("O valor realizado deve ser positivo."))
     if not 1 <= installments <= MAX_TRANSACTION_INSTALLMENTS:

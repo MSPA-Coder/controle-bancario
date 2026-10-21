@@ -30,7 +30,7 @@ from core.domain.finance import (
 )
 from core.htmx import invalid_period_response, quer_fragmento, recusa_moedas_misturadas
 from core.permissions import permission_required
-from core.services import audit_request_context, log_audit_event
+from core.services import audit_action, audit_request_context, audit_snapshot, log_audit_event
 from core.volta import resposta_de_cadastro, url_de_volta, voltar_para
 from transactions import access
 from transactions.models import (
@@ -73,9 +73,13 @@ def _to_decimal(raw, *, default=None):
     if raw in (None, ""):
         return default
     try:
-        return Decimal(str(raw).strip().replace(",", "."))
+        valor = Decimal(str(raw).strip().replace(",", "."))
     except (InvalidOperation, ValueError) as exc:
         raise ValueError(gettext("Valor monetário inválido: %(valor)s.") % {"valor": raw}) from exc
+    if not valor.is_finite():
+        # NaN e Infinity são Decimal válidos, e comparar NaN com 0 estoura.
+        raise ValueError(gettext("Valor monetário inválido: %(valor)s.") % {"valor": raw})
+    return valor
 
 
 def _parse_date(raw):
@@ -261,6 +265,12 @@ def mark_realized(request, tx_id):
         return _resposta_da_escrita(request, sucesso=False)
 
     realized_date = _parse_date(request.POST.get("realized_date"))
+    if request.POST.get("realized_date") and realized_date is None:
+        # Data digitada que não é data: valer "hoje" em silêncio realizaria o
+        # lançamento num dia que a pessoa não escolheu.
+        _log_failed_transaction_action(request, entry.id, "realize")
+        messages.error(request, gettext("Data de realização inválida."))
+        return _resposta_da_escrita(request, sucesso=False)
     try:
         realized_amount = _to_decimal(request.POST.get("realized_amount"))
     except ValueError as exc:
@@ -544,10 +554,14 @@ def category_groups_view(request):
 @require_POST
 def create_category_group_view(request):
     try:
-        create_category_group(
+        group = create_category_group(
             request.POST.get('group_name', ''),
             request.POST.get('position', ''),
             in_charts=request.POST.get('in_charts') == '1',
+        )
+        audit_action(
+            request, 'cash_flow_category_group', group.id, 'create',
+            new_values=audit_snapshot(group, 'group_name', 'position', 'in_charts'),
         )
         messages.success(request, gettext("Grupo cadastrado."))
     except ValueError as e:
@@ -562,12 +576,17 @@ def create_category_group_view(request):
 @require_POST
 def update_category_group_view(request, group_id):
     group = get_object_or_404(CashFlowCategoryGroup, id=group_id)
+    antes = audit_snapshot(group, 'group_name', 'position', 'in_charts')
     try:
         update_category_group(
             group,
             request.POST.get('group_name', ''),
             request.POST.get('position', ''),
             in_charts=request.POST.get('in_charts') == '1',
+        )
+        audit_action(
+            request, 'cash_flow_category_group', group.id, 'update',
+            old_values=antes, new_values=audit_snapshot(group, 'group_name', 'position', 'in_charts'),
         )
         messages.success(request, gettext("Grupo atualizado."))
     except ValueError as e:
@@ -582,8 +601,10 @@ def update_category_group_view(request, group_id):
 @require_POST
 def delete_category_group_view(request, group_id):
     group = get_object_or_404(CashFlowCategoryGroup, id=group_id)
+    antes = audit_snapshot(group, 'group_name', 'position', 'in_charts')
     try:
         delete_category_group(group)
+        audit_action(request, 'cash_flow_category_group', group_id, 'delete', old_values=antes)
         messages.success(request, gettext("Grupo excluído."))
     except ValueError as e:
         messages.error(request, str(e))
@@ -597,8 +618,12 @@ def delete_category_group_view(request, group_id):
 @require_POST
 def create_category_view(request):
     try:
-        create_category(
+        category = create_category(
             request.POST.get('category_name', ''), request.POST.get('kind', ''), request.POST.get('group_id', '')
+        )
+        audit_action(
+            request, 'cash_flow_category', category.id, 'create',
+            new_values=audit_snapshot(category, 'category_name', 'kind', 'group_id'),
         )
         messages.success(request, gettext("Categoria cadastrada."))
     except ValueError as e:
@@ -613,6 +638,7 @@ def create_category_view(request):
 @require_POST
 def update_category_view(request, category_id):
     category = get_object_or_404(CashFlowCategory, id=category_id)
+    antes = audit_snapshot(category, 'category_name', 'kind', 'group_id')
     try:
         if 'group_id' in request.POST:
             update_category(
@@ -621,6 +647,10 @@ def update_category_view(request, category_id):
             )
         else:
             update_category(category, request.POST.get('category_name', ''), request.POST.get('kind', ''))
+        audit_action(
+            request, 'cash_flow_category', category.id, 'update',
+            old_values=antes, new_values=audit_snapshot(category, 'category_name', 'kind', 'group_id'),
+        )
         messages.success(request, gettext("Categoria atualizada."))
     except ValueError as e:
         messages.error(request, str(e))
@@ -634,8 +664,10 @@ def update_category_view(request, category_id):
 @require_POST
 def delete_category_view(request, category_id):
     category = get_object_or_404(CashFlowCategory, id=category_id)
+    antes = audit_snapshot(category, 'category_name', 'kind', 'group_id')
     try:
         delete_category(category)
+        audit_action(request, 'cash_flow_category', category_id, 'delete', old_values=antes)
         messages.success(request, gettext("Categoria excluída."))
     except ValueError as e:
         messages.error(request, str(e))
