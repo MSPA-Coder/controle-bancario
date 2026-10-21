@@ -347,6 +347,7 @@ def planejar(user, pacote: Pacote) -> Plano:
             continue
         conferidos = sorted(SaldoConferido.objects.filter(account=conta).values_list("data", flat=True))
         anterior = conta.initial_balance_date
+        ajuste = Decimal("0")
         for dia in pacote.datas:
             if dia <= conta.initial_balance_date:
                 continue
@@ -358,14 +359,23 @@ def planejar(user, pacote: Pacote) -> Plano:
             # Os proventos que entram como rendimento são os pagos depois do
             # último saldo já conferido: os de antes já estão no saldo do CB.
             anterior = max([anterior, *(d for d in conferidos if d < dia)])
-            plano.linhas.append(_linha(user, conta, fonte.classe_myprofit, dia, valor, anterior, pacote, remessas_faltando))
+            linha = _linha(user, conta, fonte.classe_myprofit, dia, valor, anterior, pacote, remessas_faltando, ajuste)
+            plano.linhas.append(linha)
+            if linha.acao == "lancar":
+                ajuste += linha.diferenca
             anterior = dia
     return plano
 
 
-def _linha(user, conta, classe, dia, valor, anterior, pacote: Pacote, remessas_faltando: list[Remessa]) -> Linha:
+def _linha(
+    user, conta, classe, dia, valor, anterior, pacote: Pacote, remessas_faltando: list[Remessa], ajuste: Decimal = Decimal("0"),
+) -> Linha:
+    """A linha de uma conta numa data. `ajuste` é o que as linhas anteriores da
+    mesma conta vão lançar: o saldo do CB naquela data já o terá quando a vez
+    dela chegar, e a prévia mostra a diferença que de fato será lançada."""
     previa = saldo.previa(user, account_id=conta.id, data=dia, saldo_informado=str(valor))
-    linha = Linha(conta=conta, data=dia, valor=valor, saldo_no_cb=previa.saldo_no_cb, acao="lancar")
+    linha = Linha(conta=conta, data=dia, valor=valor, saldo_no_cb=previa.saldo_no_cb + ajuste, acao="lancar")
+    linha.destino = saldo.DESTINO_INVESTIMENTOS if classe == CLASSE_CAIXA_USD else saldo.DESTINO_MARCACAO
     if is_month_closed(conta, dia.year, dia.month):
         linha.acao, linha.motivo = "pular", gettext("mês fechado")
         return linha
@@ -382,13 +392,10 @@ def _linha(user, conta, classe, dia, valor, anterior, pacote: Pacote, remessas_f
         linha.acao = "conferir"
         return linha
     if classe == CLASSE_CAIXA_USD:
-        linha.destino = saldo.DESTINO_INVESTIMENTOS
         linha.rendimento = sum(
             (p.valor_usd for p in pacote.proventos if anterior < p.data <= dia and _mesma(p.corretora, conta.institution.institution_name)),
             Decimal("0"),
         ).quantize(_CENTAVO)
-    else:
-        linha.destino = saldo.DESTINO_MARCACAO
     return linha
 
 
@@ -402,9 +409,15 @@ def aplicar(user, plano: Plano, *, audit_context=None) -> ColetaMyProfit:
     agora e não o da prévia."""
     plano = planejar(user, plano.pacote)
     for linha in plano.linhas:
-        if linha.acao == "conferir":
+        if linha.acao == "pular":
+            continue
+        # O saldo do CB de agora: as linhas anteriores da mesma conta já entraram.
+        linha.saldo_no_cb = saldo.previa(
+            user, account_id=linha.conta.id, data=linha.data, saldo_informado=str(linha.valor)
+        ).saldo_no_cb
+        if linha.diferenca == 0:
             saldo.confirmar(user, account_id=linha.conta.id, data=linha.data, saldo_informado=str(linha.valor), origem=ORIGEM_MYPROFIT)
-        elif linha.acao == "lancar":
+        else:
             _lancar(user, linha, audit_context)
     coleta, _ = ColetaMyProfit.objects.update_or_create(
         sha256=plano.pacote.sha256,

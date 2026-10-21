@@ -327,6 +327,27 @@ def test_coleta_aplicada_separa_proventos_de_investimentos_e_nao_duplica(cenario
 
 
 @pytest.mark.django_db
+def test_varias_datas_na_mesma_conta_entram_em_sequencia(cenario):
+    """A prévia de setembro já desconta o que agosto vai lançar, e a gravação
+    não esbarra no saldo que agosto mudou."""
+    c = cenario
+    posicoes = {
+        data: [{"ticker": "Tesouro IPCA+ 2032", "corretora": "XP", "classe": "TREASURY", "quantidade": "4.32", "valor_brl": valor}]
+        for data, valor in (("2026-08-31", "950.00"), ("2026-09-30", "1000.00"))
+    }
+    plano = myprofit.planejar(c.user, myprofit.ler(_pacote(posicoes=posicoes)))
+    tesouro = [linha for linha in plano.linhas if linha.conta == c.tesouro]
+    assert [(linha.data, linha.acao, linha.diferenca) for linha in tesouro] == [
+        (date(2026, 8, 31), "lancar", Decimal("50.00")),
+        (date(2026, 9, 30), "lancar", Decimal("50.00")),
+    ]
+    myprofit.aplicar(c.user, plano)
+    lancados = CashFlowEntry.objects.filter(account=c.tesouro, description__startswith="Atualização de saldo")
+    assert sorted(e.entry_amount for e in lancados) == [Decimal("50.00"), Decimal("50.00")]
+    assert SaldoConferido.objects.get(account=c.tesouro, data=date(2026, 9, 30)).valor == Decimal("1000.00")
+
+
+@pytest.mark.django_db
 def test_coleta_nao_mexe_em_mes_fechado(cenario):
     c = cenario
     services.close_month(c.tesouro, 2026, 9, None, c.user)
