@@ -6,9 +6,11 @@ saldos informados -- e só guarda aqui o que não existe em outro lugar:
 - **a fonte de cada conta** (`FonteDaConta`): arquivo do banco, fatura, print de
   saldo, myProfit ou "ainda não tenho", com o formato e a frequência esperados.
   Conta sem registro tem a fonte deduzida (`fechamento.fontes.deduzir`);
-- **o saldo conferido** (`SaldoConferido`): um por conta e data. Informar de novo o
-  mesmo dia não lança outra diferença, porque o CB já inclui a primeira; o registro
-  só passa a guardar o valor mais recente;
+- **o saldo conferido** (`SaldoConferido`): um por conta, data **e origem**. Informar
+  de novo o mesmo dia pela mesma origem não lança outra diferença, porque o CB já
+  inclui a primeira; o registro só passa a guardar o valor mais recente. Outra
+  origem para o mesmo dia acrescenta um registro, e as duas são conferidas entre
+  si (`fechamento.fontes_divergentes`), sem sobrescrever a anterior;
 - **o corte** (`CorteDeFechamento`): uma conferência até uma data, sem trava. A
   trava continua sendo o fechamento mensal (`transactions.AccountMonthClose`);
 - **a coleta do myProfit** (`ColetaMyProfit`): o pacote que já foi aplicado,
@@ -113,7 +115,7 @@ class SaldoConferido(models.Model):
         db_table = 'fechamento_saldo_conferido'
         ordering = ['-data', '-id']
         constraints = [
-            models.UniqueConstraint(fields=['account', 'data'], name='uq_fechamento_saldo_conta_data'),
+            models.UniqueConstraint(fields=['account', 'data', 'origem'], name='uq_fechamento_saldo_conta_data_origem'),
             models.CheckConstraint(
                 condition=models.Q(origem__in=[valor for valor, _ in ORIGENS_DO_SALDO]),
                 name='ck_fechamento_saldo_origem_valida',

@@ -509,8 +509,25 @@ movimentação "Operações em Bolsa", que não é gasto nem renda). Todo saldo
 informado fica registrado por conta e dia (`fechamento.SaldoConferido`), com a
 origem (print, myProfit, digitado) e o lançamento da diferença, se houve. Saldo
 que já bate pode ser **registrado como conferido**, sem lançamento. Informar de
-novo o mesmo dia não duplica: o saldo do CB já inclui a primeira diferença, e só
-um valor novo lança uma diferença nova.
+novo o mesmo dia pela mesma origem não duplica: o saldo do CB já inclui a primeira
+diferença, e só um valor novo lança uma diferença nova.
+
+**Uma fonte por conta.** O registro é por conta, dia **e origem**
+(`fechamento.SaldoConferido`): outra origem para o mesmo dia acrescenta um
+registro e nunca sobrescreve o anterior. Só a fonte declarada da conta (aba
+Fontes, ou a deduzida) lança diferença: conta do myProfit aceita a origem myProfit,
+conta de print aceita print ou digitado, e conta de extrato ou fatura não restringe.
+O saldo de outra origem entra como **conferência** (`saldo.conferir`, botão
+"Registrar como conferência"): fica registrado e não lança nada. Duas origens que
+discordam no mesmo dia além da tolerância (o maior entre R$ 10,00 e 0,2% do maior
+saldo, para arredondamento não virar pendência) aparecem no Roteiro de fechamento,
+etapa Conferências, para decidir qual vale; a decisão não é um segundo ajuste.
+Trocar a fonte de uma conta fica na auditoria (`account_source`). Foi assim que o
+Tesouro Direto da XP, que recebia o preço oficial digitado e a posição do myProfit
+nas mesmas datas, passou a ter o myProfit como fonte única (decidido em
+21/10/2026). A mesma regra vale no CRV: repetir a mesma fonte substitui, e uma
+fonte diferente acrescenta e é conferida (`docs/CONCEITOS_FINANCEIROS.md`). A view
+`leitura.saldo_conferido` publica os registros por origem.
 
 ### Aplicação movimentada por conta corrente
 
@@ -612,7 +629,7 @@ futuro cobra só até hoje.
    sem movimento está em dia; conta sem fonte e sem nada a conferir não se aplica.
 3. *myProfit*: a coleta chegou até o corte e as contas que dependem dela têm o
    saldo lançado; mais o que o CRV diz de si (abaixo).
-4. *Conferências*: possíveis duplicatas, o saldo do último arquivo de cada conta
+4. *Conferências*: possíveis duplicatas, fontes do saldo que não concordam, o saldo do último arquivo de cada conta
    contra o do CB, o que a coleta não resolveu e as conferências do CRV.
 5. *Fechar o mês*: no corte do último dia, com o resto em dia.
 

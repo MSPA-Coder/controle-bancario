@@ -16,10 +16,16 @@ Destinos da diferença:
   de uma corretora que foi para ativos ou voltou deles; categoria de
   movimentação "Operações em Bolsa", que não é gasto nem renda).
 
-Cada saldo informado fica registrado por conta e data (`fechamento.SaldoConferido`),
-com ou sem diferença. Informar de novo o mesmo dia não duplica nada: o saldo do CB
-já inclui a diferença lançada da primeira vez, e o registro só passa a guardar o
-valor mais recente.
+Cada saldo informado fica registrado por conta, data e origem
+(`fechamento.SaldoConferido`), com ou sem diferença. Informar de novo o mesmo dia
+pela mesma origem não duplica nada: o saldo do CB já inclui a diferença lançada da
+primeira vez, e o registro só passa a guardar o valor mais recente.
+
+**Uma fonte por conta.** A conta tem uma fonte declarada (`fechamento.fontes`) e só
+ela lança diferença: conta do myProfit aceita a origem myProfit; conta de print
+aceita print ou digitado. O saldo de outra origem para o mesmo dia é uma
+**conferência** (`conferir`): fica registrado, não lança nada, e se divergir da
+fonte declarada vira pendência no Roteiro de fechamento, e não um segundo ajuste.
 
 *Ajuste assumido* é o "assumo isto para a movimentação bater": exige motivo, usa
 a categoria "Ajustes de Saldo" e aparece na lista de assunções, para nada ficar
@@ -52,7 +58,16 @@ from core.domain.finance import (
     STATUS_REALIZED,
     VIEW_REALIZED,
 )
-from fechamento.models import ORIGEM_MANUAL, ORIGENS_DO_SALDO, SaldoConferido
+from fechamento.fontes import fontes_das_contas
+from fechamento.models import (
+    FONTE_MYPROFIT,
+    FONTE_PRINT,
+    ORIGEM_MANUAL,
+    ORIGEM_MYPROFIT,
+    ORIGEM_PRINT,
+    ORIGENS_DO_SALDO,
+    SaldoConferido,
+)
 from reports.services import decimal_balances_before_by_account
 from transactions.models import CashFlowCategory, CashFlowEntry
 from transactions.services import TransactionRequest, create_transaction_batch
@@ -101,6 +116,13 @@ class Previa:
     saldo_no_cb: Decimal
     pendencia: str = ""
     ja_conferido: SaldoConferido | None = None
+    origem: str = ORIGEM_MANUAL
+    fonte: str = ""
+
+    @property
+    def origem_vale(self) -> bool:
+        """Se esta origem é a que a fonte declarada da conta aceita para lançar."""
+        return _origem_vale(self.fonte, self.origem)
 
     @property
     def diferenca(self) -> Decimal:
@@ -134,6 +156,23 @@ def _conta(user, account_id, acao: str) -> FinancialAccount:
     if conta.is_credit_card:
         raise ValueError(gettext("Cartão de crédito não tem saldo para atualizar: use a fatura."))
     return conta
+
+
+def _origem_vale(fonte: str, origem: str) -> bool:
+    """A origem que a fonte declarada da conta aceita para lançar diferença.
+
+    Só as fontes que são um saldo informado restringem: a do myProfit aceita a
+    origem myProfit, e a de print aceita print ou digitado. Conta de extrato ou de
+    fatura não tem a restrição, porque o saldo dela vem do próprio arquivo."""
+    if fonte == FONTE_MYPROFIT:
+        return origem == ORIGEM_MYPROFIT
+    if fonte == FONTE_PRINT:
+        return origem in (ORIGEM_PRINT, ORIGEM_MANUAL)
+    return True
+
+
+def _origem_do_saldo(origem: str) -> str:
+    return origem if origem in dict(ORIGENS_DO_SALDO) else ORIGEM_MANUAL
 
 
 def _decimal(valor, rotulo: str) -> Decimal:
@@ -179,26 +218,41 @@ def pendencia_da_movimentacao(conta: FinancialAccount, data: date) -> str:
     return ""
 
 
-def previa(user, *, account_id, data: date, saldo_informado) -> Previa:
+def previa(user, *, account_id, data: date, saldo_informado, origem: str = ORIGEM_MANUAL) -> Previa:
     conta = _conta(user, account_id, "view")
     informado = _decimal(saldo_informado, gettext("Saldo")).quantize(_QUANTO)
     saldos = decimal_balances_before_by_account([conta.id], data + timedelta(days=1), VIEW_REALIZED)
     return Previa(
         conta=conta, data=data, saldo_informado=informado, saldo_no_cb=saldos.get(conta.id, Decimal("0.00")),
         pendencia=pendencia_da_movimentacao(conta, data),
-        ja_conferido=SaldoConferido.objects.filter(account=conta, data=data).first(),
+        ja_conferido=SaldoConferido.objects.filter(account=conta, data=data).order_by("-updated_at").first(),
+        origem=_origem_do_saldo(origem), fonte=fontes_das_contas([conta])[conta.id].fonte,
     )
 
 
 def _registrar(user, conta: FinancialAccount, data: date, valor: Decimal, origem: str, lancamento=None) -> SaldoConferido:
-    """Um registro por conta e data: o saldo mais recente informado para aquele dia."""
-    if origem not in dict(ORIGENS_DO_SALDO):
-        origem = ORIGEM_MANUAL
-    defaults = {"valor": valor, "origem": origem, "created_by": user}
+    """Um registro por conta, data e origem: o saldo mais recente que essa origem informou para o dia.
+
+    Outra origem para o mesmo dia não sobrescreve: acrescenta um registro, e as
+    duas são conferidas entre si (`fechamento.fontes_divergentes`)."""
+    defaults = {"valor": valor, "created_by": user}
     if lancamento is not None:
         defaults["lancamento"] = lancamento
-    registro, _ = SaldoConferido.objects.update_or_create(account=conta, data=data, defaults=defaults)
+    registro, _ = SaldoConferido.objects.update_or_create(
+        account=conta, data=data, origem=_origem_do_saldo(origem), defaults=defaults,
+    )
     return registro
+
+
+def conferir(user, *, account_id, data: date, saldo_informado, origem: str = ORIGEM_MANUAL) -> SaldoConferido:
+    """Registra o saldo de outra fonte como conferência: não lança nada.
+
+    É o caminho do saldo que não é o da fonte declarada da conta (um print numa
+    conta do myProfit, por exemplo). Se ele divergir do que a fonte declarada
+    informou para o dia, o Roteiro de fechamento mostra a diferença para decidir."""
+    atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado, origem=origem)
+    conta = _conta(user, account_id, "create")
+    return _registrar(user, conta, data, atual.saldo_informado, atual.origem)
 
 
 def confirmar(user, *, account_id, data: date, saldo_informado, origem: str = ORIGEM_MANUAL) -> SaldoConferido:
@@ -234,8 +288,12 @@ def aplicar(
     if exige_motivo and not motivo:
         raise ValueError(gettext("“%(rotulo)s” exige um motivo.") % {"rotulo": rotulo})
 
-    atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado)
+    atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado, origem=origem)
     conta = _conta(user, account_id, "create")
+    if not atual.origem_vale:
+        raise ValueError(gettext(
+            "A fonte desta conta é outra: só ela lança diferença. Registre este saldo como conferência."
+        ))
     if atual.pendencia:
         raise ValueError(atual.pendencia)
     if atual.diferenca != _decimal(diferenca_esperada, gettext("Diferença")).quantize(_QUANTO):

@@ -93,7 +93,7 @@ def salvar_fonte_view(request, account_id: int):
         return redirect('fechamento:fontes')
     conta = FinancialAccount.objects.select_related("institution").get(id=account_id)
     try:
-        fontes.salvar(request.user, conta, request.POST)
+        fontes.salvar(request.user, conta, request.POST, audit_context=audit_request_context(request))
     except ValueError as exc:
         messages.error(request, str(exc))
     else:

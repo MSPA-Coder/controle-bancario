@@ -459,9 +459,18 @@ def atualizar_saldo_view(request):
                 )
                 messages.success(request, gettext("Saldo conferido: já batia com o do CB, nada foi lançado."))
                 return redirect('bank_statements:atualizar_saldo')
+            if request.POST.get('acao') == 'conferir':
+                saldo.conferir(
+                    request.user, account_id=request.POST.get('conta'), data=data,
+                    saldo_informado=request.POST.get('saldo'), origem=request.POST.get('origem', ''),
+                )
+                messages.success(request, gettext(
+                    "Saldo registrado como conferência: nada foi lançado. Se divergir da fonte da conta, o Roteiro de fechamento avisa."
+                ))
+                return redirect('bank_statements:atualizar_saldo')
             previa = saldo.previa(
                 request.user, account_id=request.POST.get('conta'), data=data,
-                saldo_informado=request.POST.get('saldo'),
+                saldo_informado=request.POST.get('saldo'), origem=request.POST.get('origem', ''),
             )
         except ValueError as exc:
             messages.error(request, str(exc))

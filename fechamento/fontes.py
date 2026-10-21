@@ -144,8 +144,12 @@ def fontes_das_contas(contas: list[FinancialAccount]) -> dict[int, Fonte]:
     return resultado
 
 
-def salvar(user, conta: FinancialAccount, dados) -> FonteDaConta:
-    """Grava a fonte de uma conta. `dados` é um mapeamento com os campos do formulário."""
+def salvar(user, conta: FinancialAccount, dados, audit_context=None) -> FonteDaConta:
+    """Grava a fonte de uma conta. `dados` é um mapeamento com os campos do formulário.
+
+    Trocar a fonte (ou o que ela mede no myProfit) é um fato: fica na auditoria,
+    com o valor de antes, porque a partir dali o saldo da conta passa a valer por
+    outra origem."""
     fonte = (dados.get("fonte") or "").strip()
     if fonte not in dict(FONTES):
         raise ValueError(gettext("Escolha a fonte."))
@@ -159,6 +163,7 @@ def salvar(user, conta: FinancialAccount, dados) -> FonteDaConta:
         raise ValueError(gettext("Conta que vem do myProfit precisa dizer o que ela é lá: Tesouro, renda fixa EUA ou caixa em dólar."))
     if conta.is_credit_card and fonte not in (FONTE_FATURA, FONTE_NENHUMA):
         raise ValueError(gettext("Cartão de crédito só entra por fatura."))
+    antes = fontes_das_contas([conta])[conta.id]
     registro, _ = FonteDaConta.objects.update_or_create(
         account=conta,
         defaults={
@@ -171,6 +176,21 @@ def salvar(user, conta: FinancialAccount, dados) -> FonteDaConta:
             "updated_by": user,
         },
     )
+    mudou = (antes.fonte, antes.classe_myprofit, antes.corretora_myprofit, antes.frequencia) != (
+        registro.fonte, registro.classe_myprofit, registro.corretora_myprofit, registro.frequencia,
+    )
+    if audit_context is not None and mudou:
+        from core.services import log_audit_event
+
+        log_audit_event(
+            "account_source", conta.id, "update", request_context=audit_context,
+            old_values={"fonte": antes.fonte, "classe_myprofit": antes.classe_myprofit,
+                        "corretora_myprofit": antes.corretora_myprofit, "frequencia": antes.frequencia,
+                        "cadastrada": antes.cadastrada},
+            new_values={"fonte": registro.fonte, "classe_myprofit": registro.classe_myprofit,
+                        "corretora_myprofit": registro.corretora_myprofit, "frequencia": registro.frequencia},
+            summary="Fonte do saldo da conta alterada.",
+        )
     return registro
 
 

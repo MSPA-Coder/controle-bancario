@@ -15,7 +15,7 @@ Etapas, na ordem em que se faz:
 3. **myProfit** -- a coleta do período chegou, e as contas que dependem dela
    (Tesouro, renda fixa EUA, caixa em dólar) têm o saldo lançado; mais o que o CRV
    diz dos negócios e da posição;
-4. **Conferências** -- possíveis duplicatas, saldo do arquivo contra o do CB, o que
+4. **Conferências** -- possíveis duplicatas, fontes do saldo que não concordam, saldo do arquivo contra o do CB, o que
    a coleta não resolveu e as conferências do CRV;
 5. **Fechar o mês** -- no corte do último dia, quando o resto está em dia.
 
@@ -47,7 +47,7 @@ from core.templatetags.money_filters import money_signed
 from reports.services import decimal_balances_before_by_account
 from transactions.models import AccountMonthClose, CashFlowEntry
 
-from . import crv, duplicatas
+from . import crv, duplicatas, fontes_divergentes
 from .fontes import (
     FONTE_ARQUIVO,
     FONTE_FATURA,
@@ -57,7 +57,13 @@ from .fontes import (
     Fonte,
     fontes_das_contas,
 )
-from .models import FREQUENCIA_MENSAL, ColetaMyProfit, CorteDeFechamento, SaldoConferido
+from .models import (
+    FREQUENCIA_MENSAL,
+    ORIGENS_DO_SALDO,
+    ColetaMyProfit,
+    CorteDeFechamento,
+    SaldoConferido,
+)
 
 EM_DIA = "em_dia"
 FALTA = "falta"
@@ -507,6 +513,27 @@ def _conferencias_do_cb(user, contas, corte, alvo, coleta) -> list[Item]:
         ))
     else:
         itens.append(Item(chave="saldo-arquivo", titulo=gettext("Saldo do arquivo × saldo do CB"), estado=EM_DIA, texto=gettext("Todos os últimos arquivos conferem"), **base))
+
+    discordam = fontes_divergentes.divergentes(user, corte.replace(day=1) - timedelta(days=31), alvo)
+    if discordam:
+        origens = dict(ORIGENS_DO_SALDO)
+        itens.append(Item(
+            chave="fontes-divergentes", titulo=gettext("Fontes do saldo que não concordam"), estado=PENDENTE,
+            texto=ngettext("%(n)s dia com saldos diferentes", "%(n)s dias com saldos diferentes", len(discordam)) % {"n": len(discordam)},
+            detalhe="; ".join(
+                gettext("%(conta)s em %(dia)s: %(valores)s") % {
+                    "conta": _titulo(d.conta), "dia": _dia(d.data),
+                    "valores": " × ".join(f"{origens.get(o, o)} {money_signed(v, d.conta.currency)}" for o, v in d.valores.items()),
+                }
+                for d in discordam[:6]
+            ),
+            acao=gettext("Decidir qual vale"), url=_url_do_saldo(discordam[0].conta, discordam[0].data, ""), **base,
+        ))
+    else:
+        itens.append(Item(
+            chave="fontes-divergentes", titulo=gettext("Fontes do saldo que não concordam"), estado=EM_DIA,
+            texto=gettext("Nenhuma no período"), **base,
+        ))
 
     if coleta is not None and coleta.pendencias:
         itens.append(Item(

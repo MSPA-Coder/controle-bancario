@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 00:00-0300\n"
+"POT-Creation-Date: 2026-10-21 14:08-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1316,6 +1316,10 @@ msgstr "Choose where the difference goes."
 msgid "“%(rotulo)s” exige um motivo."
 msgstr "“%(rotulo)s” requires a reason."
 
+#: bank_statements/saldo.py
+msgid "A fonte desta conta é outra: só ela lança diferença. Registre este saldo como conferência."
+msgstr "This account's source is a different one, and only it posts differences. Record this balance as a check."
+
 #: bank_statements/saldo.py templates/fechamento/painel.html
 #: templates/management/partials/management_content.html
 msgid "Diferença"
@@ -1524,6 +1528,10 @@ msgstr "Difference entered: %(descricao)s (%(valor)s)."
 #: bank_statements/views.py
 msgid "Saldo conferido: já batia com o do CB, nada foi lançado."
 msgstr "Balance checked: it already matched the CB balance, nothing was posted."
+
+#: bank_statements/views.py
+msgid "Saldo registrado como conferência: nada foi lançado. Se divergir da fonte da conta, o Roteiro de fechamento avisa."
+msgstr "Balance recorded as a check: nothing was posted. If it differs from the account's source, the closing checklist will flag it."
 
 #: bank_statements/views.py
 #, python-format
@@ -3143,6 +3151,26 @@ msgid "Todos os últimos arquivos conferem"
 msgstr "All latest files match"
 
 #: fechamento/roteiro.py
+msgid "Fontes do saldo que não concordam"
+msgstr "Balance sources that disagree"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(n)s dia com saldos diferentes"
+msgid_plural "%(n)s dias com saldos diferentes"
+msgstr[0] "%(n)s day with different balances"
+msgstr[1] "%(n)s days with different balances"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(conta)s em %(dia)s: %(valores)s"
+msgstr "%(conta)s on %(dia)s: %(valores)s"
+
+#: fechamento/roteiro.py
+msgid "Decidir qual vale"
+msgstr "Decide which one counts"
+
+#: fechamento/roteiro.py
 msgid "O que a coleta do myProfit não resolveu"
 msgstr "What the myProfit collection did not resolve"
 
@@ -4244,6 +4272,14 @@ msgstr "difference"
 #, python-format
 msgid "Este dia já tem saldo conferido (%(valor)s). O saldo do CB já inclui o que foi lançado na ocasião: só uma diferença nova vira lançamento, nada se repete."
 msgstr "This day already has a checked balance (%(valor)s). The CB balance already includes what was posted then: only a new difference becomes an entry, nothing is repeated."
+
+#: templates/banking/atualizar_saldo.html
+msgid "A fonte desta conta é outra, e só ela lança diferença. Este saldo pode ser registrado como conferência: nada é lançado, e se divergir da fonte da conta o Roteiro de fechamento avisa."
+msgstr "This account's source is a different one, and only it posts differences. This balance can be recorded as a check: nothing is posted, and if it differs from the account's source the closing checklist will flag it."
+
+#: templates/banking/atualizar_saldo.html
+msgid "Registrar como conferência"
+msgstr "Record as a check"
 
 #: templates/banking/atualizar_saldo.html
 msgid "Destino da diferença"

@@ -42,6 +42,7 @@ VIEWS_ESPERADAS = {
     "lancamento_etiqueta",
     "lancamento_projeto",
     "operacao",
+    "saldo_conferido",
     "orcamento_mensal",
 }
 

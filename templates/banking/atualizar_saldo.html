@@ -69,7 +69,18 @@
     {% if previa.ja_conferido %}
     <p class="help-text">{% blocktrans trimmed with valor=previa.ja_conferido.valor|money:previa.conta.currency %}Este dia já tem saldo conferido ({{ valor }}). O saldo do CB já inclui o que foi lançado na ocasião: só uma diferença nova vira lançamento, nada se repete.{% endblocktrans %}</p>
     {% endif %}
-    {% if previa.pendencia %}
+    {% if not previa.origem_vale %}
+    <p class="fatura-aviso">{% trans "A fonte desta conta é outra, e só ela lança diferença. Este saldo pode ser registrado como conferência: nada é lançado, e se divergir da fonte da conta o Roteiro de fechamento avisa." %}</p>
+    <form method="post" action="{% url 'bank_statements:atualizar_saldo' %}" class="top-filter-row">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="conferir">
+        <input type="hidden" name="conta" value="{{ previa.conta.id }}">
+        <input type="hidden" name="data" value="{{ previa.data|date:'Y-m-d' }}">
+        <input type="hidden" name="saldo" value="{{ previa.saldo_informado }}">
+        <input type="hidden" name="origem" value="{{ escolhas.origem }}">
+        <button type="submit" class="btn-sm btn-primary">{% trans "Registrar como conferência" %}</button>
+    </form>
+    {% elif previa.pendencia %}
     <p class="fatura-aviso">{{ previa.pendencia }}</p>
     {% elif previa.tipo %}
     <form method="post" action="{% url 'bank_statements:atualizar_saldo' %}" class="top-filter-row">

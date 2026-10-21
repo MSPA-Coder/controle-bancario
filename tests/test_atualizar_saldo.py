@@ -165,9 +165,11 @@ def test_o_mesmo_dia_informado_de_novo_nao_duplica(cenario):
     repetida = _previa(user, conta, "160", dia=dia)
     assert repetida.diferenca == 0
     assert repetida.ja_conferido.lancamento == primeira
+    # Mesma origem: o registro do dia é substituído. Outra origem acrescentaria um
+    # registro (ver `test_fonte_unica_do_saldo.py`).
     saldo.aplicar(
         user, account_id=conta.id, data=dia, saldo_informado="165", diferenca_esperada="5",
-        destino=saldo.DESTINO_RENDIMENTOS,
+        destino=saldo.DESTINO_RENDIMENTOS, origem="print",
     )
     assert SaldoConferido.objects.filter(account=conta, data=dia).count() == 1
     assert SaldoConferido.objects.get(account=conta, data=dia).valor == Decimal("165.00")
