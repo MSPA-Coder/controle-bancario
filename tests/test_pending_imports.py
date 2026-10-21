@@ -534,3 +534,25 @@ def test_tela_pede_a_senha_e_a_view_abre_o_pdf(cenario):
     assert pendente.detected_account == cenario["conta_genial"]
     tela = client.get("/banking/imports/confirm/").content.decode()
     assert f'name="account_{pendente.id}"' in tela
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resolve_pending_uploads_does_not_keep_a_batch_of_only_duplicates(cenario):
+    """Reimportar o mesmo extrato não deixa no histórico um lote de 0 linhas."""
+    from bank_statements.models import BankStatementImport
+    from bank_statements.pending_imports import pending_storage_dir
+
+    conta = cenario["conta_ofx"]
+    resultados = []
+    for nome in ("primeira.ofx", "segunda.ofx"):
+        (pending_storage_dir() / nome).write_bytes(_ofx("41861-7"))
+        upload = PendingStatementUpload.objects.create(
+            uploaded_by=cenario["usuario"], original_filename=nome, stored_filename=nome,
+            stored_path=f"pending_imports/{nome}", detected_account=conta,
+        )
+        resultados.append(resolve_pending_uploads(cenario["usuario"], {upload.id: str(conta.id)}))
+
+    assert resultados[0][0] == [("primeira.ofx", 1, 0)]
+    assert resultados[1][0] == [("segunda.ofx", 0, 1)]
+    assert resultados[1][2] == []
+    assert BankStatementImport.objects.filter(account=conta).count() == 1

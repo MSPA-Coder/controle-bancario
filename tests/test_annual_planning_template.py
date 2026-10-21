@@ -107,6 +107,9 @@ def test_annual_planning_partial_uses_summary_headers_without_transfer_card():
         r'annual-owner-column"[^>]*scope="col">([^<]+)</th>', rendered
     )
     assert cabecalhos_de_titular == ["Ana", "Bia"]
+    # A legenda explica por que a soma das colunas por titular não bate com a do mês.
+    assert "annual-owner-legend" in rendered
+    assert "só o que ainda está em aberto no mês de referência" in rendered
     assert "Custos fixos" in rendered
     assert "Transferências internas" in rendered
     assert "Mês de referência · mar/2026" in rendered
