@@ -14,6 +14,8 @@
             <span class="badge badge-warning">{% trans "Transferência" %}</span>
             {% elif category.kind == 'movimentacao' %}
             <span class="badge badge-warning">{% trans "Movimentação" %}</span>
+            {% elif category.kind == 'valorizacao' %}
+            <span class="badge badge-warning">{% trans "Variação de mercado" %}</span>
             {% else %}
             <span class="badge badge-success">{% trans "Gerencial" %}</span>
             {% endif %}

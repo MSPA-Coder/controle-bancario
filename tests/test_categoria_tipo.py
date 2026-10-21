@@ -131,7 +131,8 @@ def test_tipo_e_obrigatorio_e_validado():
         services.create_category("Nova", "")
     with pytest.raises(ValueError, match="Tipo de categoria inválido"):
         services.create_category("Nova", "qualquer")
-    assert CashFlowCategory.objects.count() == 0
+    # Só a "Variação de mercado", que a migração semeia, existe.
+    assert not CashFlowCategory.objects.exclude(category_name="Variação de mercado").exists()
 
 
 def test_categoria_com_lancamento_nao_muda_de_tipo(cenario):

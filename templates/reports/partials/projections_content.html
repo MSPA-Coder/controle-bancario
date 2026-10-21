@@ -17,6 +17,7 @@ não dizer qual é seria pior do que repetir a tabela.
                 <th class="value-col">{% trans "Geração de caixa" %}</th>
                 <th class="value-col col-separator">{% trans "Créditos internos" %}</th>
                 <th class="value-col">{% trans "Débitos internos" %}</th>
+                <th class="value-col col-separator" title="{% trans 'Variação de preço do que está aplicado (Tesouro, renda fixa, dólar): muda o saldo, mas não é receita nem despesa.' %}">{% trans "Variação de mercado" %}</th>
                 {% if show_status_columns %}
                 <th class="value-col col-separator">{% trans "Vencidos" %}</th>
                 <th class="value-col">{% trans "Realizado" %}</th>
@@ -43,6 +44,7 @@ não dizer qual é seria pior do que repetir a tabela.
                 <td class="value-col {{ m.geracao|amount_class }}">{{ m.geracao|money_signed:bloco.currency }}</td>
                 <td class="value-col amount-positive col-separator">{{ m.rec_int|money_signed:bloco.currency }}</td>
                 <td class="value-col amount-negative">{{ m.desp_int|neg|money_signed:bloco.currency }}</td>
+                <td class="value-col col-separator {{ m.valorizacao|amount_class }}">{{ m.valorizacao|money_signed:bloco.currency }}</td>
                 {% if show_status_columns %}
                 <td class="value-col col-separator {{ m.geracao_atrasado|amount_class }}">{{ m.geracao_atrasado|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ m.geracao_realizada|amount_class }}">{{ m.geracao_realizada|money_signed:bloco.currency }}</td>
@@ -51,7 +53,7 @@ não dizer qual é seria pior do que repetir a tabela.
                 <td class="value-col col-separator col-separator-right {{ m.saldo|amount_class }}"><strong>{{ m.saldo|money_signed:bloco.currency }}</strong></td>
             </tr>
             {% empty %}
-            <tr><td colspan="10" data-ui="empty-2">{% trans "Nenhum dado encontrado." %}</td></tr>
+            <tr><td colspan="11" data-ui="empty-2">{% trans "Nenhum dado encontrado." %}</td></tr>
             {% endfor %}
             {% if bloco.period_totals %}
             <tr class="summary-row">
@@ -61,6 +63,7 @@ não dizer qual é seria pior do que repetir a tabela.
                 <td class="value-col {{ bloco.period_totals.geracao|amount_class }}">{{ bloco.period_totals.geracao|money_signed:bloco.currency }}</td>
                 <td class="value-col amount-positive col-separator">{{ bloco.period_totals.rec_int|money_signed:bloco.currency }}</td>
                 <td class="value-col amount-negative">{{ bloco.period_totals.desp_int|neg|money_signed:bloco.currency }}</td>
+                <td class="value-col col-separator {{ bloco.period_totals.valorizacao|amount_class }}">{{ bloco.period_totals.valorizacao|money_signed:bloco.currency }}</td>
                 {% if show_status_columns %}
                 <td class="value-col col-separator {{ bloco.period_totals.geracao_atrasado|amount_class }}">{{ bloco.period_totals.geracao_atrasado|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ bloco.period_totals.geracao_realizada|amount_class }}">{{ bloco.period_totals.geracao_realizada|money_signed:bloco.currency }}</td>

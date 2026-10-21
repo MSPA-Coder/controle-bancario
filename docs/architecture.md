@@ -344,7 +344,7 @@ leitura recebe `SELECT` só nelas.
 |---|---|
 | `leitura.lancamento` | status **efetivo** (derivado da data, como o v4), data e valor que valem, sinal, parcela, se é estimativa de fatura |
 | `leitura.conta` | saldo realizado hoje, vencido em aberto e saldo com todo o previsto |
-| `leitura.categoria` | natureza (`gerencial`, `transferencia`, `movimentacao`) e grupo |
+| `leitura.categoria` | natureza (`gerencial`, `transferencia`, `movimentacao`, `valorizacao`) e grupo |
 | `leitura.orcamento_mensal`, `leitura.operacao`, `leitura.fechamento_mes` | metas, parcelas/recorrências e meses fechados |
 | `leitura.extrato_importacao`, `leitura.extrato_linha` | extratos e faturas importados |
 | `leitura.lancamento_etiqueta`, `leitura.lancamento_projeto` | etiquetas e projetos por lançamento |

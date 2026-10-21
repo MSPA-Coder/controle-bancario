@@ -100,7 +100,8 @@ def test_account_detail_totals_match_the_transactions_screen(account_detail_setu
     # Previsto só lista o que vence de hoje em diante; um lançamento no mês
     # corrente é o que faz o bloco previsto diferir do realizado.
     CashFlowEntry.objects.create(
-        account=account, category=CashFlowCategory.objects.get(), entry_type=ENTRY_TYPE_EXPENSE,
+        account=account, category=CashFlowCategory.objects.get(category_name="Categoria da conta"),
+        entry_type=ENTRY_TYPE_EXPENSE,
         description="Conta futura", entry_amount=Decimal("30.00"), due_date=hoje, status=STATUS_PROJECTED,
     )
     periodo = hoje.strftime("%Y-%m")

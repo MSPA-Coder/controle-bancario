@@ -503,9 +503,10 @@ A tela lista todas as atualizações de saldo lançadas (a descrição começa p
 marcadas.
 
 Dois destinos valem nos dois sentidos: *Marcação a mercado* (Tesouro e renda
-fixa, que sobem e descem com o preço; categoria "Rendimentos") e *Investimentos*
-(o caixa de uma corretora que virou ativo ou voltou dele; categoria de
-movimentação "Operações em Bolsa", que não é gasto nem renda). Todo saldo
+fixa, que sobem e descem com o preço; categoria "Variação de mercado", do tipo
+`valorizacao`) e *Investimentos* (o caixa de uma corretora que virou ativo ou
+voltou dele; categoria de movimentação "Operações em Bolsa", que não é gasto nem
+renda). Todo saldo
 informado fica registrado por conta e dia (`fechamento.SaldoConferido`), com a
 origem (print, myProfit, digitado) e o lançamento da diferença, se houve. Saldo
 que já bate pode ser **registrado como conferido**, sem lançamento. Informar de
@@ -779,7 +780,38 @@ projetada a procura pelo nome); ela vive no grupo "Bancos e cartões".
 
 Os grupos têm tela própria em Cadastros > Grupos de categoria; a tela de
 Categorias lista cada categoria sob o seu grupo e filtra pelo tipo
-(Gerencial, Movimentação ou Transferência).
+(Gerencial, Movimentação, Transferência ou Variação de mercado).
+
+### Variação de mercado (`valorizacao`)
+
+Quando o valor de uma aplicação muda sem que dinheiro entre ou saia (marcação a
+mercado de Tesouro, renda fixa, caixa em dólar), o saldo da conta muda, mas isso
+**não é receita nem despesa**: é variação não realizada do patrimônio (a
+definição está em `docs/CONCEITOS_FINANCEIROS.md`). A categoria "Variação de
+mercado" é do tipo `valorizacao` (criada pela migração
+`transactions/0012_categoria_valorizacao`, no grupo "Investimentos") e é o destino
+da *Marcação a mercado* da Atualização de saldo. "Rendimentos" fica só para juro
+que de fato foi creditado.
+
+- fora de receita e despesa gerencial, como a transferência e a movimentação
+  (`is_internal`), mas **sem** contraparte;
+- na projeção mensal tem coluna própria ("Variação de mercado", com sinal), fora
+  da geração de caixa e dos créditos/débitos internos; o saldo a inclui. Nas
+  demais telas que separam "interno" (planejamento, posição por conta) ela segue
+  junto com as movimentações internas, para que o saldo feche;
+- o contrato `patrimonio/v4` só conhece três tipos, então a publica como
+  `gerencial`, com `valuation: true` na categoria (acréscimo opcional de
+  21/10/2026). Para o consolidador (Wealthfolio) a variação é retorno, e tratá-la
+  como movimentação de capital a esconderia do resultado;
+- o CB **não** mostra "resultado total de investimentos": ele só existe
+  consolidado, somando o resultado realizado e a variação não realizada do CRV
+  com a variação de mercado daqui.
+
+`manage.py reclassificar_valorizacao --usuario NOME [--aplicar --autorizar-meses]`
+move para a categoria nova o que já foi lançado como marcação a mercado em
+"Rendimentos" (só a categoria muda; simula por padrão; mês fechado só reabre com
+autorização e fecha de novo com o saldo conferido). Faça o backup antes de
+aplicar.
 
 `manage.py grupos_de_categoria semear` cria os grupos aprovados e liga as
 categorias existentes sem grupo, sem nunca trocar um grupo já escolhido.

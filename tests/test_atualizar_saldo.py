@@ -16,7 +16,12 @@ import pytest
 from accounts.models import AccountOwner, AppUser, UserOwnerAccess
 from bank_statements import saldo
 from banking.models import FinancialAccount, FinancialInstitution
-from core.domain.finance import ENTRY_TYPE_EXPENSE, ENTRY_TYPE_INCOME, STATUS_REALIZED
+from core.domain.finance import (
+    CATEGORY_KIND_VALUATION,
+    ENTRY_TYPE_EXPENSE,
+    ENTRY_TYPE_INCOME,
+    STATUS_REALIZED,
+)
 from fechamento.models import SaldoConferido
 from transactions import services
 from transactions.models import CashFlowCategory
@@ -40,6 +45,10 @@ def cenario():
         nome: CashFlowCategory.objects.create(category_name=nome)
         for nome in ("Rendimentos", "Impostos e Tributos", "Ajustes de Saldo", "Outros")
     }
+    # A migração transactions/0012 já a cria; o teste só garante o tipo.
+    categorias["Variação de mercado"], _ = CashFlowCategory.objects.update_or_create(
+        category_name="Variação de mercado", defaults={"kind": CATEGORY_KIND_VALUATION}
+    )
     services.create_transaction_batch(
         services.TransactionRequest(
             account_id=conta.id, category_id=categorias["Outros"].id, entry_type=ENTRY_TYPE_INCOME,
@@ -183,7 +192,10 @@ def test_marcacao_a_mercado_vale_nos_dois_sentidos(cenario, informado, tipo):
         user, account_id=conta.id, data=date(2026, 9, 30), saldo_informado=informado,
         diferenca_esperada=str(diferenca), destino=saldo.DESTINO_MARCACAO,
     )
-    assert (entrada.entry_type, entrada.category, entrada.entry_amount) == (tipo, cat["Rendimentos"], abs(diferenca))
+    assert (entrada.entry_type, entrada.category, entrada.entry_amount) == (
+        tipo, cat["Variação de mercado"], abs(diferenca),
+    )
+    assert entrada.category.is_internal  # variação não é receita nem despesa
     assert entrada.description == "Atualização de saldo: marcação a mercado"
 
 

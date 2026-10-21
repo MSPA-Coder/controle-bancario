@@ -12,7 +12,8 @@ Destinos da diferença:
   assumido*;
 - **saída** (o saldo real é menor): *IR/IOF*, *Perda* ou *Ajuste assumido*;
 - **nos dois sentidos**: *Marcação a mercado* (Tesouro e renda fixa, cujo valor
-  sobe e desce com o preço; categoria "Rendimentos") e *Investimentos* (o caixa
+  sobe e desce com o preço; categoria "Variação de mercado", que não é receita
+  nem despesa) e *Investimentos* (o caixa
   de uma corretora que foi para ativos ou voltou deles; categoria de
   movimentação "Operações em Bolsa", que não é gasto nem renda).
 
@@ -75,6 +76,9 @@ from transactions.services import TransactionRequest, create_transaction_batch
 from .models import LINE_STATUS_NEW, BankStatementImport, BankStatementLine
 
 CATEGORIA_DE_AJUSTE = "Ajustes de Saldo"
+#: Categoria do tipo `valorizacao` (criada pela migração transactions/0012): marcação
+#: a mercado muda o saldo, mas não é receita nem despesa; "Rendimentos" fica para juros.
+CATEGORIA_DE_VARIACAO = "Variação de mercado"
 #: Início da descrição de todo lançamento daqui (a Situação das Contas também o reconhece por ele).
 PREFIXO_DA_DESCRICAO = "Atualização de saldo"
 
@@ -92,7 +96,7 @@ DESTINOS = {
     DESTINO_IR_IOF: (gettext_lazy("IR / IOF"), "Impostos e Tributos", ENTRY_TYPE_EXPENSE, False),
     DESTINO_PERDA: (gettext_lazy("Perda"), CATEGORIA_DE_AJUSTE, ENTRY_TYPE_EXPENSE, True),
     DESTINO_AJUSTE: (gettext_lazy("Ajuste assumido"), CATEGORIA_DE_AJUSTE, None, True),
-    DESTINO_MARCACAO: (gettext_lazy("Marcação a mercado"), "Rendimentos", None, False),
+    DESTINO_MARCACAO: (gettext_lazy("Marcação a mercado"), CATEGORIA_DE_VARIACAO, None, False),
     DESTINO_INVESTIMENTOS: (gettext_lazy("Investimentos (compra ou venda de ativos)"), "Operações em Bolsa", None, False),
 }
 # O que vai para a descrição gravada do lançamento (e que a Situação reconhece):

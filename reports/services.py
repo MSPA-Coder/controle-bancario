@@ -37,6 +37,7 @@ from core.currency_filter import ALL_CURRENCIES, currency_q, parse_currency_filt
 from core.domain.finance import (
     ACCOUNT_KIND_CREDIT_CARD,
     BASE_CURRENCY,
+    CATEGORY_KIND_VALUATION,
     ENTRY_TYPE_INCOME,
     OPERATION_INTERNAL_TRANSFER,
     STATUS_PENDING,
@@ -1358,6 +1359,7 @@ def _empty_month(month_start: date, saldo_inicial: Decimal) -> dict:
         "despesa": Decimal("0.00"),
         "rec_int": Decimal("0.00"),
         "desp_int": Decimal("0.00"),
+        "valorizacao": Decimal("0.00"),
         "receita_realizada": Decimal("0.00"),
         "despesa_realizada": Decimal("0.00"),
         "receita_atrasado": Decimal("0.00"),
@@ -1381,6 +1383,12 @@ def _add_entry_to_bucket(month: dict, entry: CashFlowEntry, view_mode: str) -> N
     realized = _entry_is_realized_for_mode(entry, view_mode)
     amount = _entry_amount(entry, realized=realized)
     is_internal = bool(entry.category and entry.category.is_internal)
+
+    # Variação de mercado muda o saldo mas não é crédito nem débito "interno" (não
+    # há outra ponta): ganha a coluna própria, com sinal, e fica fora da geração de caixa.
+    if entry.category and entry.category.kind == CATEGORY_KIND_VALUATION:
+        month["valorizacao"] += amount if entry.entry_type == ENTRY_TYPE_INCOME else -amount
+        return
 
     if entry.entry_type == ENTRY_TYPE_INCOME:
         if is_internal:
@@ -1487,7 +1495,7 @@ def projection_period_totals(month_data: list[dict]) -> dict | None:
     if not month_data:
         return None
     keys = (
-        "receita", "despesa", "geracao", "rec_int", "desp_int",
+        "receita", "despesa", "geracao", "rec_int", "desp_int", "valorizacao",
         "geracao_atrasado", "geracao_realizada", "geracao_projetada",
     )
     totals = {key: sum((m[key] for m in month_data), Decimal("0.00")) for key in keys}

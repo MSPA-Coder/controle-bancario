@@ -39,20 +39,27 @@ STATUS_FILTER_OPTIONS: Final = STATUS_OPTIONS
 CATEGORY_KIND_MANAGERIAL: Final = "gerencial"
 CATEGORY_KIND_TRANSFER: Final = "transferencia"
 CATEGORY_KIND_MOVEMENT: Final = "movimentacao"
+# O quarto: o patrimônio mudou de valor sem que dinheiro entrasse ou saísse
+# (marcação a mercado de Tesouro, renda fixa, caixa em dólar). Muda o saldo da
+# conta, mas não é receita nem despesa do período: é variação não realizada.
+CATEGORY_KIND_VALUATION: Final = "valorizacao"
 VALID_CATEGORY_KINDS: Final = (
     CATEGORY_KIND_MANAGERIAL,
     CATEGORY_KIND_TRANSFER,
     CATEGORY_KIND_MOVEMENT,
+    CATEGORY_KIND_VALUATION,
 )
 CATEGORY_KIND_OPTIONS: Final = (
     (CATEGORY_KIND_MANAGERIAL, gettext_lazy("Gerencial (receita ou despesa)")),
     (CATEGORY_KIND_TRANSFER, gettext_lazy("Transferência entre contas")),
     (CATEGORY_KIND_MOVEMENT, gettext_lazy("Movimentação (não é receita nem despesa)")),
+    (CATEGORY_KIND_VALUATION, gettext_lazy("Variação de mercado (não é receita nem despesa)")),
 )
-# Os dois que não entram em receita nem em despesa gerencial.
+# Os que não entram em receita nem em despesa gerencial.
 NON_MANAGERIAL_CATEGORY_KINDS: Final = (
     CATEGORY_KIND_TRANSFER,
     CATEGORY_KIND_MOVEMENT,
+    CATEGORY_KIND_VALUATION,
 )
 
 OPERATION_SINGLE: Final = "single"

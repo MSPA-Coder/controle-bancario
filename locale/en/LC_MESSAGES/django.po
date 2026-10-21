@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 14:08-0300\n"
+"POT-Creation-Date: 2026-10-21 14:50-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -992,15 +992,17 @@ msgid "A fatura tem lançamentos em mês fechado do cartão (%(meses)s): autoriz
 msgstr "The card statement has entries in a closed month of the card (%(meses)s): authorize reopening and a new monthly close to process it."
 
 #: bank_statements/fatura.py bank_statements/meses.py
-#: bank_statements/reclassificacao.py
+#: bank_statements/reclassificacao.py bank_statements/valorizacao.py
 msgid "Reabrir mês fechado exige a permissão de fechamento mensal."
 msgstr "Reopening a closed month requires the monthly close permission."
 
 #: bank_statements/meses.py bank_statements/reclassificacao.py
+#: bank_statements/valorizacao.py
 msgid "Há meses fechados entre os lançamentos: autorize a reabertura e o novo fechamento."
 msgstr "There are closed months among the entries: authorize reopening and a new monthly close."
 
 #: bank_statements/meses.py bank_statements/reclassificacao.py
+#: bank_statements/valorizacao.py
 #, python-format
 msgid "O saldo de fechamento de %(mes)02d/%(ano)s (%(conta)s) mudaria de %(anterior)s para %(novo)s; nada foi gravado."
 msgstr "The month-end balance for %(mes)02d/%(ano)s (%(conta)s) would change from %(anterior)s to %(novo)s; nothing was saved."
@@ -1427,6 +1429,11 @@ msgstr "closed without the month-end balance entered"
 #: bank_statements/situacao.py
 msgid "fechado"
 msgstr "closed"
+
+#: bank_statements/valorizacao.py
+#, python-format
+msgid "A categoria \"%(nome)s\" existe e não é do tipo variação de mercado; corrija-a antes."
+msgstr "The category \"%(nome)s\" exists but is not of the market change type; fix it first."
 
 #: bank_statements/views.py
 msgid "Selecione ao menos um arquivo para importar."
@@ -2044,6 +2051,10 @@ msgstr "Transfer between accounts"
 #: core/domain/finance.py
 msgid "Movimentação (não é receita nem despesa)"
 msgstr "Movement (neither income nor expense)"
+
+#: core/domain/finance.py
+msgid "Variação de mercado (não é receita nem despesa)"
+msgstr "Market change (neither income nor expense)"
 
 #: core/domain/finance.py
 msgid "Real (R$)"
@@ -6150,6 +6161,15 @@ msgstr "Internal credits"
 #: templates/reports/partials/projections_content.html
 msgid "Débitos internos"
 msgstr "Internal debits"
+
+#: templates/reports/partials/projections_content.html
+msgid "Variação de preço do que está aplicado (Tesouro, renda fixa, dólar): muda o saldo, mas não é receita nem despesa."
+msgstr "Price change of what is invested (Treasury, fixed income, dollars): it changes the balance, but it is neither income nor expense."
+
+#: templates/reports/partials/projections_content.html
+#: templates/tables/_categories_table.html templates/tables/categories.html
+msgid "Variação de mercado"
+msgstr "Market change"
 
 #: templates/reports/partials/projections_content.html
 msgid "Ver lançamentos do mês"

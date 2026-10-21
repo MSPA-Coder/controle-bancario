@@ -270,7 +270,7 @@ def test_divided_installments_absorb_rounding_remainder_in_last_entry():
 def test_projection_balance_is_canonical_regardless_of_status_filter():
     from reports import services as report_services
 
-    category = SimpleNamespace(is_internal=False)
+    category = SimpleNamespace(is_internal=False, kind="gerencial")
     realized_income = SimpleNamespace(
         status=STATUS_REALIZED, entry_type="receita", entry_amount=Decimal("100.00"),
         realized_amount=Decimal("100.00"), due_date=date(2026, 8, 1),

@@ -76,8 +76,10 @@ from sharedauth.secrets import SegredoInvalidoError, resolver_segredo
 from bank_statements.models import BankStatementImport, BankStatementLine
 from banking.models import FinancialAccount
 from core.domain.finance import (
+    CATEGORY_KIND_MANAGERIAL,
     CATEGORY_KIND_MOVEMENT,
     CATEGORY_KIND_TRANSFER,
+    CATEGORY_KIND_VALUATION,
     ENTRY_TYPE_INCOME,
     OPERATION_INTERNAL_TRANSFER,
     OPERATION_RECURRING,
@@ -350,11 +352,25 @@ def _conta_v4(
     }
 
 
+def _kind_v4(kind: str) -> str:
+    """O `kind` que o contrato v4 conhece.
+
+    A variação de mercado é publicada como `gerencial`: o CB não a soma em receita
+    nem despesa, mas para o patrimônio ela é retorno (o Wealthfolio trata o que
+    não é gerencial como movimentação de capital, e a marcação de um Tesouro não
+    é isso). O contrato tem três valores; o quarto é só do CB, e quem precisa
+    separá-la lê `valuation` na categoria.
+    """
+    return CATEGORY_KIND_MANAGERIAL if kind == CATEGORY_KIND_VALUATION else kind
+
+
 def _categoria_v4(categoria: CashFlowCategory) -> dict:
     return {
         "source_id": _source_id_v4("category", categoria.id),
         "name": categoria.category_name,
-        "kind": categoria.kind,
+        "kind": _kind_v4(categoria.kind),
+        # Acréscimo opcional (21/10/2026): só a categoria de variação de mercado.
+        **({"valuation": True} if categoria.kind == CATEGORY_KIND_VALUATION else {}),
         # Acréscimo opcional (02/10/2026): o nome do grupo da categoria, ou null.
         "group": categoria.group.group_name if categoria.group_id else None,
         "created_at": categoria.created_at.isoformat() if categoria.created_at else None,
@@ -420,7 +436,7 @@ def _lancamento_v4(entry: CashFlowEntry, referencia: date) -> dict:
         # Muda com o dia sem que o lançamento mude, então quem guarda a foto por
         # `high_watermark` precisa pedir uma nova a cada dia.
         "effective_status": status_efetivo(entry, referencia),
-        "category_kind": entry.category.kind,
+        "category_kind": _kind_v4(entry.category.kind),
         "currency": entry.account.currency,
         "planned_amount": str(entry.entry_amount.quantize(MONEY_QUANT)),
         "realized_amount": (
@@ -691,7 +707,7 @@ def _mes_vazio(mes: date, moeda: str) -> dict:
 
 def _coluna_do_lancamento(entry: CashFlowEntry) -> str:
     receita = entry.entry_type == ENTRY_TYPE_INCOME
-    natureza = entry.category.kind
+    natureza = _kind_v4(entry.category.kind)
     if natureza == CATEGORY_KIND_MOVEMENT:
         return "investimentos_entrada" if receita else "investimentos_saida"
     if natureza == CATEGORY_KIND_TRANSFER:
