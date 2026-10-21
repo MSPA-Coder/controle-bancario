@@ -66,6 +66,9 @@
             </div>
             <div class="sidebar-brand-subtitle">{% trans "Fluxo de caixa" %}</div>
         </div>
+        {# Só no celular: o menu começa recolhido para não tomar 40% da tela. #}
+        <button type="button" class="sidebar-mobile-toggle" data-sidebar-mobile-toggle
+                aria-controls="appSidebar" aria-expanded="false">{% trans "Menu" %}</button>
     </div>
 
     <div class="sidebar-menu">

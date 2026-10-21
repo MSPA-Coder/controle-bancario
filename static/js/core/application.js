@@ -946,6 +946,14 @@
                 _setSidebarCollapsed(!_sidebarIsCollapsed());
             });
         }
+        /* Celular: o menu começa fechado e o botão "Menu" abre/fecha a lista. */
+        var _mobileToggle = document.querySelector('[data-sidebar-mobile-toggle]');
+        if (_mobileToggle && _sidebarNav) {
+            _mobileToggle.addEventListener('click', function () {
+                var aberto = _sidebarNav.classList.toggle('is-mobile-open');
+                _mobileToggle.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+            });
+        }
         /* A largura das telas muda com o menu: refaz o que depende dela ao fim da transicao. */
         if (_sidebarNav) {
             _sidebarNav.addEventListener('transitionend', function (e) {

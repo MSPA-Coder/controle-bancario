@@ -86,7 +86,7 @@
                 <td colspan="{{ table_columns }}">
                     <form method="POST" action="{% url 'transactions:transaction_edit' t.id %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="tx-form" data-tx-htmx>
                         {% csrf_token %}
-                        {% with form_id="edit-"|add:t.id|stringformat:"s" %}
+                        {% with form_id=t.id|stringformat:"s" %}
                         {% include "transactions/_fields.html" with t=t form_id=form_id %}
                         {% endwith %}
                         <div class="span-4 form-actions">

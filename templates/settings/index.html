@@ -19,6 +19,7 @@
 
 {% block content %}
 <div class="settings-split-grid">
+    {% if can_manage_password_policy %}
     <div class="section-card">
         <h3>{% trans "Configuração de senha" %}</h3>
         <form method="post" action="{% url 'core:settings_update_password_policy' %}" class="settings-password-grid">
@@ -63,6 +64,9 @@
         </form>
     </div>
 
+    {% endif %}
+
+    {% if can_manage_projection %}
     <div class="section-card">
         <h3>{% trans "Projeção de recorrências" %}</h3>
         <form method="post" action="{% url 'core:settings_update_recurring_projection' %}" class="btn-group" data-ui="items-end">
@@ -105,5 +109,12 @@
             <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar a data inicial do sistema?' %}" data-sa-titulo="{% trans 'Confirmar configuração' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
         </form>
     </div>
+    {% endif %}
+
+    {% if not can_manage_password_policy and not can_manage_projection %}
+    <div class="section-card">
+        <p>{% trans "Você não tem permissão para alterar os parâmetros do sistema." %}</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

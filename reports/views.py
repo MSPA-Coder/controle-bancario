@@ -194,7 +194,7 @@ def account_position_view(request):
         })
 
     context = {
-        "report_rows": rows,
+        "report_rows": [row for bloco in blocos for row in bloco["rows"]],
         "blocos": blocos,
         "selected_period": selected_period,
         "today_period": today_period,

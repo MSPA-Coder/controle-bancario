@@ -441,3 +441,21 @@ document.addEventListener('lancamentoGravado', function (event) {
         if (token && campo) campo.value = token;
     }
 });
+
+/* O botão "Salvar" do novo lançamento usa o diálogo genérico `data-sa-confirmar`,
+   que abriria "Confirmar lançamento?" antes de a validação nativa rodar: a
+   pessoa confirmava e só então via "preencha este campo". Esta guarda corre na
+   captura da janela (antes do ouvinte do sharedauth, que está no document) e,
+   com o formulário inválido, mostra os avisos nativos e interrompe o clique. */
+window.addEventListener('click', function (event) {
+    var alvo = event.target && event.target.closest
+        ? event.target.closest('#newTransactionCard button[data-sa-confirmar]')
+        : null;
+    if (!alvo) return;
+    var form = alvo.form || alvo.closest('form');
+    if (form && typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+        form.reportValidity();
+    }
+}, true);

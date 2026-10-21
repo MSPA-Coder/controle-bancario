@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 15:18-0300\n"
+"POT-Creation-Date: 2026-10-21 20:24-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -435,6 +435,20 @@ msgstr "Account holder updated."
 #: accounts/views.py
 msgid "Titular excluído."
 msgstr "Account holder deleted."
+
+#: accounts/views.py
+msgid "Entrada no sistema."
+msgstr "Signed in."
+
+#: accounts/views.py
+#, python-format
+msgid "Usuário ou senha inválidos. Usuário informado: %(nome)s."
+msgstr "Invalid username or password. Username entered: %(nome)s."
+
+#: accounts/views.py
+#, python-format
+msgid "Tentativa recusada pelo bloqueio de login. Usuário informado: %(nome)s."
+msgstr "Attempt refused by the login lockout. Username entered: %(nome)s."
 
 #: accounts/views.py
 msgid "Senha alterada."
@@ -1471,6 +1485,11 @@ msgstr[1] "Other card statements awaiting processing: %(outras)s."
 
 #: bank_statements/views.py
 #, python-format
+msgid "Importação desfeita: %(linhas)s linhas removidas, %(conciliadas)s conciliações revertidas."
+msgstr "Import undone: %(linhas)s lines removed, %(conciliadas)s reconciliations reverted."
+
+#: bank_statements/views.py
+#, python-format
 msgid "Importação desfeita: %(n)s linha de extrato removida"
 msgid_plural "Importação desfeita: %(n)s linhas de extrato removidas"
 msgstr[0] "Import undone: %(n)s bank statement line removed"
@@ -1608,6 +1627,11 @@ msgstr[1] "%(n)s lines could not be processed: %(erro)s"
 
 #: bank_statements/views.py
 #, python-format
+msgid "%(n)s linhas ignoradas em lote."
+msgstr "%(n)s lines skipped in bulk."
+
+#: bank_statements/views.py
+#, python-format
 msgid "%(n)s linha ignorada."
 msgid_plural "%(n)s linhas ignoradas."
 msgstr[0] "%(n)s line skipped."
@@ -1688,6 +1712,18 @@ msgstr "Invalid currency: %(moeda)s."
 #: banking/services.py
 msgid "Data do saldo inicial inválida."
 msgstr "Starting balance date is invalid."
+
+#: banking/services.py
+msgid "A data do saldo inicial não pode ser depois de hoje."
+msgstr "The starting balance date cannot be after today."
+
+#: banking/services.py
+msgid "Este titular já tem uma conta com esse nome nesta instituição."
+msgstr "This owner already has an account with this name at this institution."
+
+#: banking/services.py
+msgid "Já existe uma conta desta instituição com esse identificador de extrato."
+msgstr "An account at this institution already has this statement identifier."
 
 #: banking/services.py management/services.py
 msgid "Titular é obrigatório."
@@ -2068,6 +2104,14 @@ msgstr "US dollar (US$)"
 #, python-format
 msgid "As contas selecionadas têm moedas diferentes (%(moedas)s), e este sistema não converte moeda. Filtre por uma conta, um titular ou uma instituição de uma moeda só."
 msgstr "The selected accounts have different currencies (%(moedas)s), and this system does not convert currency. Filter by one account, one account holder, or one institution in a single currency."
+
+#: core/domain/finance.py
+msgid "Valor monetário inválido."
+msgstr "Invalid monetary amount."
+
+#: core/domain/finance.py
+msgid "Valor acima do limite permitido (9.999.999.999,99)."
+msgstr "Amount above the allowed limit (9,999,999,999.99)."
 
 #: core/domain/finance.py templates/transactions/index.html
 msgid "Todos os modos"
@@ -2512,6 +2556,11 @@ msgstr[1] "Table scrolling adjusted to more than %(n)s records."
 #: core/views.py transactions/services.py
 msgid "Acesso negado: você não tem permissão para fechar este mês."
 msgstr "Access denied: you do not have permission to close this month."
+
+#: core/views.py
+#, python-format
+msgid "O mês %(mes)02d/%(ano)s ainda não terminou: só se fecha um mês depois do último dia dele."
+msgstr "Month %(mes)02d/%(ano)s has not ended yet: a month can only be closed after its last day."
 
 #: core/views.py
 #, python-format
@@ -3263,6 +3312,10 @@ msgstr[1] "Collection through %(dia)s applied: %(n)s balances posted or checked.
 #: fechamento/views.py
 msgid "Anotado: o par não é duplicata e não volta a aparecer."
 msgstr "Noted: the pair is not a duplicate and will not show up again."
+
+#: financeiro/urls.py
+msgid "Saída do sistema."
+msgstr "Signed out."
 
 #: management/services.py
 msgid "Nome da tag é obrigatório."
@@ -5050,6 +5103,10 @@ msgid "Fluxo de caixa"
 msgstr "Cash flow"
 
 #: templates/components/navigation.html
+msgid "Menu"
+msgstr "Menu"
+
+#: templates/components/navigation.html
 msgid "Sair"
 msgstr "Log out"
 
@@ -6149,6 +6206,10 @@ msgid "Use Ctrl (Windows) ou ⌘ (macOS) para selecionar mais de um titular ou c
 msgstr "Use Ctrl (Windows) or ⌘ (macOS) to select more than one account holder or account."
 
 #: templates/reports/partials/annual_planning_content.html
+msgid "As colunas por titular mostram só o que ainda está em aberto no mês de referência; as colunas de mês incluem também o que já foi realizado."
+msgstr "The owner columns show only what is still open in the reference month; the month columns also include what has already been settled."
+
+#: templates/reports/partials/annual_planning_content.html
 msgid "Totais do planejamento por titular e mês"
 msgstr "Planning totals by account holder and month"
 
@@ -6477,6 +6538,10 @@ msgstr "Save the system start date?"
 #: templates/settings/index.html
 msgid "Confirmar configuração"
 msgstr "Confirm setup"
+
+#: templates/settings/index.html
+msgid "Você não tem permissão para alterar os parâmetros do sistema."
+msgstr "You do not have permission to change the system parameters."
 
 #: templates/settings/monthly_close.html
 msgid "Movimentação • Fechamento mensal"
@@ -7296,8 +7361,8 @@ msgstr "Mixed: %(statuses)s"
 
 #: transactions/services.py
 #, python-format
-msgid "Mês %(mes)s/%(ano)s está fechado para a conta %(conta)s."
-msgstr "Month %(mes)s/%(ano)s is closed for account %(conta)s."
+msgid "Mês %(mes)02d/%(ano)s está fechado para a conta %(conta)s."
+msgstr "Month %(mes)02d/%(ano)s is closed for account %(conta)s."
 
 #: transactions/services.py
 msgid "Acesso negado: você não tem permissão para usar a conta de origem."
@@ -7325,8 +7390,8 @@ msgstr "Entry is not settled."
 
 #: transactions/services.py
 #, python-format
-msgid "Mês %(mes)s/%(ano)s já está fechado para esta conta."
-msgstr "Month %(mes)s/%(ano)s is already closed for this account."
+msgid "Mês %(mes)02d/%(ano)s já está fechado para esta conta."
+msgstr "Month %(mes)02d/%(ano)s is already closed for this account."
 
 #: transactions/services.py
 msgid "O motivo da reabertura é obrigatório."
@@ -7334,8 +7399,8 @@ msgstr "The reason for reopening is required."
 
 #: transactions/services.py
 #, python-format
-msgid "Mês %(mes)s/%(ano)s não está fechado para esta conta."
-msgstr "Month %(mes)s/%(ano)s is not closed for this account."
+msgid "Mês %(mes)02d/%(ano)s não está fechado para esta conta."
+msgstr "Month %(mes)02d/%(ano)s is not closed for this account."
 
 #: transactions/services.py
 msgid "Nome da categoria é obrigatório."
@@ -7422,6 +7487,19 @@ msgid "Transferência interna sem contraparte."
 msgstr "Internal transfer without a counterparty."
 
 #: transactions/services.py
+#, python-format
+msgid "A parcela %(atual)s não cabe em %(total)s parcelas: informe pelo menos %(atual)s."
+msgstr "Installment %(atual)s does not fit in %(total)s installments: enter at least %(atual)s."
+
+#: transactions/services.py
+msgid "A data de realização não pode ser depois de hoje: realizado é o que já aconteceu. Deixe o lançamento a vencer até a data."
+msgstr "The settlement date cannot be after today: settled means it has already happened. Leave the entry as upcoming until then."
+
+#: transactions/services.py
+msgid "Tipo de lançamento inválido."
+msgstr "Invalid entry type."
+
+#: transactions/services.py
 msgid "O valor do lançamento deve ser positivo."
 msgstr "The entry amount must be positive."
 
@@ -7506,6 +7584,10 @@ msgstr "Enter the entry description."
 #: transactions/views.py
 msgid "Acesso negado: você não tem permissão para realizar este lançamento."
 msgstr "Access denied: you do not have permission to settle this entry."
+
+#: transactions/views.py
+msgid "Data de realização inválida."
+msgstr "Invalid settlement date."
 
 #: transactions/views.py
 msgid "Lançamento marcado como realizado."

@@ -14,7 +14,7 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
         {% for titular, contas in update_accounts|por_titular %}
         <optgroup label="{{ titular }}">
             {% for acc in contas %}
-            <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-currency-symbol="{{ acc.currency|currency_symbol }}" {% if t.account_id == acc.id %}selected{% endif %}>{{ acc.institution.institution_name }} / {{ acc.account_name }}</option>
+            <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-currency-symbol="{{ acc.currency|currency_symbol }}" {% if t.account_id == acc.id %}selected{% endif %}>{{ acc.owner.name }} / {{ acc.institution.institution_name }} / {{ acc.account_name }}</option>
             {% endfor %}
         </optgroup>
         {% endfor %}
@@ -22,7 +22,7 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
         {% for titular, contas in create_accounts|por_titular %}
         <optgroup label="{{ titular }}">
             {% for acc in contas %}
-            <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-currency-symbol="{{ acc.currency|currency_symbol }}" {% if new_entry_defaults.account_id == acc.id|stringformat:"s" %}selected{% endif %}>{{ acc.institution.institution_name }} / {{ acc.account_name }}</option>
+            <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-currency-symbol="{{ acc.currency|currency_symbol }}" {% if new_entry_defaults.account_id == acc.id|stringformat:"s" %}selected{% endif %}>{{ acc.owner.name }} / {{ acc.institution.institution_name }} / {{ acc.account_name }}</option>
             {% endfor %}
         </optgroup>
         {% endfor %}
@@ -68,7 +68,7 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
         {% for titular, contas in counterparty_accounts|por_titular %}
         <optgroup label="{{ titular }}">
             {% for acc in contas %}
-            <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-currency-symbol="{{ acc.currency|currency_symbol }}" {% if t and t.counterparty_account_id == acc.id %}selected{% endif %}>{{ acc.institution.institution_name }} / {{ acc.account_name }}</option>
+            <option value="{{ acc.id }}" data-currency="{{ acc.currency }}" data-currency-symbol="{{ acc.currency|currency_symbol }}" {% if t and t.counterparty_account_id == acc.id %}selected{% endif %}>{{ acc.owner.name }} / {{ acc.institution.institution_name }} / {{ acc.account_name }}</option>
             {% endfor %}
         </optgroup>
         {% endfor %}

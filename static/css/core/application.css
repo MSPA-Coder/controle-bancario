@@ -620,6 +620,8 @@ a:hover { text-decoration: underline; }
     html[data-sidebar="collapsed"] .sidebar-user-actions { margin-left: 0; }
 }
 
+.sidebar-mobile-toggle { display: none; }
+
 @media (max-width: 900px) {
     .sidebar-collapse-toggle { display: none; }
     .app-shell { flex-direction: column; }
@@ -628,6 +630,19 @@ a:hover { text-decoration: underline; }
         flex: 0 0 auto; border-right: none; border-bottom: 1px solid var(--border);
     }
     .sidebar-menu { max-height: 26vh; overflow-y: auto; }
+    /* Menu recolhido por padrão no celular: o botão "Menu" abre a lista. */
+    .sidebar-mobile-toggle {
+        display: inline-flex; align-items: center; margin-left: auto;
+        min-height: 2.25rem; padding: 0 0.85rem; border: 1px solid var(--border);
+        border-radius: var(--radius-sm); background: var(--card); color: var(--text);
+        font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+    }
+    .app-sidebar-nav:not(.is-mobile-open) .sidebar-menu,
+    .app-sidebar-nav:not(.is-mobile-open) .sidebar-user-card { display: none; }
+    .app-sidebar-nav:not(.is-mobile-open) { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    /* Alvos de toque dos botões de editar/excluir da tabela: 25 px é pouco para o dedo. */
+    .tx-table .actions .btn-icon { min-width: 2.25rem; min-height: 2.25rem; }
+    .tx-table .actions { white-space: nowrap; }
     /* A barra lateral vira faixa de 40vh com rolagem própria, e cortaria o menu
        de filtros (moeda, grupos de conta, modo discreto): fixo, ele sai do corte. */
     .sidebar-global-filters-menu {

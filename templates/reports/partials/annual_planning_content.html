@@ -36,6 +36,7 @@
     {% endcomment %}
     {% for bloco in blocos %}
     {% if blocos|length > 1 %}<h3 class="currency-block-title">{{ bloco.currency|currency_label }}</h3>{% endif %}
+    <p class="annual-filter-help annual-owner-legend">{% trans "As colunas por titular mostram só o que ainda está em aberto no mês de referência; as colunas de mês incluem também o que já foi realizado." %}</p>
     <div class="annual-summary-wrap">
         <table class="annual-summary-table">
             <caption class="sr-only">{% trans "Totais do planejamento por titular e mês" %}</caption>
