@@ -828,6 +828,8 @@ def annual_planning_presentation(
     }
     transfer_owner_values, transfer_months = owner_zeroes(), zeroes()
     transfer_volume_operations: set[tuple[int, int]] = set()
+    # Variação de mercado: com sinal (não é volume de transferência), em linha própria.
+    market_owner_values, market_months = owner_zeroes(), zeroes()
 
     if selected_view_mode == VIEW_ALL:
         in_months = Q(status=STATUS_REALIZED, realized_date__gte=first_month, realized_date__lt=end_exclusive) | Q(
@@ -858,6 +860,14 @@ def annual_planning_presentation(
             (entry.category and entry.category.is_internal)
             or entry.operation_type == OPERATION_INTERNAL_TRANSFER
         )
+        if entry.category and entry.category.kind == CATEGORY_KIND_VALUATION:
+            signed_market = amount if entry.entry_type == ENTRY_TYPE_INCOME else -amount
+            market_months[month_index] += signed_market
+            if date(period_date.year, period_date.month, 1) == reference_month:
+                owner_index = owner_positions.get(entry.account.owner_id)
+                if owner_index is not None:
+                    market_owner_values[owner_index] += signed_market
+            continue
         if is_internal:
             signed_transfer = amount if entry.entry_type == ENTRY_TYPE_INCOME else -amount
             # Cada transferência possui duas pontas. O resumo mensal mostra
@@ -1029,8 +1039,10 @@ def annual_planning_presentation(
         for owner in selected_owners
     ]
     end_owner = [
-        (start + generation + transfer).quantize(MONEY_QUANT)
-        for start, generation, transfer in zip(start_owner, generation_owner, transfer_owner_values, strict=True)
+        (start + generation + transfer + market).quantize(MONEY_QUANT)
+        for start, generation, transfer, market in zip(
+            start_owner, generation_owner, transfer_owner_values, market_owner_values, strict=True
+        )
     ]
     balance_rows = projection_months_between(selected_account_ids, first_month, months[-1], selected_view_mode)
     balance_by_month = {date.fromisoformat(row["month"] + "-01"): row for row in balance_rows}
@@ -1048,8 +1060,15 @@ def annual_planning_presentation(
         {"label": gettext("Total receitas"), "owner_values": income_owner, "months": _month_values(income_months)},
         {"label": gettext("Total despesas"), "owner_values": expense_owner, "months": _month_values(expense_months)},
         {"label": gettext("Transferências internas"), "owner_values": transfer_owner_values, "months": _month_values(transfer_months)},
-        {"label": gettext("Saldo atual / inicial"), "owner_values": start_owner, "months": _month_values(start_months)},
     ]
+    # Só aparece quando há variação no período: a grade sem aplicações é a de sempre.
+    if any(market_owner_values) or any(market_months):
+        summary_rows.append(
+            {"label": gettext("Variação de mercado"), "owner_values": market_owner_values, "months": _month_values(market_months)}
+        )
+    summary_rows.append(
+        {"label": gettext("Saldo atual / inicial"), "owner_values": start_owner, "months": _month_values(start_months)}
+    )
 
     return {
         "reference_month_label": reference_month.strftime("%m/%Y"),
@@ -1522,6 +1541,9 @@ class AccountCashReportRow:
     cash_generation: Decimal
     internal_transfers: Decimal
     end_balance: Decimal
+    # Variação de preço do que está aplicado: muda o saldo, mas não é geração de
+    # caixa nem transferência (não há outra ponta).
+    market_change: Decimal = Decimal("0.00")
 
 
 def account_cash_report_rows(account_ids: list[int], start_month: date, end_month: date, view_mode: str) -> list[AccountCashReportRow]:
@@ -1549,12 +1571,15 @@ def account_cash_report_rows(account_ids: list[int], start_month: date, end_mont
     end_by_account = dict(decimal_period_start_balances_by_account(ordered_ids, last_month, final_end, view_mode))
     generation_by_account = {account_id: Decimal("0.00") for account_id in ordered_ids}
     transfers_by_account = {account_id: Decimal("0.00") for account_id in ordered_ids}
+    market_by_account = {account_id: Decimal("0.00") for account_id in ordered_ids}
 
     for entry in entries_for_period(ordered_ids, first_month, final_end, view_mode):
         realized = _entry_is_realized_for_mode(entry, view_mode)
         amount = _entry_amount(entry, realized=realized)
         is_internal = bool(entry.category and entry.category.is_internal)
-        if is_internal:
+        if entry.category and entry.category.kind == CATEGORY_KIND_VALUATION:
+            market_by_account[entry.account_id] += _entry_signed_amount(entry, realized=realized)
+        elif is_internal:
             transfers_by_account[entry.account_id] += _entry_signed_amount(entry, realized=realized)
         else:
             if entry.entry_type == ENTRY_TYPE_INCOME:
@@ -1576,6 +1601,7 @@ def account_cash_report_rows(account_ids: list[int], start_month: date, end_mont
             cash_generation=generation_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
             internal_transfers=transfers_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
             end_balance=end_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
+            market_change=market_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
         )
         for account in accounts
     ]

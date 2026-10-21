@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 14:50-0300\n"
+"POT-Creation-Date: 2026-10-21 15:18-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -3482,6 +3482,12 @@ msgstr "Total expenses"
 msgid "Transferências internas"
 msgstr "Internal transfers"
 
+#: reports/services.py templates/reports/partials/account_position_content.html
+#: templates/reports/partials/projections_content.html
+#: templates/tables/_categories_table.html templates/tables/categories.html
+msgid "Variação de mercado"
+msgstr "Market change"
+
 #: reports/services.py
 msgid "Saldo atual / inicial"
 msgstr "Current / opening balance"
@@ -6081,6 +6087,11 @@ msgid "Saldo inicial"
 msgstr "Opening balance"
 
 #: templates/reports/partials/account_position_content.html
+#: templates/reports/partials/projections_content.html
+msgid "Variação de preço do que está aplicado (Tesouro, renda fixa, dólar): muda o saldo, mas não é receita nem despesa."
+msgstr "Price change of what is invested (Treasury, fixed income, dollars): it changes the balance, but it is neither income nor expense."
+
+#: templates/reports/partials/account_position_content.html
 #: templates/reports/partials/upcoming_movements_content.html
 #: templates/transactions/_summary_cards.html
 msgid "Saldo final"
@@ -6161,15 +6172,6 @@ msgstr "Internal credits"
 #: templates/reports/partials/projections_content.html
 msgid "Débitos internos"
 msgstr "Internal debits"
-
-#: templates/reports/partials/projections_content.html
-msgid "Variação de preço do que está aplicado (Tesouro, renda fixa, dólar): muda o saldo, mas não é receita nem despesa."
-msgstr "Price change of what is invested (Treasury, fixed income, dollars): it changes the balance, but it is neither income nor expense."
-
-#: templates/reports/partials/projections_content.html
-#: templates/tables/_categories_table.html templates/tables/categories.html
-msgid "Variação de mercado"
-msgstr "Market change"
 
 #: templates/reports/partials/projections_content.html
 msgid "Ver lançamentos do mês"

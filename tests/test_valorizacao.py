@@ -91,6 +91,45 @@ def test_a_projecao_mensal_tem_coluna_propria_com_sinal_e_o_saldo_a_inclui(cenar
     assert reports_services.projection_period_totals([mes])["valorizacao"] == Decimal("180.00")
 
 
+def test_a_posicao_por_conta_separa_a_variacao_das_transferencias(cenario):
+    _, conta, rendimentos, variacao = cenario
+    _lancar(conta, rendimentos, ENTRY_TYPE_INCOME, "50.00", "Juros do CDB")
+    _lancar(conta, variacao, ENTRY_TYPE_INCOME, "300.00", MARCACAO)
+    _lancar(conta, variacao, ENTRY_TYPE_EXPENSE, "120.00", MARCACAO)
+
+    linha = reports_services.account_cash_report_rows(
+        [conta.id], date(2026, 9, 1), date(2026, 9, 1), VIEW_ALL
+    )[0]
+
+    assert (linha.cash_generation, linha.internal_transfers, linha.market_change) == (
+        Decimal("50.00"), Decimal("0.00"), Decimal("180.00"),
+    )
+    assert linha.end_balance == Decimal("1230.00")
+
+
+def test_o_planejamento_anual_tem_linha_propria_e_nao_a_mistura_com_transferencias(cenario):
+    user, conta, rendimentos, variacao = cenario
+    _lancar(conta, rendimentos, ENTRY_TYPE_INCOME, "50.00", "Juros do CDB")
+    _lancar(conta, variacao, ENTRY_TYPE_INCOME, "300.00", MARCACAO)
+    _lancar(conta, variacao, ENTRY_TYPE_EXPENSE, "120.00", MARCACAO)
+
+    grade = reports_services.annual_planning_presentation(
+        user, date(2026, 9, 1), view_mode=reports_services.VIEW_REALIZED
+    )
+    linhas = {linha["label"]: linha for linha in grade["summary_rows"]}
+
+    setembro = next(i for i, mes in enumerate(grade["months"]) if mes["key"] == "2026-09")
+    assert linhas["Variação de mercado"]["months"][setembro]["value"] == Decimal("180.00")
+    assert linhas["Transferências internas"]["months"][setembro]["value"] == Decimal("0.00")
+    assert linhas["Geração de caixa"]["months"][setembro]["value"] == Decimal("50.00")
+
+    # Sem nenhuma variação no período, a linha nem aparece.
+    sem = reports_services.annual_planning_presentation(
+        user, date(2025, 1, 1), view_mode=reports_services.VIEW_REALIZED
+    )
+    assert "Variação de mercado" not in {linha["label"] for linha in sem["summary_rows"]}
+
+
 def test_o_contrato_v4_publica_como_gerencial_e_marca_a_valorizacao(cenario):
     _, conta, rendimentos, variacao = cenario
     assert patrimonio._categoria_v4(variacao)["kind"] == "gerencial"

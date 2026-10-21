@@ -189,6 +189,7 @@ def account_position_view(request):
             "total_start": sum((row.start_balance for row in do_bloco), Decimal("0.00")),
             "total_generation": sum((row.cash_generation for row in do_bloco), Decimal("0.00")),
             "total_transfers": sum((row.internal_transfers for row in do_bloco), Decimal("0.00")),
+            "total_market": sum((row.market_change for row in do_bloco), Decimal("0.00")),
             "total_end": sum((row.end_balance for row in do_bloco), Decimal("0.00")),
         })
 

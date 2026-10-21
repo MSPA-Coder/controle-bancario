@@ -9,6 +9,7 @@
                 <th class="value-col">{% trans "Saldo inicial" %}</th>
                 <th class="value-col">{% trans "Geração de caixa" %}</th>
                 <th class="value-col">{% trans "Transferências internas" %}</th>
+                <th class="value-col" title="{% trans 'Variação de preço do que está aplicado (Tesouro, renda fixa, dólar): muda o saldo, mas não é receita nem despesa.' %}">{% trans "Variação de mercado" %}</th>
                 <th class="value-col">{% trans "Saldo final" %}</th>
             </tr>
         </thead>
@@ -23,10 +24,11 @@
                 <td class="value-col {{ row.start_balance|amount_class }}">{{ row.start_balance|money_signed:row.currency }}</td>
                 <td class="value-col {{ row.cash_generation|amount_class }}">{{ row.cash_generation|money_signed:row.currency }}</td>
                 <td class="value-col {{ row.internal_transfers|amount_class }}">{{ row.internal_transfers|money_signed:row.currency }}</td>
+                <td class="value-col {{ row.market_change|amount_class }}">{{ row.market_change|money_signed:row.currency }}</td>
                 <td class="value-col {{ row.end_balance|amount_class }}"><strong>{{ row.end_balance|money_signed:row.currency }}</strong></td>
             </tr>
             {% empty %}
-            <tr><td colspan="7" data-ui="empty-2">{% trans "Nenhum dado encontrado." %}</td></tr>
+            <tr><td colspan="8" data-ui="empty-2">{% trans "Nenhum dado encontrado." %}</td></tr>
             {% endfor %}
             {% comment %}
             As linhas acima convivem numa tabela só, cada uma com o símbolo da
@@ -41,6 +43,7 @@
                 <td class="value-col {{ bloco.total_start|amount_class }}">{{ bloco.total_start|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ bloco.total_generation|amount_class }}">{{ bloco.total_generation|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ bloco.total_transfers|amount_class }}">{{ bloco.total_transfers|money_signed:bloco.currency }}</td>
+                <td class="value-col {{ bloco.total_market|amount_class }}">{{ bloco.total_market|money_signed:bloco.currency }}</td>
                 <td class="value-col {{ bloco.total_end|amount_class }}">{{ bloco.total_end|money_signed:bloco.currency }}</td>
             </tr>
             {% endif %}
