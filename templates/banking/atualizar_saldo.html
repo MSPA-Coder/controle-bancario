@@ -45,6 +45,13 @@
             <input type="text" name="saldo" inputmode="decimal" value="{{ escolhas.saldo }}" placeholder="0,00" required
                    title="{% trans 'Aplicação: líquido para resgate, já sem IR e IOF.' %}">
         </label>
+        <label>{% trans "De onde veio" %}
+            <select name="origem">
+                {% for valor, rotulo in origens %}
+                <option value="{{ valor }}" {% if escolhas.origem == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </label>
         <button type="submit" class="btn-sm btn-primary">{% trans "Comparar" %}</button>
     </form>
 </div>
@@ -59,6 +66,9 @@
         {% trans "saldo no CB" %} <strong>{{ previa.saldo_no_cb|money:previa.conta.currency }}</strong>,
         {% trans "diferença" %} <strong class="amount {{ previa.diferenca|amount_class }}">{{ previa.diferenca|money_signed:previa.conta.currency }}</strong>.
     </p>
+    {% if previa.ja_conferido %}
+    <p class="help-text">{% blocktrans trimmed with valor=previa.ja_conferido.valor|money:previa.conta.currency %}Este dia já tem saldo conferido ({{ valor }}). O saldo do CB já inclui o que foi lançado na ocasião: só uma diferença nova vira lançamento, nada se repete.{% endblocktrans %}</p>
+    {% endif %}
     {% if previa.pendencia %}
     <p class="fatura-aviso">{{ previa.pendencia }}</p>
     {% elif previa.tipo %}
@@ -69,6 +79,7 @@
         <input type="hidden" name="data" value="{{ previa.data|date:'Y-m-d' }}">
         <input type="hidden" name="saldo" value="{{ previa.saldo_informado }}">
         <input type="hidden" name="diferenca" value="{{ previa.diferenca }}">
+        <input type="hidden" name="origem" value="{{ escolhas.origem }}">
         <label>{% trans "Destino da diferença" %}
             <select name="destino" required>
                 {% for chave, rotulo in previa.destinos %}
@@ -86,7 +97,16 @@
                 data-sa-ok="{% trans 'Lançar' %}">{% trans "Lançar a diferença" %}</button>
     </form>
     {% else %}
-    <p class="empty-state">{% trans "O saldo informado já bate com o do CB." %}</p>
+    <form method="post" action="{% url 'bank_statements:atualizar_saldo' %}" class="top-filter-row">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="confirmar">
+        <input type="hidden" name="conta" value="{{ previa.conta.id }}">
+        <input type="hidden" name="data" value="{{ previa.data|date:'Y-m-d' }}">
+        <input type="hidden" name="saldo" value="{{ previa.saldo_informado }}">
+        <input type="hidden" name="origem" value="{{ escolhas.origem }}">
+        <p class="empty-state">{% trans "O saldo informado já bate com o do CB." %}</p>
+        <button type="submit" class="btn-sm btn-primary">{% trans "Registrar como conferido" %}</button>
+    </form>
     {% endif %}
 </div>
 {% endif %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Movimentação • Fontes do fechamento" %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/pages/fechamento.css' %}">
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header-title">
+    <div>
+        <h1>🧭 {% trans "Roteiro de fechamento" %}</h1>
+        <p>{% trans "De onde vem o dado de cada conta. O roteiro lê este cadastro para dizer o que falta e em que formato." %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "fechamento/_abas.html" %}
+
+<div class="fech-cartao">
+    <p class="help-text">{% blocktrans trimmed %}Conta sem cadastro mostra a fonte deduzida do que o CB já sabe dela (o último arquivo importado, o tipo de conta),
+        marcada como “deduzida”. Gravar a linha fixa a escolha. “Ainda não tenho” deixa a conta visível como pendência, sem travar as outras.
+        Conta que vem do myProfit diz o que é lá (Tesouro, renda fixa EUA ou caixa em dólar) e o nome da corretora no myProfit.{% endblocktrans %}</p>
+</div>
+
+<div class="table-container">
+    <table class="tx-table fech-tabela-fontes">
+        <thead>
+            <tr>
+                <th scope="col">{% trans "Conta" %}</th>
+                <th scope="col">{% trans "Fonte" %}</th>
+                <th scope="col">{% trans "Formato" %}</th>
+                <th scope="col">{% trans "Frequência" %}</th>
+                <th scope="col">{% trans "No myProfit" %}</th>
+                <th scope="col">{% trans "Onde obter" %}</th>
+                <th scope="col"><span class="fech-sr">{% trans "Ação" %}</span></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% regroup linhas by 0.owner as por_titular %}
+        {% for grupo in por_titular %}
+            <tr class="situacao-titular"><th colspan="7" scope="colgroup">{{ grupo.grouper.name }}</th></tr>
+            {% for conta, fonte in grupo.list %}
+            <tr id="conta-{{ conta.id }}">
+                <th scope="row">{{ conta.institution.institution_name }} / {{ conta.account_name }}
+                    <small class="fech-deduzida">{% if conta.is_credit_card %}{% trans "cartão" %} · {% endif %}{{ conta.currency }}{% if not fonte.cadastrada %} · {% trans "deduzida" %}{% endif %}</small>
+                </th>
+                {% if pode_editar %}
+                <td>
+                    <select name="fonte" form="fonte-{{ conta.id }}" aria-label="{% trans 'Fonte' %}">
+                        {% for valor, rotulo in opcoes_de_fonte %}<option value="{{ valor }}" {% if fonte.fonte == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+                    </select>
+                </td>
+                <td><input type="text" name="formato" form="fonte-{{ conta.id }}" value="{{ fonte.formato }}" maxlength="40" aria-label="{% trans 'Formato' %}"></td>
+                <td>
+                    <select name="frequencia" form="fonte-{{ conta.id }}" aria-label="{% trans 'Frequência' %}">
+                        {% for valor, rotulo in opcoes_de_frequencia %}<option value="{{ valor }}" {% if fonte.frequencia == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <div class="fech-linha-fonte">
+                        <select name="classe_myprofit" form="fonte-{{ conta.id }}" aria-label="{% trans 'O que a conta é no myProfit' %}">
+                            <option value="">—</option>
+                            {% for valor, rotulo in opcoes_de_classe %}<option value="{{ valor }}" {% if fonte.classe_myprofit == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+                        </select>
+                        <input type="text" name="corretora_myprofit" form="fonte-{{ conta.id }}" value="{{ fonte.corretora_myprofit }}" maxlength="40" size="8" placeholder="{% trans 'Corretora' %}" aria-label="{% trans 'Corretora no myProfit' %}">
+                    </div>
+                </td>
+                <td><input type="text" name="onde" form="fonte-{{ conta.id }}" value="{{ fonte.onde }}" maxlength="200" placeholder="{% trans 'Ex.: App C6 › Extrato › Exportar OFX' %}" aria-label="{% trans 'Onde obter' %}"></td>
+                <td>
+                    <form method="post" action="{% url 'fechamento:salvar_fonte' conta.id %}" id="fonte-{{ conta.id }}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-sm {% if fonte.cadastrada %}btn-ghost{% else %}btn-primary{% endif %}">{% if fonte.cadastrada %}{% trans "Gravar" %}{% else %}{% trans "Confirmar" %}{% endif %}</button>
+                    </form>
+                </td>
+                {% else %}
+                <td>{{ fonte.rotulo }}</td>
+                <td>{{ fonte.formato|default:"—" }}</td>
+                <td>{{ fonte.rotulo_da_frequencia }}</td>
+                <td>{% if fonte.classe_myprofit %}{{ fonte.rotulo_da_classe }} · {{ fonte.corretora_myprofit }}{% else %}—{% endif %}</td>
+                <td>{{ fonte.onde|default:"—" }}</td>
+                <td></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        {% empty %}
+            <tr><td colspan="7" class="empty-state">{% trans "Nenhuma conta ao seu alcance." %}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

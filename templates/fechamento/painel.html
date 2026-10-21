@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% load static i18n regional_filters money_filters %}
+
+{% block title %}{% trans "Movimentação • Roteiro de fechamento" %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/pages/fechamento.css' %}">
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header-title">
+    <div>
+        <h1>🧭 {% trans "Roteiro de fechamento" %}</h1>
+        <p>{% trans "O que falta, conta a conta, para conferir tudo até a data escolhida. Cortes no meio do mês não travam nada; reimportar um período já tratado é seguro." %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "fechamento/_abas.html" %}
+
+<section class="fech-cartao fech-corte" aria-labelledby="fech-corte-titulo">
+    <div class="fech-corte-topo">
+        <h2 id="fech-corte-titulo">{% trans "Conferir até" %}</h2>
+        <nav class="fech-chips" aria-label="{% trans 'Datas de corte' %}">
+            {% for c in roteiro.cortes %}
+            <a class="fech-chip" href="?corte={{ c.data|date:'Y-m-d' }}{% if filtro == 'tudo' %}&amp;ver=tudo{% endif %}"
+               {% if c.data == roteiro.corte %}aria-current="true"{% endif %}>
+                {% if c.concluido %}<span class="fech-chip-ok" aria-hidden="true"></span>{% endif %}
+                {{ c.data|date:"d/m" }}
+                <small>{% if c.concluido %}{% trans "concluído" %}{% elif c.rotulo %}{{ c.rotulo }}{% elif c.data.day == roteiro.regua|length %}{% trans "fim do mês" %}{% endif %}</small>
+            </a>
+            {% endfor %}
+            <form method="get" class="fech-outra-data">
+                <label for="fech-outra-data">{% trans "Outra data" %}</label>
+                <input type="date" id="fech-outra-data" name="corte" value="{{ roteiro.corte|date:'Y-m-d' }}" required>
+                {% if filtro == 'tudo' %}<input type="hidden" name="ver" value="tudo">{% endif %}
+                <button type="submit" class="btn-sm btn-ghost">{% trans "Ver" %}</button>
+            </form>
+        </nav>
+    </div>
+
+    <div class="fech-regua dias-{{ roteiro.dias_no_mes }}" aria-hidden="true">
+        {% for d in roteiro.regua %}
+        <span class="fech-regua-dia {{ d.classe }}{% if d.marca %} marca-{{ d.marca }}{% endif %}">{% if d.rotulo %}<em>{{ d.rotulo }}</em>{% endif %}</span>
+        {% endfor %}
+    </div>
+    <div class="fech-regua-legenda" aria-hidden="true"><span>01/{{ roteiro.corte|date:"m" }}</span><span>{{ roteiro.regua|length }}/{{ roteiro.corte|date:"m" }}</span></div>
+
+    <div class="fech-resumo">
+        <div class="fech-anel" role="img" aria-label="{% blocktrans trimmed with p=roteiro.percentual %}{{ p }}% em dia{% endblocktrans %}">
+            <svg viewBox="0 0 84 84" aria-hidden="true">
+                <circle class="fech-anel-fundo" cx="42" cy="42" r="36"></circle>
+                <circle class="fech-anel-valor" cx="42" cy="42" r="36" stroke-dasharray="{{ roteiro.anel }}"></circle>
+            </svg>
+            <span class="fech-anel-texto">{{ roteiro.percentual }}%<small>{% trans "em dia" %}</small></span>
+        </div>
+        <dl class="fech-numeros">
+            <div class="fech-num-ok"><dt>{% trans "em dia" %}</dt><dd>{{ roteiro.em_dia }}</dd></div>
+            <div class="fech-num-falta"><dt>{% trans "para fazer" %}</dt><dd>{{ roteiro.a_fazer }}</dd></div>
+            <div class="fech-num-espera"><dt>{% trans "esperando outro passo" %}</dt><dd>{{ roteiro.esperando }}</dd></div>
+            <div class="fech-num-sem"><dt>{% trans "sem fonte ou conta" %}</dt><dd>{{ roteiro.sem_fonte }}</dd></div>
+        </dl>
+    </div>
+</section>
+
+{% with proximo=roteiro.proximo %}
+{% if proximo %}
+<section class="fech-cartao fech-proximo" aria-labelledby="fech-proximo-titulo">
+    <div>
+        <p class="fech-sobretitulo">{% trans "Próximo passo" %}</p>
+        <h2 id="fech-proximo-titulo">{% if proximo.acao %}{{ proximo.acao }} · {% endif %}{{ proximo.titulo }}</h2>
+        <p>{{ proximo.texto }}.{% if proximo.detalhe %} {{ proximo.detalhe }}{% endif %}</p>
+    </div>
+    <div class="fech-proximo-acoes">
+        <a class="btn-sm btn-ghost" href="#item-{{ proximo.chave }}">{% trans "Ver como fazer" %}</a>
+        {% if proximo.url %}<a class="btn-sm btn-primary" href="{{ proximo.url }}"{% if proximo.externo %} target="_blank" rel="noopener"{% endif %}>{{ proximo.acao|default:_("Abrir") }}</a>{% endif %}
+    </div>
+</section>
+{% elif roteiro.esperando %}
+<section class="fech-cartao fech-proximo fech-proximo-vazio">
+    <div>
+        <h2>{% trans "Nada para fazer agora" %}</h2>
+        <p>{% blocktrans trimmed count n=roteiro.esperando %}{{ n }} item espera dados que ainda não existem.{% plural %}{{ n }} itens esperam dados que ainda não existem.{% endblocktrans %}</p>
+    </div>
+</section>
+{% else %}
+<section class="fech-cartao fech-proximo fech-proximo-ok">
+    <div>
+        <h2>{% blocktrans trimmed with dia=roteiro.corte|date:"d/m" %}Corte de {{ dia }} em dia{% endblocktrans %}</h2>
+        <p>{% trans "Tudo conferido até a data do corte." %}</p>
+    </div>
+    {% if roteiro.concluivel and pode_conciliar %}
+    <form method="post" action="{% url 'fechamento:concluir_corte' %}">
+        {% csrf_token %}
+        <input type="hidden" name="corte" value="{{ roteiro.corte|date:'Y-m-d' }}">
+        <button type="submit" class="btn-sm btn-primary">{% trans "Concluir o corte" %}</button>
+    </form>
+    {% endif %}
+</section>
+{% endif %}
+{% endwith %}
+
+<div class="fech-barra-de-filtro">
+    <nav class="fech-segmento" aria-label="{% trans 'Mostrar' %}">
+        <a href="?corte={{ roteiro.corte|date:'Y-m-d' }}" {% if filtro == 'falta' %}aria-current="true"{% endif %}>{% trans "O que falta" %}</a>
+        <a href="?corte={{ roteiro.corte|date:'Y-m-d' }}&amp;ver=tudo" {% if filtro == 'tudo' %}aria-current="true"{% endif %}>{% trans "Tudo" %}</a>
+    </nav>
+    <ul class="fech-legenda" aria-label="{% trans 'Legenda' %}">
+        {% for estado, rotulo in legenda %}<li><span class="fech-ponto fech-{{ estado }}" aria-hidden="true"></span>{{ rotulo }}</li>{% endfor %}
+    </ul>
+</div>
+
+{% for etapa in roteiro.etapas %}
+<section class="fech-cartao fech-etapa" id="{{ etapa.chave }}" aria-labelledby="fech-etapa-{{ etapa.chave }}">
+    <header class="fech-etapa-topo">
+        <span class="fech-etapa-numero{% if etapa.completa %} completa{% endif %}" aria-hidden="true">{% if etapa.completa %}✓{% else %}{{ etapa.numero }}{% endif %}</span>
+        <div>
+            <h3 id="fech-etapa-{{ etapa.chave }}">{{ etapa.numero }}. {{ etapa.titulo }}</h3>
+            <p>{{ etapa.explicacao }}</p>
+        </div>
+        <span class="fech-etapa-conta">{% blocktrans trimmed with n=etapa.em_dia total=etapa.itens|length %}<b>{{ n }}</b> de {{ total }} em dia{% endblocktrans %}</span>
+    </header>
+    <div class="fech-itens">
+    {% for item in etapa.itens %}
+        {% if filtro == 'tudo' or item.problema %}
+        <details class="fech-item" id="item-{{ item.chave }}" {% if item == roteiro.proximo %}open{% endif %}>
+            <summary>
+                <span class="fech-item-quem"><b>{{ item.titulo }}</b><small>{{ item.subtitulo }}</small></span>
+                <span class="fech-item-fonte">
+                    {% if item.automatico %}<span class="fech-tag">{% trans "automático" %}</span>
+                    {% elif item.fonte %}<span class="fech-tag">{{ item.fonte.rotulo }}</span>{% if item.fonte.formato %}<span class="fech-tag fech-tag-formato">{{ item.fonte.formato }}</span>{% endif %}
+                    {% endif %}
+                    {% if item.externo %}<span class="fech-tag">CRV</span>{% endif %}
+                </span>
+                <span class="fech-item-estado">
+                    <span class="fech-pilula fech-{{ item.estado }}"><span class="fech-sr">{{ item.rotulo_do_estado }}: </span>{{ item.texto }}</span>
+                    {% if item.barra %}<span class="fech-barra dias-{{ item.barra|length }}" aria-hidden="true">{% for m in item.barra %}<span class="{{ m }}"></span>{% endfor %}</span>{% endif %}
+                    {% if item.detalhe %}<small>{{ item.detalhe }}</small>{% endif %}
+                </span>
+            </summary>
+            <div class="fech-item-detalhe">
+                {% if item.pares %}
+                <ul class="fech-pares">
+                    {% for par in item.pares %}
+                    <li>
+                        <span><b>{{ par.a.account.institution.institution_name }} / {{ par.a.account.account_name }}</b> · {{ par.a.amount|money:par.a.account.currency }}</span>
+                        <span>{{ par.a.statement_date|udate }} — {{ par.a.description }}</span>
+                        <span>{{ par.b.statement_date|udate }} — {{ par.b.description }}</span>
+                        {% if pode_conciliar %}
+                        <form method="post" action="{% url 'fechamento:descartar_duplicata' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="par" value="{{ par.chave }}">
+                            <input type="hidden" name="corte" value="{{ roteiro.corte|date:'Y-m-d' }}">
+                            <button type="submit" class="btn-sm btn-ghost">{% trans "Não é duplicata" %}</button>
+                        </form>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="help-text">{% trans "Se for duplicata, desfaça a conciliação da linha a mais (ou ignore-a) na Conciliação." %}</p>
+                {% endif %}
+                {% if item.passos or item.acao %}
+                <div class="fech-guia">
+                    <h4>{% trans "Como fazer" %}</h4>
+                    {% if item.fonte %}
+                    <p class="fech-guia-fatos">
+                        {% if item.fonte.formato %}<span>{% trans "Formato" %} <b>{{ item.fonte.formato }}</b></span>{% endif %}
+                        <span>{% trans "Frequência" %} <b>{{ item.fonte.rotulo_da_frequencia }}</b></span>
+                    </p>
+                    {% endif %}
+                    {% if item.passos %}<ol>{% for passo in item.passos %}<li>{{ passo }}</li>{% endfor %}</ol>{% endif %}
+                    {% if item.url %}<p><a class="btn-sm btn-primary" href="{{ item.url }}"{% if item.externo %} target="_blank" rel="noopener"{% endif %}>{{ item.acao|default:_("Abrir") }}</a></p>{% endif %}
+                </div>
+                {% elif not item.pares %}
+                <p class="fech-nada">{% trans "Nada a fazer neste corte." %}</p>
+                {% endif %}
+            </div>
+        </details>
+        {% endif %}
+    {% empty %}
+        <p class="fech-nada">{% trans "Nenhum item nesta etapa." %}</p>
+    {% endfor %}
+    {% if filtro == 'falta' and etapa.completa and etapa.itens %}
+        <p class="fech-nada fech-ok">{% trans "Tudo em dia nesta etapa." %}</p>
+    {% endif %}
+    </div>
+</section>
+{% endfor %}
+
+<section class="fech-cartao fech-coleta" id="coleta" aria-labelledby="fech-coleta-titulo">
+    <h3 id="fech-coleta-titulo">{% trans "Coleta do myProfit" %}</h3>
+    {% if pode_conciliar %}
+    {% if plano %}
+    <p>{% blocktrans trimmed with de=plano.pacote.de|udate ate=plano.pacote.ate|udate %}Pacote de {{ de }} a {{ ate }}.{% endblocktrans %}
+       {% if plano.ja_aplicada %}<strong>{% trans "Este pacote já foi aplicado: gravar de novo só confere." %}</strong>{% endif %}</p>
+    <div class="table-container">
+    <table class="tx-table">
+        <thead><tr><th>{% trans "Conta" %}</th><th>{% trans "Data" %}</th><th>{% trans "myProfit" %}</th><th>{% trans "CB" %}</th><th>{% trans "Diferença" %}</th><th>{% trans "O que acontece" %}</th></tr></thead>
+        <tbody>
+        {% for linha in plano.linhas %}
+            <tr>
+                <td>{{ linha.titulo }}</td>
+                <td>{{ linha.data|udate }}</td>
+                <td class="amount">{{ linha.valor|money:linha.conta.currency }}</td>
+                <td class="amount">{{ linha.saldo_no_cb|money:linha.conta.currency }}</td>
+                <td class="amount {{ linha.diferenca|amount_class }}">{{ linha.diferenca|money_signed:linha.conta.currency }}</td>
+                <td>{% if linha.acao == 'lancar' %}{% if linha.rendimento %}{% blocktrans trimmed with r=linha.rendimento|money:linha.conta.currency %}Lança {{ r }} de proventos e o resto como investimentos{% endblocktrans %}{% elif linha.destino == 'marcacao' %}{% trans "Lança como marcação a mercado" %}{% else %}{% trans "Lança como investimentos" %}{% endif %}
+                    {% elif linha.acao == 'conferir' %}{% trans "Já bate: só registra como conferido" %}
+                    {% else %}{% blocktrans trimmed with m=linha.motivo %}Não entra: {{ m }}{% endblocktrans %}{% endif %}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="empty-state">{% trans "Nenhuma conta do CB usa este pacote. Defina em Fontes as contas que vêm do myProfit." %}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <p>{% blocktrans trimmed count n=plano.remessas_conferidas %}{{ n }} remessa de câmbio confere com o CB.{% plural %}{{ n }} remessas de câmbio conferem com o CB.{% endblocktrans %}</p>
+    {% if plano.pendencias %}
+    <ul class="fech-pendencias">{% for p in plano.pendencias %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% endif %}
+    <div class="fech-coleta-acoes">
+        <form method="post" action="{% url 'fechamento:coleta' %}">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="gravar">
+            <input type="hidden" name="corte" value="{{ roteiro.corte|date:'Y-m-d' }}">
+            <button type="submit" class="btn-sm btn-primary">{% trans "Gravar" %}</button>
+        </form>
+        <form method="post" action="{% url 'fechamento:coleta' %}">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="descartar">
+            <input type="hidden" name="corte" value="{{ roteiro.corte|date:'Y-m-d' }}">
+            <button type="submit" class="btn-sm btn-ghost">{% trans "Descartar" %}</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="help-text">{% trans "Envie o pacote .json que a coleta gerou. Primeiro vem a prévia; nada é gravado sem confirmar." %}</p>
+    <form method="post" action="{% url 'fechamento:coleta' %}" enctype="multipart/form-data" class="top-filter-row">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="previa">
+        <input type="hidden" name="corte" value="{{ roteiro.corte|date:'Y-m-d' }}">
+        <label for="fech-pacote">{% trans "Pacote da coleta" %}
+            <input type="file" id="fech-pacote" name="pacote" accept=".json,application/json" required>
+        </label>
+        <button type="submit" class="btn-sm btn-primary">{% trans "Ver a prévia" %}</button>
+    </form>
+    {% endif %}
+    {% else %}
+    <p class="help-text">{% trans "Aplicar a coleta exige a permissão de conciliar." %}</p>
+    {% endif %}
+</section>
+{% endblock %}

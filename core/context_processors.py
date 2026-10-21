@@ -106,6 +106,13 @@ def _build_menu_items() -> list[MenuItem]:
                             "/banking/status/",
                             required_permission="banking.view",
                         ),
+                        MenuItem(
+                            gettext("Roteiro de fechamento"),
+                            "/banking/closing/",
+                            "\U0001F9ED",
+                            "/banking/closing/",
+                            required_permission="banking.view",
+                        ),
                     ),
                 ),
                 MenuItem(

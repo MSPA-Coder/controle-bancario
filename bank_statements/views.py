@@ -445,11 +445,19 @@ def atualizar_saldo_view(request):
                     destino=request.POST.get('destino'),
                     motivo=request.POST.get('motivo', ''),
                     audit_context=audit_request_context(request),
+                    origem=request.POST.get('origem', ''),
                 )
                 messages.success(request, gettext("Diferença lançada: %(descricao)s (%(valor)s).") % {
                     "descricao": lancamento.description,
                     "valor": lancamento.entry_amount,
                 })
+                return redirect('bank_statements:atualizar_saldo')
+            if request.POST.get('acao') == 'confirmar':
+                saldo.confirmar(
+                    request.user, account_id=request.POST.get('conta'), data=data,
+                    saldo_informado=request.POST.get('saldo'), origem=request.POST.get('origem', ''),
+                )
+                messages.success(request, gettext("Saldo conferido: já batia com o do CB, nada foi lançado."))
                 return redirect('bank_statements:atualizar_saldo')
             previa = saldo.previa(
                 request.user, account_id=request.POST.get('conta'), data=data,
@@ -465,7 +473,9 @@ def atualizar_saldo_view(request):
         "contas": contas,
         "data": data,
         "previa": previa,
-        "escolhas": request.POST if request.method == 'POST' else {},
+        # O roteiro de fechamento abre esta tela com a conta e a data já escolhidas.
+        "escolhas": request.POST if request.method == 'POST' else request.GET,
+        "origens": saldo.ORIGENS_DO_SALDO,
         "assuncoes": saldo.assuncoes(request.user),
         "atualizacoes": saldo.atualizacoes(request.user),
         "categoria_de_ajuste": saldo.CATEGORIA_DE_AJUSTE,

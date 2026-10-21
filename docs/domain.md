@@ -502,6 +502,16 @@ A tela lista todas as atualizações de saldo lançadas (a descrição começa p
 "Atualização de saldo"), com o destino de cada uma; as assunções aparecem
 marcadas.
 
+Dois destinos valem nos dois sentidos: *Marcação a mercado* (Tesouro e renda
+fixa, que sobem e descem com o preço; categoria "Rendimentos") e *Investimentos*
+(o caixa de uma corretora que virou ativo ou voltou dele; categoria de
+movimentação "Operações em Bolsa", que não é gasto nem renda). Todo saldo
+informado fica registrado por conta e dia (`fechamento.SaldoConferido`), com a
+origem (print, myProfit, digitado) e o lançamento da diferença, se houve. Saldo
+que já bate pode ser **registrado como conferido**, sem lançamento. Informar de
+novo o mesmo dia não duplica: o saldo do CB já inclui a primeira diferença, e só
+um valor novo lança uma diferença nova.
+
 ### Aplicação movimentada por conta corrente
 
 Cofrinho, CDB, Caixinha, Rende Fácil e Tesouro Direto não têm extrato: o
@@ -571,6 +581,78 @@ Comprovantes são arquivos distintos do registro relacional. O sistema valida
 tamanho, extensão e assinatura, grava o arquivo sob `MEDIA_ROOT/attachments` e
 mantém seus metadados no PostgreSQL. Downloads passam novamente pelo controle
 de acesso ao lançamento.
+
+## Roteiro de fechamento
+
+Movimentação › Importação › Roteiro de fechamento (`/banking/closing/`,
+`fechamento/`) diz, conta a conta, o que falta para conferir tudo até uma **data
+de corte**: o dia 10, o 25, o último dia do mês, hoje ou outra. O corte não trava
+nada e pode se repetir quantas vezes for preciso no mês; a trava continua sendo o
+fechamento mensal, que o roteiro só sugere no corte do último dia. Concluir um
+corte (tudo em dia e a data já passada) só o registra, para o histórico da aba
+Cortes.
+
+**Fonte de cada conta** (aba Fontes, `FonteDaConta`): extrato em arquivo, fatura,
+print de saldo, myProfit ou "ainda não tenho", com o formato, a frequência (a
+cada corte ou só no fim do mês) e onde obter. A conta sem cadastro tem a fonte
+deduzida (`fechamento/fontes.py`): cartão é fatura; aplicação com "Tesouro" no
+nome vem do myProfit, no fim do mês; outra aplicação é print do fim do mês; conta
+com extrato importado é arquivo, no formato do último; a conta em dólar da Avenue
+vem do myProfit; conta com saldo já informado é print; o resto, "ainda não tenho".
+
+**Etapas e estados.** O extrato de hoje quase nunca existe, então a cobertura
+exigida vai até a véspera do corte; o saldo de print vale até hoje. Corte no
+futuro cobra só até hoje.
+
+1. *Extratos e faturas*: o extrato cobre até a véspera e nada ficou por conciliar;
+   no cartão, a fatura que fechou até o corte foi importada.
+2. *Saldos sem extrato*: o saldo do corte foi informado (ou o do fim do mês
+   anterior, para quem é conferido só no fim do mês). A aplicação com conta de
+   movimento espera o extrato dela, como em Saldo Aplicações. Aplicação zerada e
+   sem movimento está em dia; conta sem fonte e sem nada a conferir não se aplica.
+3. *myProfit*: a coleta chegou até o corte e as contas que dependem dela têm o
+   saldo lançado; mais o que o CRV diz de si (abaixo).
+4. *Conferências*: possíveis duplicatas, o saldo do último arquivo de cada conta
+   contra o do CB, o que a coleta não resolveu e as conferências do CRV.
+5. *Fechar o mês*: no corte do último dia, com o resto em dia.
+
+Cada item tem um estado (em dia, falta fazer, pede decisão, espera outro passo,
+sem fonte, não se aplica) e, quando há o que fazer, o formato, o período a pedir
+ao banco e o link para onde se resolve. O **próximo passo** é o primeiro item a
+fazer, na ordem das etapas.
+
+**Reimportar é seguro.** Linha de extrato repetida é reconhecida pelo hash (ver
+"Extratos, conciliação e comprovantes"); saldo informado de novo para o mesmo dia
+só lança uma diferença nova; a coleta reaplicada só confere. O que escapa é a mesma
+transação com outra cara na segunda exportação: **possível duplicata** é o par de
+linhas da mesma conta e valor, até dois dias de distância, com descrições e lotes
+diferentes (`fechamento/duplicatas.py`). O par que não é duplicata é descartado e
+não volta.
+
+**Coleta do myProfit** (`fechamento/myprofit.py`, tela e
+`manage.py importar_coleta_myprofit <pacote> --usuario U [--gravar]`). O pacote
+`myprofit-coleta/1` sai de `scripts/myprofit/coletar.js`, no repositório do CRV,
+rodado na aba do myProfit já logada; ele só copia campos de uma lista fixa (nada
+de nome, CPF, e-mail ou telefone). O CB usa a posição por corretora em cada data
+do pacote e as notas de câmbio. Conta com fonte myProfit diz o que é lá
+(`classe_myprofit`: Tesouro, renda fixa EUA ou caixa em dólar) e o nome da
+corretora; a diferença para o saldo do CB segue Saldo Aplicações com origem
+myProfit: Tesouro e renda fixa EUA como marcação a mercado; no caixa em dólar, os
+proventos do período como rendimento e o resto como investimentos. Conta mensal
+só recebe as datas de fim de mês. Fica de fora, como pendência: mês fechado,
+conta de movimento sem extrato, posição sem conta no CB e, no caixa em dólar, a
+data com remessa de câmbio que ainda não está no CB (sem ela, a remessa viraria
+"investimentos"). A remessa confere com uma entrada na conta em dólar até quatro
+dias e US$ 1,00 de distância.
+
+**O CRV no roteiro** (`fechamento/crv.py`). O CRV publica
+`GET /fechamento/status?ate=AAAA-MM-DD` (contrato `crv-fechamento/1`): itens já
+avaliados por ele, com etapa, estado e texto. O CB os lê pela rede interna do VPS
+(`CRV_FECHAMENTO_URL`), autenticado pelo token do vínculo CB ↔ CRV
+(`PATRIMONIO_INTEGRATION_TOKEN` daqui, que o CRV conhece como
+`cb_patrimonio_token`), e monta os links com `CRV_PUBLIC_URL`. Sem configuração,
+ou com o CRV fora, o roteiro mostra um item "espera outro passo" com o motivo e o
+resto segue.
 
 ## Projeção de recorrências
 

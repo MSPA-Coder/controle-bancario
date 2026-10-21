@@ -151,7 +151,7 @@ TELAS = [
     "reports:projections_view", "reports:upcoming_movements_view", "reports:account_position_view",
     "reports:annual_planning_view", "management:management_view", "core:permissions",
     "core:settings_home", "core:settings_profile", "core:settings_monthly_close", "core:settings_database",
-    "core:settings_audit_log",
+    "core:settings_audit_log", "fechamento:painel", "fechamento:fontes", "fechamento:cortes",
 ]
 
 

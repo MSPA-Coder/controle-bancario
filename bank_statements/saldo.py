@@ -10,7 +10,16 @@ Destinos da diferença:
 
 - **entrada** (o saldo real é maior que o do CB): *Rendimentos* ou *Ajuste
   assumido*;
-- **saída** (o saldo real é menor): *IR/IOF*, *Perda* ou *Ajuste assumido*.
+- **saída** (o saldo real é menor): *IR/IOF*, *Perda* ou *Ajuste assumido*;
+- **nos dois sentidos**: *Marcação a mercado* (Tesouro e renda fixa, cujo valor
+  sobe e desce com o preço; categoria "Rendimentos") e *Investimentos* (o caixa
+  de uma corretora que foi para ativos ou voltou deles; categoria de
+  movimentação "Operações em Bolsa", que não é gasto nem renda).
+
+Cada saldo informado fica registrado por conta e data (`fechamento.SaldoConferido`),
+com ou sem diferença. Informar de novo o mesmo dia não duplica nada: o saldo do CB
+já inclui a diferença lançada da primeira vez, e o registro só passa a guardar o
+valor mais recente.
 
 *Ajuste assumido* é o "assumo isto para a movimentação bater": exige motivo, usa
 a categoria "Ajustes de Saldo" e aparece na lista de assunções, para nada ficar
@@ -30,6 +39,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Max, Q
 from django.utils.translation import gettext, gettext_lazy, ngettext
 
@@ -42,6 +52,7 @@ from core.domain.finance import (
     STATUS_REALIZED,
     VIEW_REALIZED,
 )
+from fechamento.models import ORIGEM_MANUAL, ORIGENS_DO_SALDO, SaldoConferido
 from reports.services import decimal_balances_before_by_account
 from transactions.models import CashFlowCategory, CashFlowEntry
 from transactions.services import TransactionRequest, create_transaction_batch
@@ -56,6 +67,8 @@ DESTINO_RENDIMENTOS = "rendimentos"
 DESTINO_IR_IOF = "ir_iof"
 DESTINO_PERDA = "perda"
 DESTINO_AJUSTE = "ajuste"
+DESTINO_MARCACAO = "marcacao"
+DESTINO_INVESTIMENTOS = "investimentos"
 
 # destino -> (rótulo, nome da categoria, tipo do lançamento, exige motivo)
 # O nome da categoria é chave de busca no banco: não se traduz.
@@ -64,6 +77,8 @@ DESTINOS = {
     DESTINO_IR_IOF: (gettext_lazy("IR / IOF"), "Impostos e Tributos", ENTRY_TYPE_EXPENSE, False),
     DESTINO_PERDA: (gettext_lazy("Perda"), CATEGORIA_DE_AJUSTE, ENTRY_TYPE_EXPENSE, True),
     DESTINO_AJUSTE: (gettext_lazy("Ajuste assumido"), CATEGORIA_DE_AJUSTE, None, True),
+    DESTINO_MARCACAO: (gettext_lazy("Marcação a mercado"), "Rendimentos", None, False),
+    DESTINO_INVESTIMENTOS: (gettext_lazy("Investimentos (compra ou venda de ativos)"), "Operações em Bolsa", None, False),
 }
 # O que vai para a descrição gravada do lançamento (e que a Situação reconhece):
 # fica em português, como o resto do que é gravado, qualquer que seja o idioma da tela.
@@ -72,6 +87,8 @@ _ROTULO_NA_DESCRICAO = {
     DESTINO_IR_IOF: "ir / iof",
     DESTINO_PERDA: "perda",
     DESTINO_AJUSTE: "ajuste assumido",
+    DESTINO_MARCACAO: "marcação a mercado",
+    DESTINO_INVESTIMENTOS: "investimentos",
 }
 _QUANTO = Decimal("0.01")
 
@@ -83,6 +100,7 @@ class Previa:
     saldo_informado: Decimal
     saldo_no_cb: Decimal
     pendencia: str = ""
+    ja_conferido: SaldoConferido | None = None
 
     @property
     def diferenca(self) -> Decimal:
@@ -168,7 +186,30 @@ def previa(user, *, account_id, data: date, saldo_informado) -> Previa:
     return Previa(
         conta=conta, data=data, saldo_informado=informado, saldo_no_cb=saldos.get(conta.id, Decimal("0.00")),
         pendencia=pendencia_da_movimentacao(conta, data),
+        ja_conferido=SaldoConferido.objects.filter(account=conta, data=data).first(),
     )
+
+
+def _registrar(user, conta: FinancialAccount, data: date, valor: Decimal, origem: str, lancamento=None) -> SaldoConferido:
+    """Um registro por conta e data: o saldo mais recente informado para aquele dia."""
+    if origem not in dict(ORIGENS_DO_SALDO):
+        origem = ORIGEM_MANUAL
+    defaults = {"valor": valor, "origem": origem, "created_by": user}
+    if lancamento is not None:
+        defaults["lancamento"] = lancamento
+    registro, _ = SaldoConferido.objects.update_or_create(account=conta, data=data, defaults=defaults)
+    return registro
+
+
+def confirmar(user, *, account_id, data: date, saldo_informado, origem: str = ORIGEM_MANUAL) -> SaldoConferido:
+    """Registra um saldo que já bate com o do CB: a conferência fica, sem lançamento."""
+    atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado)
+    conta = _conta(user, account_id, "create")
+    if atual.pendencia:
+        raise ValueError(atual.pendencia)
+    if atual.tipo is not None:
+        raise ValueError(gettext("O saldo informado não bate com o do CB: lance a diferença com um destino."))
+    return _registrar(user, conta, data, atual.saldo_informado, origem)
 
 
 def _categoria(nome: str) -> CashFlowCategory:
@@ -180,7 +221,7 @@ def _categoria(nome: str) -> CashFlowCategory:
 
 def aplicar(
     user, *, account_id, data: date, saldo_informado, diferenca_esperada, destino: str, motivo: str = "",
-    audit_context=None,
+    audit_context=None, origem: str = ORIGEM_MANUAL,
 ) -> CashFlowEntry:
     """Lança a diferença como um lançamento realizado na data do saldo.
 
@@ -208,22 +249,25 @@ def aplicar(
     if motivo:
         descricao = f"{descricao} ({motivo})"
     valor = abs(atual.diferenca)
-    return create_transaction_batch(
-        TransactionRequest(
-            account_id=conta.id,
-            category_id=_categoria(nome_da_categoria).id,
-            entry_type=atual.tipo,
-            description=descricao,
-            entry_amount=valor,
-            installments=1,
-            due_date=data,
-            status=STATUS_REALIZED,
-            realized_date=data,
-            realized_amount=valor,
-        ),
-        audit_context=audit_context,
-        user=user,
-    )[0]
+    with transaction.atomic():
+        lancamento = create_transaction_batch(
+            TransactionRequest(
+                account_id=conta.id,
+                category_id=_categoria(nome_da_categoria).id,
+                entry_type=atual.tipo,
+                description=descricao,
+                entry_amount=valor,
+                installments=1,
+                due_date=data,
+                status=STATUS_REALIZED,
+                realized_date=data,
+                realized_amount=valor,
+            ),
+            audit_context=audit_context,
+            user=user,
+        )[0]
+        _registrar(user, conta, data, atual.saldo_informado, origem, lancamento)
+    return lancamento
 
 
 def atualizacoes(user, limit: int = 200) -> list[CashFlowEntry]:

@@ -133,6 +133,13 @@ urls -> views -> services -> models -> PostgreSQL
   e `investimentos.py` (parser puro) e `investimentos_preenchimento.py` leem o
   ativo e o tipo de renda do texto da corretora (ver "Dado de investimento no
   lançamento");
+- `fechamento/`: o Roteiro de fechamento (Movimentação › Importação). `fontes.py`
+  diz de onde vem o dado de cada conta (cadastro ou dedução), `roteiro.py` avalia
+  cada fonte contra uma data de corte e monta as etapas e o próximo passo,
+  `myprofit.py` aplica a coleta do myProfit (saldos e remessas) pelo caminho de
+  Saldo Aplicações, `duplicatas.py` procura a mesma transação importada duas
+  vezes e `crv.py` lê o status do CRV pela rede interna. Regras em
+  `docs/domain.md`, "Roteiro de fechamento";
 - `management/`: tags, projetos e orçamentos;
 - `reports/` e `dashboard/`: consultas e apresentação analítica;
 - `core/`: configuração da aplicação, auditoria, segurança e serviços comuns;

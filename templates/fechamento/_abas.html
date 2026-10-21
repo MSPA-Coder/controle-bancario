@@ -1,0 +1,6 @@
+{% load i18n %}
+<nav class="fech-abas" aria-label="{% trans 'Seções do fechamento' %}">
+    <a href="{% url 'fechamento:painel' %}" {% if aba == 'roteiro' %}aria-current="page"{% endif %}>{% trans "Roteiro" %}</a>
+    <a href="{% url 'fechamento:fontes' %}" {% if aba == 'fontes' %}aria-current="page"{% endif %}>{% trans "Fontes" %}</a>
+    <a href="{% url 'fechamento:cortes' %}" {% if aba == 'cortes' %}aria-current="page"{% endif %}>{% trans "Cortes" %}</a>
+</nav>

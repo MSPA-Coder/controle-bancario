@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 16:32-0300\n"
+"POT-Creation-Date: 2026-10-20 23:36-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1254,11 +1254,19 @@ msgstr "Loss"
 msgid "Ajuste assumido"
 msgstr "Adjustment accepted"
 
+#: bank_statements/saldo.py
+msgid "Marcação a mercado"
+msgstr "Mark to market"
+
+#: bank_statements/saldo.py
+msgid "Investimentos (compra ou venda de ativos)"
+msgstr "Investments (buying or selling assets)"
+
 #: bank_statements/saldo.py bank_statements/services.py
 msgid "Conta não encontrada."
 msgstr "Account not found."
 
-#: bank_statements/saldo.py
+#: bank_statements/saldo.py fechamento/views.py
 msgid "Acesso negado: você não tem permissão para acessar esta conta."
 msgstr "Access denied: you do not have permission to access this account."
 
@@ -1291,6 +1299,10 @@ msgid "Saldo"
 msgstr "Balance"
 
 #: bank_statements/saldo.py
+msgid "O saldo informado não bate com o do CB: lance a diferença com um destino."
+msgstr "The balance entered does not match the CB balance: post the difference with a destination."
+
+#: bank_statements/saldo.py
 #, python-format
 msgid "Cadastre a categoria “%(nome)s” antes de lançar esta diferença."
 msgstr "Create the category “%(nome)s” before adding this difference."
@@ -1304,7 +1316,7 @@ msgstr "Choose where the difference goes."
 msgid "“%(rotulo)s” exige um motivo."
 msgstr "“%(rotulo)s” requires a reason."
 
-#: bank_statements/saldo.py
+#: bank_statements/saldo.py templates/fechamento/painel.html
 #: templates/management/partials/management_content.html
 msgid "Diferença"
 msgstr "Difference"
@@ -1510,6 +1522,10 @@ msgid "Diferença lançada: %(descricao)s (%(valor)s)."
 msgstr "Difference entered: %(descricao)s (%(valor)s)."
 
 #: bank_statements/views.py
+msgid "Saldo conferido: já batia com o do CB, nada foi lançado."
+msgstr "Balance checked: it already matched the CB balance, nothing was posted."
+
+#: bank_statements/views.py
 #, python-format
 msgid "Linha conciliada; realização corrigida pelo extrato (%(correcao)s)."
 msgstr "Line reconciled; settlement corrected by the statement (%(correcao)s)."
@@ -1615,8 +1631,8 @@ msgstr "Statement line marked as skipped."
 msgid "Banco"
 msgstr "Bank"
 
-#: banking/models.py templates/tables/_institutions_table.html
-#: templates/tables/banks.html
+#: banking/models.py templates/fechamento/fontes.html
+#: templates/tables/_institutions_table.html templates/tables/banks.html
 msgid "Corretora"
 msgstr "Brokerage"
 
@@ -1882,6 +1898,11 @@ msgstr "Card statements and projections"
 msgid "Situação das contas"
 msgstr "Account status"
 
+#: core/context_processors.py templates/fechamento/cortes.html
+#: templates/fechamento/fontes.html templates/fechamento/painel.html
+msgid "Roteiro de fechamento"
+msgstr "Closing checklist"
+
 #: core/context_processors.py templates/banking/reclassificacao.html
 msgid "Reclassificação"
 msgstr "Reclassification"
@@ -2040,6 +2061,7 @@ msgstr "All modes"
 #: templates/banking/pending_imports_confirm.html
 #: templates/banking/reclassificacao.html
 #: templates/banking/situacao_das_contas.html templates/dashboard/index.html
+#: templates/fechamento/fontes.html templates/fechamento/painel.html
 #: templates/management/index.html
 #: templates/management/partials/management_content.html
 #: templates/reports/partials/account_position_content.html
@@ -2198,6 +2220,7 @@ msgid "Nenhuma otimização registrada"
 msgstr "No optimization recorded"
 
 #: core/textos_js.py templates/banking/pending_imports_confirm.html
+#: templates/fechamento/fontes.html
 #: templates/management/partials/management_content.html
 #: templates/transactions/index.html
 msgid "Confirmar"
@@ -2590,6 +2613,617 @@ msgstr "Declining cash generation"
 #: dashboard/views.py
 msgid "Estabilidade"
 msgstr "Stability"
+
+#: fechamento/crv.py
+msgid "CRV não configurado neste ambiente."
+msgstr "CRV is not configured in this environment."
+
+#: fechamento/crv.py
+msgid "Falta o token do vínculo com o CRV."
+msgstr "The CRV link token is missing."
+
+#: fechamento/crv.py
+#, python-format
+msgid "O CRV recusou a consulta (HTTP %(codigo)s)."
+msgstr "CRV refused the request (HTTP %(codigo)s)."
+
+#: fechamento/crv.py
+msgid "O CRV não respondeu."
+msgstr "CRV did not respond."
+
+#: fechamento/crv.py
+msgid "O CRV respondeu num formato que este CB não conhece."
+msgstr "CRV responded in a format this CB does not recognize."
+
+#: fechamento/duplicatas.py
+msgid "Par de linhas inválido."
+msgstr "Invalid pair of lines."
+
+#: fechamento/fontes.py fechamento/roteiro.py
+msgid "fatura"
+msgstr "card statement"
+
+#: fechamento/fontes.py
+msgid "Posição do myProfit"
+msgstr "myProfit position"
+
+#: fechamento/fontes.py
+msgid "Print do app"
+msgstr "App screenshot"
+
+#: fechamento/fontes.py
+msgid "Escolha a fonte."
+msgstr "Choose the source."
+
+#: fechamento/fontes.py
+msgid "Escolha a frequência."
+msgstr "Choose the frequency."
+
+#: fechamento/fontes.py
+msgid "Conta que vem do myProfit precisa dizer o que ela é lá: Tesouro, renda fixa EUA ou caixa em dólar."
+msgstr "An account that comes from myProfit must say what it is there: Treasury, US fixed income or dollar cash."
+
+#: fechamento/fontes.py
+msgid "Cartão de crédito só entra por fatura."
+msgstr "A credit card only comes in through its card statement."
+
+#: fechamento/models.py
+msgid "Extrato em arquivo"
+msgstr "Statement file"
+
+#: fechamento/models.py templates/banking/fatura.html
+msgid "Fatura do cartão"
+msgstr "Card statement"
+
+#: fechamento/models.py
+msgid "Print de saldo"
+msgstr "Balance screenshot"
+
+#: fechamento/models.py fechamento/roteiro.py templates/fechamento/painel.html
+msgid "myProfit"
+msgstr "myProfit"
+
+#: fechamento/models.py
+msgid "Ainda não tenho"
+msgstr "Not available yet"
+
+#: fechamento/models.py
+msgid "A cada corte"
+msgstr "Every cutoff"
+
+#: fechamento/models.py fechamento/roteiro.py
+msgid "Só no fim do mês"
+msgstr "Only at month end"
+
+#: fechamento/models.py
+msgid "Tesouro Direto"
+msgstr "Tesouro Direto"
+
+#: fechamento/models.py
+msgid "Renda fixa EUA"
+msgstr "US fixed income"
+
+#: fechamento/models.py
+msgid "Caixa em dólar"
+msgstr "Dollar cash"
+
+#: fechamento/models.py
+msgid "Print"
+msgstr "Screenshot"
+
+#: fechamento/models.py
+msgid "Digitado"
+msgstr "Typed"
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "Data inválida em %(campo)s."
+msgstr "Invalid date in %(campo)s."
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "Número inválido em %(campo)s."
+msgstr "Invalid number in %(campo)s."
+
+#: fechamento/myprofit.py
+msgid "Envie o pacote .json da coleta."
+msgstr "Send the collection .json package."
+
+#: fechamento/myprofit.py
+msgid "O pacote passa de 2 MB."
+msgstr "The package is larger than 2 MB."
+
+#: fechamento/myprofit.py
+msgid "O arquivo não é um pacote JSON da coleta do myProfit."
+msgstr "The file is not a myProfit collection JSON package."
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "O arquivo não é um pacote %(formato)s."
+msgstr "The file is not a %(formato)s package."
+
+#: fechamento/myprofit.py
+msgid "O período do pacote é inválido."
+msgstr "The package period is invalid."
+
+#: fechamento/myprofit.py
+msgid "As posições do pacote estão num formato inválido."
+msgstr "The package positions are in an invalid format."
+
+#: fechamento/myprofit.py
+msgid "O pacote traz posição depois da data da coleta."
+msgstr "The package has a position after the collection date."
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "Remessa de %(dia)s (%(usd)s) não está em %(conta)s"
+msgstr "Remittance of %(dia)s (%(usd)s) is not in %(conta)s"
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "%(classe)s na %(corretora)s (%(valor)s) sem conta no CB"
+msgstr "%(classe)s at %(corretora)s (%(valor)s) has no account in the CB"
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "%(conta)s está em %(moeda)s, mas o myProfit a mede em %(esperada)s"
+msgstr "%(conta)s is in %(moeda)s, but myProfit measures it in %(esperada)s"
+
+#: fechamento/myprofit.py
+msgid "mês fechado"
+msgstr "month closed"
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "remessa de %(dia)s ainda não está no CB"
+msgstr "remittance of %(dia)s is not in the CB yet"
+
+#: fechamento/myprofit.py
+#, python-format
+msgid "%(conta)s em %(dia)s: %(motivo)s"
+msgstr "%(conta)s on %(dia)s: %(motivo)s"
+
+#: fechamento/roteiro.py
+msgid "Em dia"
+msgstr "Up to date"
+
+#: fechamento/roteiro.py
+msgid "Falta fazer"
+msgstr "To do"
+
+#: fechamento/roteiro.py
+msgid "Pede decisão"
+msgstr "Needs a decision"
+
+#: fechamento/roteiro.py
+msgid "Espera outro passo"
+msgstr "Waiting for another step"
+
+#: fechamento/roteiro.py
+msgid "Sem fonte ou conta"
+msgstr "No source or account"
+
+#: fechamento/roteiro.py
+msgid "Não se aplica neste corte"
+msgstr "Not applicable at this cutoff"
+
+#: fechamento/roteiro.py
+msgid "Em dia até hoje"
+msgstr "Up to date as of today"
+
+#: fechamento/roteiro.py
+msgid "Extratos e faturas"
+msgstr "Statements and card statements"
+
+#: fechamento/roteiro.py
+msgid "Contas com movimento linha a linha. Pode exportar um período maior: o que já foi importado é reconhecido e ignorado."
+msgstr "Accounts with line-by-line activity. You can export a longer period: what was already imported is recognized and skipped."
+
+#: fechamento/roteiro.py
+msgid "Saldos sem extrato"
+msgstr "Balances without a statement"
+
+#: fechamento/roteiro.py
+msgid "Aplicações e contas em que só o saldo entra. O rendimento sai da diferença; a conta de movimento precisa estar em dia antes."
+msgstr "Investments and accounts where only the balance comes in. The yield is the difference; the cash account must be up to date first."
+
+#: fechamento/roteiro.py
+msgid "Uma coleta alimenta o CB (Tesouro, renda fixa EUA, caixa em dólar, câmbio) e o CRV (negócios e posição)."
+msgstr "One collection feeds the CB (Treasury, US fixed income, dollar cash, exchange) and the CRV (trades and position)."
+
+#: fechamento/roteiro.py
+msgid "Conferências"
+msgstr "Checks"
+
+#: fechamento/roteiro.py
+msgid "Rodam sozinhas com o que já foi importado. Aqui aparece o resultado e o que pede decisão sua."
+msgstr "They run on their own with what was already imported. Here you see the result and what needs your decision."
+
+#: fechamento/roteiro.py
+msgid "Fechar o mês"
+msgstr "Close the month"
+
+#: fechamento/roteiro.py
+msgid "Trava o mês nas contas conferidas. Só no corte do último dia; os cortes do meio do mês não travam nada."
+msgstr "Locks the month in the checked accounts. Only at the last-day cutoff; mid-month cutoffs lock nothing."
+
+#: fechamento/roteiro.py
+msgid "extrato do banco"
+msgstr "bank statement"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Falta %(periodo)s"
+msgstr "Missing %(periodo)s"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Importar %(formato)s"
+msgstr "Import %(formato)s"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Onde: %(onde)s."
+msgstr "Where: %(onde)s."
+
+#: fechamento/roteiro.py
+msgid "Exporte o extrato no app ou no site do banco."
+msgstr "Export the statement from the bank app or website."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Período: %(de)s a %(ate)s. Começar uns dias antes é seguro: o que já foi importado é ignorado."
+msgstr "Period: %(de)s to %(ate)s. Starting a few days earlier is safe: what was already imported is skipped."
+
+#: fechamento/roteiro.py
+msgid "Envie o arquivo em Importar extratos e faturas e concilie as linhas novas."
+msgstr "Upload the file in Import statements and card statements and reconcile the new lines."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(n)s linha para conciliar"
+msgid_plural "%(n)s linhas para conciliar"
+msgstr[0] "%(n)s line to reconcile"
+msgstr[1] "%(n)s lines to reconcile"
+
+#: fechamento/roteiro.py
+msgid "Abrir a conciliação"
+msgstr "Open reconciliation"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Em dia até %(dia)s"
+msgstr "Up to date through %(dia)s"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "O corte é %(dia)s; o restante entra depois."
+msgstr "The cutoff is %(dia)s; the rest comes in later."
+
+#: fechamento/roteiro.py
+msgid "Nenhum extrato importado."
+msgstr "No statement imported."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Extrato até %(dia)s."
+msgstr "Statement through %(dia)s."
+
+#: fechamento/roteiro.py
+msgid "Nenhuma fatura até o corte"
+msgstr "No card statement until the cutoff"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Última fatura importada: fechamento em %(dia)s."
+msgstr "Last imported card statement: closed on %(dia)s."
+
+#: fechamento/roteiro.py
+msgid "Nenhuma fatura importada."
+msgstr "No card statement imported."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Falta a fatura que fechou em %(dia)s"
+msgstr "Missing the card statement that closed on %(dia)s"
+
+#: fechamento/roteiro.py
+msgid "Baixe a fatura fechada no app do cartão."
+msgstr "Download the closed card statement from the card app."
+
+#: fechamento/roteiro.py
+msgid "Só fatura fechada: a fatura aberta ainda muda até o fechamento."
+msgstr "Closed card statements only: an open one still changes until it closes."
+
+#: fechamento/roteiro.py
+msgid "Envie o arquivo em Importar extratos e faturas e processe a prévia."
+msgstr "Upload the file in Import statements and card statements and process the preview."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(n)s linha da fatura para processar"
+msgid_plural "%(n)s linhas da fatura para processar"
+msgstr[0] "%(n)s card statement line to process"
+msgstr[1] "%(n)s card statement lines to process"
+
+#: fechamento/roteiro.py
+msgid "Abrir as faturas"
+msgstr "Open card statements"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Fatura de %(dia)s importada"
+msgstr "Card statement of %(dia)s imported"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Último saldo em %(dia)s."
+msgstr "Last balance on %(dia)s."
+
+#: fechamento/roteiro.py
+msgid "Nenhum saldo informado ainda."
+msgstr "No balance entered yet."
+
+#: fechamento/roteiro.py
+msgid "A conta começa depois do corte"
+msgstr "The account starts after the cutoff"
+
+#: fechamento/roteiro.py
+msgid "Sem saldo nem movimento"
+msgstr "No balance and no activity"
+
+#: fechamento/roteiro.py
+msgid "Sem fonte definida, mas também sem nada a conferir."
+msgstr "No source set, but nothing to check either."
+
+#: fechamento/roteiro.py
+msgid "Ainda sem fonte"
+msgstr "No source yet"
+
+#: fechamento/roteiro.py
+msgid "Diga em Fontes de onde vem o saldo desta conta."
+msgstr "Say in Sources where this account's balance comes from."
+
+#: fechamento/roteiro.py
+msgid "Definir a fonte"
+msgstr "Set the source"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Saldo de %(dia)s informado"
+msgstr "Balance of %(dia)s entered"
+
+#: fechamento/roteiro.py
+msgid "Zerada e sem movimento"
+msgstr "Zero balance and no activity"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Depende da coleta do myProfit até %(dia)s"
+msgstr "Depends on the myProfit collection through %(dia)s"
+
+#: fechamento/roteiro.py
+msgid "Espera o extrato da conta de movimento"
+msgstr "Waiting for the cash account statement"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Saldo de %(dia)s ainda não lançado"
+msgstr "Balance of %(dia)s not posted yet"
+
+#: fechamento/roteiro.py
+msgid "Aplicar a coleta do myProfit"
+msgstr "Apply the myProfit collection"
+
+#: fechamento/roteiro.py
+msgid "Reenvie o pacote da coleta: o que já foi lançado é reconhecido e só o que falta entra."
+msgstr "Send the collection package again: what was already posted is recognized and only what is missing comes in."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Informar o saldo de %(dia)s"
+msgstr "Enter the balance of %(dia)s"
+
+#: fechamento/roteiro.py
+msgid "Informar o saldo"
+msgstr "Enter the balance"
+
+#: fechamento/roteiro.py
+msgid "Abra o app e anote o saldo da conta (ou tire um print com a data visível)."
+msgstr "Open the app and note the account balance (or take a screenshot with the date visible)."
+
+#: fechamento/roteiro.py
+msgid "Aplicação: valor líquido para resgate, já sem IR e IOF."
+msgstr "Investment: net redemption value, after income tax and IOF."
+
+#: fechamento/roteiro.py
+msgid "Informar o mesmo dia de novo não duplica: só uma diferença nova vira lançamento."
+msgstr "Entering the same day again does not duplicate anything: only a new difference becomes an entry."
+
+#: fechamento/roteiro.py templates/fechamento/painel.html
+msgid "Coleta do myProfit"
+msgstr "myProfit collection"
+
+#: fechamento/roteiro.py
+msgid "B3 e Avenue"
+msgstr "B3 and Avenue"
+
+#: fechamento/roteiro.py
+msgid "No navegador interno do Claude, com o myProfit logado, o Claude roda a coleta do período (scripts/myprofit/coletar.js)."
+msgstr "In Claude's built-in browser, with myProfit signed in, Claude runs the collection for the period (scripts/myprofit/coletar.js)."
+
+#: fechamento/roteiro.py
+msgid "Sai um pacote .json só com posições, negócios, proventos e remessas: sem nome, CPF ou e-mail."
+msgstr "It produces a .json package with positions, trades, income and remittances only: no name, CPF or e-mail."
+
+#: fechamento/roteiro.py
+msgid "Envie o pacote aqui embaixo. A prévia mostra o que entra; o que já entrou é reconhecido e não se repete."
+msgstr "Upload the package below. The preview shows what comes in; what already came in is recognized and not repeated."
+
+#: fechamento/roteiro.py
+msgid "A parte do CRV (negócios e posição) é importada no CRV, com o mesmo pacote."
+msgstr "The CRV part (trades and position) is imported in the CRV, with the same package."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Coletar %(periodo)s"
+msgstr "Collect %(periodo)s"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Última coleta até %(dia)s."
+msgstr "Last collection through %(dia)s."
+
+#: fechamento/roteiro.py
+msgid "Nenhuma coleta aplicada ainda."
+msgstr "No collection applied yet."
+
+#: fechamento/roteiro.py
+msgid "Coletar no myProfit"
+msgstr "Collect from myProfit"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Coletado até %(dia)s"
+msgstr "Collected through %(dia)s"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Aplicada em %(quando)s."
+msgstr "Applied on %(quando)s."
+
+#: fechamento/roteiro.py
+msgid "Renda variável (CRV)"
+msgstr "Variable income (CRV)"
+
+#: fechamento/roteiro.py
+msgid "Negócios, posição e conferências do CRV ficam de fora até ele responder."
+msgstr "CRV trades, position and checks are left out until it responds."
+
+#: fechamento/roteiro.py
+msgid "Possíveis duplicatas"
+msgstr "Possible duplicates"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(n)s par de linhas parecidas"
+msgid_plural "%(n)s pares de linhas parecidas"
+msgstr[0] "%(n)s pair of similar lines"
+msgstr[1] "%(n)s pairs of similar lines"
+
+#: fechamento/roteiro.py
+msgid "Mesmo valor e conta, até dois dias de distância, descrições e arquivos diferentes."
+msgstr "Same amount and account, up to two days apart, different descriptions and files."
+
+#: fechamento/roteiro.py templates/banking/reclassificacao.html
+msgid "Revisar"
+msgstr "Review"
+
+#: fechamento/roteiro.py
+msgid "Nenhuma no período"
+msgstr "None in the period"
+
+#: fechamento/roteiro.py
+msgid "Saldo do arquivo × saldo do CB"
+msgstr "File balance × CB balance"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(n)s conta não bate"
+msgid_plural "%(n)s contas não batem"
+msgstr[0] "%(n)s account does not match"
+msgstr[1] "%(n)s accounts do not match"
+
+#: fechamento/roteiro.py
+msgid "Abrir os extratos"
+msgstr "Open statements"
+
+#: fechamento/roteiro.py
+msgid "Todos os últimos arquivos conferem"
+msgstr "All latest files match"
+
+#: fechamento/roteiro.py
+msgid "O que a coleta do myProfit não resolveu"
+msgstr "What the myProfit collection did not resolve"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(n)s ponto para decidir"
+msgid_plural "%(n)s pontos para decidir"
+msgstr[0] "%(n)s item to decide"
+msgstr[1] "%(n)s items to decide"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(conta)s em %(dia)s: diferença de %(valor)s"
+msgstr "%(conta)s on %(dia)s: difference of %(valor)s"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Disponível no corte de %(dia)s"
+msgstr "Available at the %(dia)s cutoff"
+
+#: fechamento/roteiro.py
+msgid "Cortes parciais não travam nada."
+msgstr "Partial cutoffs lock nothing."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "%(mes)s fechado"
+msgstr "%(mes)s closed"
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Falta %(n)s item antes de fechar"
+msgid_plural "Faltam %(n)s itens antes de fechar"
+msgstr[0] "%(n)s item left before closing"
+msgstr[1] "%(n)s items left before closing"
+
+#: fechamento/roteiro.py
+msgid "Contas já conferidas podem ser fechadas uma a uma em Fechamento mensal."
+msgstr "Accounts already checked can be closed one by one in Monthly close."
+
+#: fechamento/roteiro.py
+#, python-format
+msgid "Tudo conferido: pode fechar %(mes)s"
+msgstr "Everything checked: you can close %(mes)s"
+
+#: fechamento/roteiro.py
+msgid "Trava o mês nas contas conferidas. Reabrir exige motivo e fica na auditoria."
+msgstr "Locks the month in the checked accounts. Reopening requires a reason and is kept in the audit trail."
+
+#: fechamento/roteiro.py
+msgid "hoje"
+msgstr "today"
+
+#: fechamento/roteiro.py
+msgid "O corte só pode ser concluído com tudo em dia e com a data já passada."
+msgstr "The cutoff can only be completed with everything up to date and once its date has passed."
+
+#: fechamento/views.py
+#, python-format
+msgid "Fonte de %(conta)s gravada. O roteiro já usa o novo cadastro."
+msgstr "Source of %(conta)s saved. The checklist already uses it."
+
+#: fechamento/views.py
+#, python-format
+msgid "Corte de %(dia)s concluído: %(em_dia)s de %(total)s em dia."
+msgstr "Cutoff of %(dia)s completed: %(em_dia)s of %(total)s up to date."
+
+#: fechamento/views.py
+msgid "Envie o pacote de novo: a prévia expirou."
+msgstr "Send the package again: the preview expired."
+
+#: fechamento/views.py
+#, python-format
+msgid "Coleta até %(dia)s aplicada: %(n)s saldo lançado ou conferido."
+msgid_plural "Coleta até %(dia)s aplicada: %(n)s saldos lançados ou conferidos."
+msgstr[0] "Collection through %(dia)s applied: %(n)s balance posted or checked."
+msgstr[1] "Collection through %(dia)s applied: %(n)s balances posted or checked."
+
+#: fechamento/views.py
+msgid "Anotado: o par não é duplicata e não volta a aparecer."
+msgstr "Noted: the pair is not a duplicate and will not show up again."
 
 #: management/services.py
 msgid "Nome da tag é obrigatório."
@@ -2987,7 +3621,7 @@ msgstr "%(iguais)s of %(votos)s"
 #: templates/banking/_import_table.html
 #: templates/banking/_reconciliation_tables.html
 #: templates/banking/atualizar_saldo.html templates/banking/extrato.html
-#: templates/banking/reclassificacao.html
+#: templates/banking/reclassificacao.html templates/fechamento/painel.html
 #: templates/management/partials/management_content.html
 #: templates/reports/partials/upcoming_movements_content.html
 msgid "Data"
@@ -3022,7 +3656,7 @@ msgstr "Installment"
 msgid "Valor"
 msgstr "Amount"
 
-#: templates/banking/_fatura_cabecalho.html
+#: templates/banking/_fatura_cabecalho.html templates/fechamento/painel.html
 msgid "O que acontece"
 msgstr "What happens"
 
@@ -3578,6 +4212,10 @@ msgid "Aplicação: líquido para resgate, já sem IR e IOF."
 msgstr "Investment: net amount on redemption, after income tax and IOF."
 
 #: templates/banking/atualizar_saldo.html
+msgid "De onde veio"
+msgstr "Where it came from"
+
+#: templates/banking/atualizar_saldo.html
 msgid "Comparar"
 msgstr "Compare"
 
@@ -3601,6 +4239,11 @@ msgstr "CB balance"
 #: templates/banking/atualizar_saldo.html
 msgid "diferença"
 msgstr "difference"
+
+#: templates/banking/atualizar_saldo.html
+#, python-format
+msgid "Este dia já tem saldo conferido (%(valor)s). O saldo do CB já inclui o que foi lançado na ocasião: só uma diferença nova vira lançamento, nada se repete."
+msgstr "This day already has a checked balance (%(valor)s). The CB balance already includes what was posted then: only a new difference becomes an entry, nothing is repeated."
 
 #: templates/banking/atualizar_saldo.html
 msgid "Destino da diferença"
@@ -3629,6 +4272,10 @@ msgstr "Post"
 #: templates/banking/atualizar_saldo.html
 msgid "O saldo informado já bate com o do CB."
 msgstr "The entered balance already matches the CB balance."
+
+#: templates/banking/atualizar_saldo.html
+msgid "Registrar como conferido"
+msgstr "Record as checked"
 
 #: templates/banking/atualizar_saldo.html
 msgid "Atualizações de saldo lançadas"
@@ -3761,10 +4408,6 @@ msgstr "Card statements"
 #: templates/banking/fatura.html
 msgid "Movimentação • Fatura do cartão"
 msgstr "Activity • Card statement"
-
-#: templates/banking/fatura.html
-msgid "Fatura do cartão"
-msgstr "Card statement"
 
 #: templates/banking/fatura.html
 #, python-format
@@ -4032,6 +4675,7 @@ msgid "Senha do PDF %(arquivo)s"
 msgstr "Password for PDF %(arquivo)s"
 
 #: templates/banking/pending_imports_confirm.html
+#: templates/fechamento/cortes.html templates/fechamento/painel.html
 msgid "Abrir"
 msgstr "Open"
 
@@ -4186,10 +4830,6 @@ msgid "Nova categoria…"
 msgstr "New category…"
 
 #: templates/banking/reclassificacao.html
-msgid "Revisar"
-msgstr "Review"
-
-#: templates/banking/reclassificacao.html
 msgid "Selecionar todos"
 msgstr "Select all"
 
@@ -4260,7 +4900,7 @@ msgstr "No accounts apply to this month."
 msgid "Escolha o mês do resumo clicando no título da coluna. O mês corrente está em andamento: os extratos costumam sair depois que ele acaba."
 msgstr "Choose the summary month by clicking its column header. The current month is still in progress: statements usually become available after it ends."
 
-#: templates/banking/situacao_das_contas.html
+#: templates/banking/situacao_das_contas.html templates/fechamento/painel.html
 msgid "Legenda"
 msgstr "Legend"
 
@@ -4272,11 +4912,11 @@ msgstr "Summarize"
 msgid "em andamento"
 msgstr "in progress"
 
-#: templates/banking/situacao_das_contas.html
+#: templates/banking/situacao_das_contas.html templates/fechamento/fontes.html
 msgid "cartão"
 msgstr "card"
 
-#: templates/banking/situacao_das_contas.html
+#: templates/banking/situacao_das_contas.html templates/fechamento/fontes.html
 msgid "Nenhuma conta ao seu alcance."
 msgstr "No accounts available to you."
 
@@ -4481,6 +5121,305 @@ msgstr "Institution"
 msgid "Limpar"
 msgstr "Clear"
 
+#: templates/fechamento/_abas.html
+msgid "Seções do fechamento"
+msgstr "Closing sections"
+
+#: templates/fechamento/_abas.html
+msgid "Roteiro"
+msgstr "Checklist"
+
+#: templates/fechamento/_abas.html
+msgid "Fontes"
+msgstr "Sources"
+
+#: templates/fechamento/_abas.html
+msgid "Cortes"
+msgstr "Cutoffs"
+
+#: templates/fechamento/cortes.html
+msgid "Movimentação • Cortes do fechamento"
+msgstr "Activity • Closing cutoffs"
+
+#: templates/fechamento/cortes.html
+msgid "Cada corte é uma conferência até uma data, sem trava. A trava continua sendo o fechamento do mês, no último corte."
+msgstr "Each cutoff is a check up to a date, with no lock. The lock is still the monthly close, at the last cutoff."
+
+#: templates/fechamento/cortes.html
+msgid "Reimportar um período que já passou por um corte é seguro: as linhas que já existem são reconhecidas e ignoradas, e um saldo informado de novo para o mesmo dia só lança uma diferença nova."
+msgstr "Importing again a period that already went through a cutoff is safe: existing lines are recognized and skipped, and a balance entered again for the same day only posts a new difference."
+
+#: templates/fechamento/cortes.html
+msgid "Corte"
+msgstr "Cutoff"
+
+#: templates/fechamento/cortes.html
+msgid "Concluído em"
+msgstr "Completed on"
+
+#: templates/fechamento/cortes.html
+msgid "Itens em dia"
+msgstr "Items up to date"
+
+#: templates/fechamento/cortes.html templates/fechamento/fontes.html
+#: templates/management/partials/management_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/settings/audit_log.html templates/settings/monthly_close.html
+msgid "Ação"
+msgstr "Action"
+
+#: templates/fechamento/cortes.html
+msgid "Nenhum corte concluído ainda. Conclua um no Roteiro quando tudo estiver em dia."
+msgstr "No cutoff completed yet. Complete one in the Checklist when everything is up to date."
+
+#: templates/fechamento/fontes.html
+msgid "Movimentação • Fontes do fechamento"
+msgstr "Activity • Closing sources"
+
+#: templates/fechamento/fontes.html
+msgid "De onde vem o dado de cada conta. O roteiro lê este cadastro para dizer o que falta e em que formato."
+msgstr "Where each account's data comes from. The checklist reads this record to say what is missing and in which format."
+
+#: templates/fechamento/fontes.html
+msgid "Conta sem cadastro mostra a fonte deduzida do que o CB já sabe dela (o último arquivo importado, o tipo de conta), marcada como “deduzida”. Gravar a linha fixa a escolha. “Ainda não tenho” deixa a conta visível como pendência, sem travar as outras. Conta que vem do myProfit diz o que é lá (Tesouro, renda fixa EUA ou caixa em dólar) e o nome da corretora no myProfit."
+msgstr "An account without a record shows the source inferred from what the CB already knows about it (the last imported file, the account type), marked “inferred”. Saving the row fixes the choice. “Not available yet” keeps the account visible as pending without blocking the others. An account that comes from myProfit says what it is there (Treasury, US fixed income or dollar cash) and the broker name in myProfit."
+
+#: templates/fechamento/fontes.html
+msgid "Fonte"
+msgstr "Source"
+
+#: templates/fechamento/fontes.html templates/fechamento/painel.html
+msgid "Formato"
+msgstr "Format"
+
+#: templates/fechamento/fontes.html templates/fechamento/painel.html
+msgid "Frequência"
+msgstr "Frequency"
+
+#: templates/fechamento/fontes.html
+msgid "No myProfit"
+msgstr "In myProfit"
+
+#: templates/fechamento/fontes.html
+msgid "Onde obter"
+msgstr "Where to get it"
+
+#: templates/fechamento/fontes.html
+msgid "deduzida"
+msgstr "inferred"
+
+#: templates/fechamento/fontes.html
+msgid "O que a conta é no myProfit"
+msgstr "What the account is in myProfit"
+
+#: templates/fechamento/fontes.html
+msgid "Corretora no myProfit"
+msgstr "Broker in myProfit"
+
+#: templates/fechamento/fontes.html
+msgid "Ex.: App C6 › Extrato › Exportar OFX"
+msgstr "E.g.: C6 app › Statement › Export OFX"
+
+#: templates/fechamento/fontes.html templates/fechamento/painel.html
+msgid "Gravar"
+msgstr "Save"
+
+#: templates/fechamento/painel.html
+msgid "Movimentação • Roteiro de fechamento"
+msgstr "Activity • Closing checklist"
+
+#: templates/fechamento/painel.html
+msgid "O que falta, conta a conta, para conferir tudo até a data escolhida. Cortes no meio do mês não travam nada; reimportar um período já tratado é seguro."
+msgstr "What is missing, account by account, to check everything up to the chosen date. Mid-month cutoffs lock nothing; importing again a period already handled is safe."
+
+#: templates/fechamento/painel.html
+msgid "Conferir até"
+msgstr "Check up to"
+
+#: templates/fechamento/painel.html
+msgid "Datas de corte"
+msgstr "Cutoff dates"
+
+#: templates/fechamento/painel.html
+msgid "concluído"
+msgstr "completed"
+
+#: templates/fechamento/painel.html
+msgid "fim do mês"
+msgstr "month end"
+
+#: templates/fechamento/painel.html
+msgid "Outra data"
+msgstr "Other date"
+
+#: templates/fechamento/painel.html templates/permissions/index.html
+msgid "Ver"
+msgstr "View"
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "%(p)s%% em dia"
+msgstr "%(p)s%% up to date"
+
+#: templates/fechamento/painel.html
+msgid "em dia"
+msgstr "up to date"
+
+#: templates/fechamento/painel.html
+msgid "para fazer"
+msgstr "to do"
+
+#: templates/fechamento/painel.html
+msgid "esperando outro passo"
+msgstr "waiting for another step"
+
+#: templates/fechamento/painel.html
+msgid "sem fonte ou conta"
+msgstr "no source or account"
+
+#: templates/fechamento/painel.html
+msgid "Próximo passo"
+msgstr "Next step"
+
+#: templates/fechamento/painel.html
+msgid "Ver como fazer"
+msgstr "See how"
+
+#: templates/fechamento/painel.html
+msgid "Nada para fazer agora"
+msgstr "Nothing to do right now"
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "%(n)s item espera dados que ainda não existem."
+msgid_plural "%(n)s itens esperam dados que ainda não existem."
+msgstr[0] "%(n)s item is waiting for data that does not exist yet."
+msgstr[1] "%(n)s items are waiting for data that does not exist yet."
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "Corte de %(dia)s em dia"
+msgstr "Cutoff of %(dia)s up to date"
+
+#: templates/fechamento/painel.html
+msgid "Tudo conferido até a data do corte."
+msgstr "Everything checked up to the cutoff date."
+
+#: templates/fechamento/painel.html
+msgid "Concluir o corte"
+msgstr "Complete the cutoff"
+
+#: templates/fechamento/painel.html
+msgid "Mostrar"
+msgstr "Show"
+
+#: templates/fechamento/painel.html
+msgid "O que falta"
+msgstr "What is missing"
+
+#: templates/fechamento/painel.html
+msgid "Tudo"
+msgstr "Everything"
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "<b>%(n)s</b> de %(total)s em dia"
+msgstr "<b>%(n)s</b> of %(total)s up to date"
+
+#: templates/fechamento/painel.html
+msgid "automático"
+msgstr "automatic"
+
+#: templates/fechamento/painel.html
+msgid "Não é duplicata"
+msgstr "Not a duplicate"
+
+#: templates/fechamento/painel.html
+msgid "Se for duplicata, desfaça a conciliação da linha a mais (ou ignore-a) na Conciliação."
+msgstr "If it is a duplicate, undo the reconciliation of the extra line (or ignore it) in Reconciliation."
+
+#: templates/fechamento/painel.html
+msgid "Como fazer"
+msgstr "How to do it"
+
+#: templates/fechamento/painel.html
+msgid "Nada a fazer neste corte."
+msgstr "Nothing to do at this cutoff."
+
+#: templates/fechamento/painel.html
+msgid "Nenhum item nesta etapa."
+msgstr "No items in this step."
+
+#: templates/fechamento/painel.html
+msgid "Tudo em dia nesta etapa."
+msgstr "Everything is up to date in this step."
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "Pacote de %(de)s a %(ate)s."
+msgstr "Package from %(de)s to %(ate)s."
+
+#: templates/fechamento/painel.html
+msgid "Este pacote já foi aplicado: gravar de novo só confere."
+msgstr "This package was already applied: saving again only checks."
+
+#: templates/fechamento/painel.html
+msgid "CB"
+msgstr "CB"
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "Lança %(r)s de proventos e o resto como investimentos"
+msgstr "Posts %(r)s of income and the rest as investments"
+
+#: templates/fechamento/painel.html
+msgid "Lança como marcação a mercado"
+msgstr "Posts as mark to market"
+
+#: templates/fechamento/painel.html
+msgid "Lança como investimentos"
+msgstr "Posts as investments"
+
+#: templates/fechamento/painel.html
+msgid "Já bate: só registra como conferido"
+msgstr "Already matches: only records it as checked"
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "Não entra: %(m)s"
+msgstr "Not included: %(m)s"
+
+#: templates/fechamento/painel.html
+msgid "Nenhuma conta do CB usa este pacote. Defina em Fontes as contas que vêm do myProfit."
+msgstr "No CB account uses this package. Set in Sources the accounts that come from myProfit."
+
+#: templates/fechamento/painel.html
+#, python-format
+msgid "%(n)s remessa de câmbio confere com o CB."
+msgid_plural "%(n)s remessas de câmbio conferem com o CB."
+msgstr[0] "%(n)s exchange remittance matches the CB."
+msgstr[1] "%(n)s exchange remittances match the CB."
+
+#: templates/fechamento/painel.html
+msgid "Descartar"
+msgstr "Discard"
+
+#: templates/fechamento/painel.html
+msgid "Envie o pacote .json que a coleta gerou. Primeiro vem a prévia; nada é gravado sem confirmar."
+msgstr "Upload the .json package the collection produced. The preview comes first; nothing is saved without confirming."
+
+#: templates/fechamento/painel.html
+msgid "Pacote da coleta"
+msgstr "Collection package"
+
+#: templates/fechamento/painel.html
+msgid "Ver a prévia"
+msgstr "See the preview"
+
+#: templates/fechamento/painel.html
+msgid "Aplicar a coleta exige a permissão de conciliar."
+msgstr "Applying the collection requires the reconcile permission."
+
 #: templates/management/index.html
 msgid "Relatórios • Controle gerencial"
 msgstr "Reports • Management"
@@ -4635,12 +5574,6 @@ msgstr "Items with no links are deleted. Items with history are archived and sto
 #: templates/management/partials/management_content.html
 msgid "Nome / período"
 msgstr "Name / period"
-
-#: templates/management/partials/management_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/settings/audit_log.html templates/settings/monthly_close.html
-msgid "Ação"
-msgstr "Action"
 
 #: templates/management/partials/management_content.html
 msgid "Ativa"
@@ -4926,10 +5859,6 @@ msgstr "Check delete"
 #: templates/permissions/index.html
 msgid "Limpar titulares"
 msgstr "Clear account holders"
-
-#: templates/permissions/index.html
-msgid "Ver"
-msgstr "View"
 
 #: templates/permissions/index.html
 #, python-format

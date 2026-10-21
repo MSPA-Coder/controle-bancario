@@ -63,6 +63,7 @@ def test_movimentacao_na_ordem_pedida_e_sem_o_nivel_banking():
         "Extratos importados",
         "Faturas e projeção",
         "Situação das contas",
+        "Roteiro de fechamento",
     ]
     assert _item(menu, "Movimentação", "Banking") is None
 
@@ -108,4 +109,5 @@ def test_quem_so_consulta_enxerga_o_grupo_importacao_com_as_telas_de_leitura():
         "Extratos importados",
         "Faturas e projeção",
         "Situação das contas",
+        "Roteiro de fechamento",
     ]

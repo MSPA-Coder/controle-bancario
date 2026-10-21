@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'management',
     'reports',
     'dashboard',
+    'fechamento',
     # Third party
     'django_htmx',
 ]

@@ -82,6 +82,7 @@ COPY bank_statements ./bank_statements
 COPY banking ./banking
 COPY core ./core
 COPY dashboard ./dashboard
+COPY fechamento ./fechamento
 COPY financeiro ./financeiro
 COPY management ./management
 COPY reports ./reports
@@ -180,6 +181,7 @@ COPY bank_statements ./bank_statements
 COPY banking ./banking
 COPY core ./core
 COPY dashboard ./dashboard
+COPY fechamento ./fechamento
 COPY financeiro ./financeiro
 COPY management ./management
 COPY reports ./reports

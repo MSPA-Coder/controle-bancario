@@ -1,0 +1,153 @@
+/* Roteiro de fechamento. Cores dos tokens do tema (--primary, --success,
+   --warning, --danger, --card, --text, --muted, --border, --bg-header): os
+   quatro temas e o modo escuro valem aqui sem regra própria. */
+
+.fech-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.fech-abas { display: inline-flex; gap: 4px; padding: 3px; margin-bottom: 1rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+.fech-abas a { padding: 0.35rem 0.85rem; border-radius: var(--radius-sm); color: var(--muted); font-weight: 600; font-size: 0.85rem; text-decoration: none; }
+.fech-abas a[aria-current="page"] { background: var(--primary-light); color: var(--primary); }
+.fech-abas a:hover { color: var(--text); }
+
+.fech-cartao { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 1rem 1.2rem; margin-bottom: 1rem; }
+.fech-cartao h2 { font-size: 1rem; margin: 0; }
+.fech-cartao h3 { font-size: 0.98rem; margin: 0; }
+
+/* Corte */
+.fech-corte { display: grid; gap: 1rem; }
+.fech-corte-topo { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; }
+.fech-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fech-chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 0.25rem 0.75rem; font-size: 0.84rem; font-weight: 600; color: var(--text); text-decoration: none; font-variant-numeric: tabular-nums; }
+.fech-chip small { color: var(--muted); font-weight: 500; }
+.fech-chip[aria-current="true"] { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+.fech-chip[aria-current="true"] small { color: var(--primary); }
+.fech-chip:hover { border-color: var(--primary); text-decoration: none; }
+.fech-chip-ok { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.fech-outra-data { display: inline-flex; gap: 6px; align-items: center; font-size: 0.84rem; color: var(--muted); }
+.fech-outra-data input { padding: 0.2rem 0.4rem; }
+
+.fech-regua { display: grid; gap: 2px; height: 10px; margin-top: 1.4rem; }
+.fech-regua.dias-28 { grid-template-columns: repeat(28, 1fr); }
+.fech-regua.dias-29 { grid-template-columns: repeat(29, 1fr); }
+.fech-regua.dias-30 { grid-template-columns: repeat(30, 1fr); }
+.fech-regua.dias-31 { grid-template-columns: repeat(31, 1fr); }
+.fech-regua-dia { position: relative; border-radius: 2px; background: var(--border); }
+.fech-regua-dia.feito { background: var(--success); opacity: 0.75; }
+.fech-regua-dia.periodo { background: var(--primary); opacity: 0.55; }
+.fech-regua-dia em { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 0.7rem; font-weight: 700; white-space: nowrap; color: var(--muted); }
+.fech-regua-dia.marca-corte em { color: var(--primary); }
+.fech-regua-dia.marca-concluido em { color: var(--success); }
+.fech-regua-dia.marca-hoje em { color: var(--text); }
+.fech-regua-dia[class*="marca-"]::after { content: ""; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; transform: translateX(-50%); background: currentColor; border-radius: 1px; }
+.fech-regua-dia.marca-corte { color: var(--primary); }
+.fech-regua-dia.marca-concluido { color: var(--success); }
+.fech-regua-dia.marca-hoje { color: var(--text); }
+.fech-regua-legenda { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-top: -0.6rem; }
+
+.fech-resumo { display: grid; grid-template-columns: auto 1fr; gap: 1.25rem; align-items: center; }
+.fech-anel { position: relative; width: 84px; height: 84px; }
+.fech-anel svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.fech-anel-fundo { fill: none; stroke: var(--border); stroke-width: 8; }
+.fech-anel-valor { fill: none; stroke: var(--success); stroke-width: 8; stroke-linecap: round; }
+.fech-anel-texto { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fech-anel-texto small { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 600; }
+.fech-numeros { display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; margin: 0; }
+.fech-numeros div { display: flex; flex-direction: column-reverse; }
+.fech-numeros dd { margin: 0; font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fech-numeros dt { font-size: 0.8rem; color: var(--muted); }
+.fech-num-ok dd { color: var(--success); }
+.fech-num-falta dd { color: var(--warning); }
+.fech-num-espera dd { color: var(--muted); }
+.fech-num-sem dd { color: var(--danger); }
+
+/* Próximo passo */
+.fech-proximo { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem 1rem; align-items: center; border-color: var(--primary); background: linear-gradient(0deg, var(--primary-light), var(--primary-light)), var(--card); }
+.fech-proximo p { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.86rem; }
+.fech-proximo h2 { font-size: 1.05rem; margin-top: 0.1rem; }
+.fech-sobretitulo { margin: 0; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--primary) !important; }
+.fech-proximo-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.fech-proximo-ok { border-color: var(--success); background: var(--card); }
+.fech-proximo-ok h2 { color: var(--success); }
+.fech-proximo-vazio { border-color: var(--border); background: var(--card); }
+
+/* Filtro e legenda */
+.fech-barra-de-filtro { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.fech-segmento { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--card); }
+.fech-segmento a { padding: 0.35rem 0.85rem; font-size: 0.85rem; font-weight: 600; color: var(--muted); text-decoration: none; }
+.fech-segmento a + a { border-left: 1px solid var(--border); }
+.fech-segmento a[aria-current="true"] { background: var(--primary-light); color: var(--primary); }
+.fech-legenda { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; margin: 0; padding: 0; list-style: none; font-size: 0.78rem; color: var(--muted); }
+.fech-ponto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; background: currentColor; }
+
+/* Estados: a cor vem do token semântico; o texto do item sempre diz o estado. */
+.fech-em_dia, .fech-depois { color: var(--success); }
+.fech-falta, .fech-pendente { color: var(--warning); }
+.fech-espera, .fech-fora { color: var(--muted); }
+.fech-sem_fonte { color: var(--danger); }
+
+/* Etapas */
+.fech-etapa { padding: 0; overflow: hidden; }
+.fech-etapa-topo { display: grid; grid-template-columns: auto 1fr auto; gap: 0.9rem; align-items: center; padding: 0.85rem 1.1rem; background: var(--bg-header); border-bottom: 1px solid var(--border); }
+.fech-etapa-topo p { margin: 0.1rem 0 0; font-size: 0.8rem; color: var(--muted); }
+.fech-etapa-numero { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 0.85rem; background: var(--primary-light); color: var(--primary); }
+.fech-etapa-numero.completa { color: var(--success); background: var(--card); border: 1px solid var(--success); }
+.fech-etapa-conta { font-size: 0.8rem; color: var(--muted); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fech-etapa-conta b { color: var(--text); }
+
+.fech-item { border-top: 1px solid var(--border); }
+.fech-item:first-child { border-top: 0; }
+.fech-item > summary { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 0.9rem; align-items: center; padding: 0.7rem 1.1rem; cursor: pointer; list-style: none; }
+.fech-item > summary::-webkit-details-marker { display: none; }
+.fech-item > summary:hover { background: var(--bg-header); }
+.fech-item-quem b { display: block; font-weight: 600; }
+.fech-item-quem small, .fech-item-estado small { color: var(--muted); font-size: 0.78rem; }
+.fech-item-fonte { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.fech-tag { font-size: 0.72rem; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 0.45rem; color: var(--muted); white-space: nowrap; }
+.fech-tag-formato { color: var(--text); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.fech-item-estado { display: grid; gap: 5px; min-width: 0; }
+.fech-pilula { justify-self: start; display: inline-flex; gap: 6px; align-items: center; border-radius: 999px; padding: 0.1rem 0.6rem 0.1rem 0.45rem; font-size: 0.78rem; font-weight: 600; background: var(--bg-header); }
+.fech-pilula::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+
+.fech-barra { display: grid; gap: 1px; height: 6px; }
+.fech-barra.dias-28 { grid-template-columns: repeat(28, 1fr); }
+.fech-barra.dias-29 { grid-template-columns: repeat(29, 1fr); }
+.fech-barra.dias-30 { grid-template-columns: repeat(30, 1fr); }
+.fech-barra.dias-31 { grid-template-columns: repeat(31, 1fr); }
+.fech-barra > span { background: var(--border); border-radius: 1px; }
+.fech-barra > span.c { background: var(--success); opacity: 0.8; }
+.fech-barra > span.b { background: var(--success); border-radius: 50%; }
+.fech-barra > span.g { background: repeating-linear-gradient(135deg, var(--warning) 0 2px, transparent 2px 4px); }
+
+.fech-item-detalhe { padding: 0 1.1rem 1rem; display: grid; gap: 0.6rem; }
+.fech-guia { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 0.9rem; background: var(--bg-header); }
+.fech-guia h4 { margin: 0 0 0.4rem; font-size: 0.85rem; }
+.fech-guia ol { margin: 0 0 0.5rem; padding-left: 1.2rem; font-size: 0.85rem; display: grid; gap: 0.2rem; }
+.fech-guia p { margin: 0 0 0.4rem; }
+.fech-guia-fatos { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; font-size: 0.8rem; color: var(--muted); }
+.fech-guia-fatos b { color: var(--text); }
+.fech-nada { margin: 0; padding: 0.7rem 1.1rem; font-size: 0.85rem; color: var(--muted); }
+.fech-ok { color: var(--success); }
+.fech-pares { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.5rem; }
+.fech-pares li { display: grid; gap: 0.15rem; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.84rem; }
+.fech-pares form { margin-top: 0.3rem; }
+
+/* Coleta */
+.fech-coleta { display: grid; gap: 0.75rem; }
+.fech-coleta p { margin: 0; }
+.fech-coleta-acoes { display: flex; gap: 0.5rem; }
+.fech-pendencias { margin: 0; padding-left: 1.2rem; color: var(--warning); font-size: 0.85rem; }
+
+/* Fontes e cortes */
+.fech-tabela-fontes td, .fech-tabela-fontes th { vertical-align: middle; }
+.fech-tabela-fontes select, .fech-tabela-fontes input[type="text"] { max-width: 100%; font-size: 0.82rem; }
+.fech-tabela-fontes .fech-deduzida { font-size: 0.72rem; color: var(--muted); }
+.fech-linha-fonte { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+
+@media (max-width: 760px) {
+    .fech-item > summary { grid-template-columns: 1fr; gap: 0.4rem; }
+    .fech-proximo { grid-template-columns: 1fr; }
+    .fech-resumo { grid-template-columns: 1fr; justify-items: start; }
+    .fech-etapa-topo { grid-template-columns: auto 1fr; }
+    .fech-etapa-conta { grid-column: 2; }
+}
+@media (prefers-reduced-motion: reduce) { .fech-item > summary { transition: none; } }

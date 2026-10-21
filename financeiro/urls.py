@@ -70,6 +70,7 @@ urlpatterns = [
     path('', include('accounts.urls')),
     path('', include('banking.urls')),
     path('', include('bank_statements.urls')),
+    path('', include('fechamento.urls')),
     path('', include('reports.urls')),
     path('', include('management.urls')),
 ]

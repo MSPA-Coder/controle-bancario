@@ -17,6 +17,7 @@ from accounts.models import AccountOwner, AppUser, UserOwnerAccess
 from bank_statements import saldo
 from banking.models import FinancialAccount, FinancialInstitution
 from core.domain.finance import ENTRY_TYPE_EXPENSE, ENTRY_TYPE_INCOME, STATUS_REALIZED
+from fechamento.models import SaldoConferido
 from transactions import services
 from transactions.models import CashFlowCategory
 
@@ -61,7 +62,9 @@ def test_previa_compara_o_saldo_realizado_ate_a_data_inclusive(cenario):
     assert previa.saldo_no_cb == Decimal("150.00")
     assert previa.diferenca == Decimal("10.00")
     assert previa.tipo == ENTRY_TYPE_INCOME
-    assert [chave for chave, _ in previa.destinos] == [saldo.DESTINO_RENDIMENTOS, saldo.DESTINO_AJUSTE]
+    assert [chave for chave, _ in previa.destinos] == [
+        saldo.DESTINO_RENDIMENTOS, saldo.DESTINO_AJUSTE, saldo.DESTINO_MARCACAO, saldo.DESTINO_INVESTIMENTOS,
+    ]
     # No próprio dia do aporte o saldo já o inclui; um dia antes, não.
     assert _previa(user, conta, "150", dia=date(2026, 9, 10)).saldo_no_cb == Decimal("150.00")
     assert _previa(user, conta, "100", dia=date(2026, 9, 9)).saldo_no_cb == Decimal("100.00")
@@ -139,6 +142,58 @@ def test_saldo_que_ja_bate_nao_lanca_nada(cenario):
             user, account_id=conta.id, data=date(2026, 9, 30), saldo_informado="150",
             diferenca_esperada="0", destino=saldo.DESTINO_RENDIMENTOS,
         )
+
+
+def test_saldo_que_ja_bate_fica_registrado_como_conferido(cenario):
+    user, conta, _ = cenario
+    registro = saldo.confirmar(user, account_id=conta.id, data=date(2026, 9, 30), saldo_informado="150,00", origem="print")
+    assert (registro.valor, registro.origem, registro.lancamento) == (Decimal("150.00"), "print", None)
+    assert _previa(user, conta, "150").ja_conferido == registro
+    with pytest.raises(ValueError, match="não bate"):
+        saldo.confirmar(user, account_id=conta.id, data=date(2026, 9, 30), saldo_informado="151")
+
+
+def test_o_mesmo_dia_informado_de_novo_nao_duplica(cenario):
+    """O CB já inclui a primeira diferença: repetir o saldo não lança nada, e
+    só um valor novo lança a diferença nova. O registro guarda o mais recente."""
+    user, conta, _ = cenario
+    dia = date(2026, 9, 30)
+    primeira = saldo.aplicar(
+        user, account_id=conta.id, data=dia, saldo_informado="160", diferenca_esperada="10",
+        destino=saldo.DESTINO_RENDIMENTOS, origem="print",
+    )
+    repetida = _previa(user, conta, "160", dia=dia)
+    assert repetida.diferenca == 0
+    assert repetida.ja_conferido.lancamento == primeira
+    saldo.aplicar(
+        user, account_id=conta.id, data=dia, saldo_informado="165", diferenca_esperada="5",
+        destino=saldo.DESTINO_RENDIMENTOS,
+    )
+    assert SaldoConferido.objects.filter(account=conta, data=dia).count() == 1
+    assert SaldoConferido.objects.get(account=conta, data=dia).valor == Decimal("165.00")
+
+
+@pytest.mark.parametrize(("informado", "tipo"), [("140", ENTRY_TYPE_EXPENSE), ("170", ENTRY_TYPE_INCOME)])
+def test_marcacao_a_mercado_vale_nos_dois_sentidos(cenario, informado, tipo):
+    user, conta, cat = cenario
+    diferenca = Decimal(informado) - Decimal("150")
+    entrada = saldo.aplicar(
+        user, account_id=conta.id, data=date(2026, 9, 30), saldo_informado=informado,
+        diferenca_esperada=str(diferenca), destino=saldo.DESTINO_MARCACAO,
+    )
+    assert (entrada.entry_type, entrada.category, entrada.entry_amount) == (tipo, cat["Rendimentos"], abs(diferenca))
+    assert entrada.description == "Atualização de saldo: marcação a mercado"
+
+
+def test_investimentos_e_movimentacao_na_categoria_de_bolsa(cenario):
+    user, conta, _ = cenario
+    bolsa = CashFlowCategory.objects.create(category_name="Operações em Bolsa")
+    entrada = saldo.aplicar(
+        user, account_id=conta.id, data=date(2026, 9, 30), saldo_informado="20", diferenca_esperada="-130",
+        destino=saldo.DESTINO_INVESTIMENTOS, motivo="compra de ações",
+    )
+    assert (entrada.entry_type, entrada.category) == (ENTRY_TYPE_EXPENSE, bolsa)
+    assert entrada.description == "Atualização de saldo: investimentos (compra de ações)"
 
 
 def test_mes_fechado_recusa_o_lancamento(cenario):

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static i18n regional_filters %}
+
+{% block title %}{% trans "Movimentação • Cortes do fechamento" %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/pages/fechamento.css' %}">
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header-title">
+    <div>
+        <h1>🧭 {% trans "Roteiro de fechamento" %}</h1>
+        <p>{% trans "Cada corte é uma conferência até uma data, sem trava. A trava continua sendo o fechamento do mês, no último corte." %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% include "fechamento/_abas.html" %}
+
+<div class="fech-cartao">
+    <p class="help-text">{% blocktrans trimmed %}Reimportar um período que já passou por um corte é seguro: as linhas que já existem são reconhecidas e ignoradas,
+        e um saldo informado de novo para o mesmo dia só lança uma diferença nova.{% endblocktrans %}</p>
+</div>
+
+<div class="table-container">
+    <table class="tx-table">
+        <thead>
+            <tr><th scope="col">{% trans "Corte" %}</th><th scope="col">{% trans "Concluído em" %}</th><th scope="col">{% trans "Itens em dia" %}</th><th scope="col"><span class="fech-sr">{% trans "Ação" %}</span></th></tr>
+        </thead>
+        <tbody>
+        {% for corte in cortes %}
+            <tr>
+                <td>{{ corte.data|udate }}</td>
+                <td>{{ corte.concluido_em|udatetime }}</td>
+                <td>{{ corte.em_dia }} / {{ corte.total }}</td>
+                <td><a class="btn-sm btn-ghost" href="{% url 'fechamento:painel' %}?corte={{ corte.data|date:'Y-m-d' }}&amp;ver=tudo">{% trans "Abrir" %}</a></td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="4" class="empty-state">{% trans "Nenhum corte concluído ainda. Conclua um no Roteiro quando tudo estiver em dia." %}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
