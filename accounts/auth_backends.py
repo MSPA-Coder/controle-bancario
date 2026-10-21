@@ -7,10 +7,20 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.hashers import check_password, make_password
 from django.http import HttpRequest
 from sharedauth.logs import sanitizar_log
 
 logger = logging.getLogger(__name__)
+
+_HASH_DE_REFERENCIA: list[str] = []
+
+
+def _gastar_o_custo_do_hash(password: str) -> None:
+    """Verifica a senha contra um hash descartável, com o hasher padrão do projeto."""
+    if not _HASH_DE_REFERENCIA:
+        _HASH_DE_REFERENCIA.append(make_password("senha-de-referencia-sem-usuario"))
+    check_password(password, _HASH_DE_REFERENCIA[0])
 
 
 class CaseInsensitiveUsernameBackend(ModelBackend):
@@ -46,10 +56,15 @@ class CaseInsensitiveUsernameBackend(ModelBackend):
         try:
             user = user_model._default_manager.get(username__iexact=username)
         except user_model.DoesNotExist:
+            # Sem isto, "usuário inexistente" responde em centésimos de segundo
+            # e "senha errada" em décimos (o custo do hash): o tempo sozinho
+            # diria quais nomes existem. Gasta-se o mesmo hash nos dois casos.
+            _gastar_o_custo_do_hash(password)
             logger.warning("auth_user_not_found username=%s", sanitizar_log(username))
             return None
 
         if not self.user_can_authenticate(user):
+            _gastar_o_custo_do_hash(password)
             logger.warning("auth_user_inactive username=%s", sanitizar_log(username))
             return None
 

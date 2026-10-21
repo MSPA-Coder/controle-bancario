@@ -19,7 +19,7 @@ from core.account_group_filter import account_group_q
 from core.currency_filter import currency_q
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
-from core.services import audit_request_context
+from core.services import audit_action, audit_request_context
 from core.templatetags.money_filters import balance_signed
 from transactions.models import AccountMonthClose
 
@@ -141,6 +141,13 @@ def process_imports_view(request):
     choices = {upload.id: request.POST.get(f'account_{upload.id}', '') for upload in uploads}
     resultados, erros, lotes = pending_imports.resolve_pending_uploads(request.user, choices)
 
+    for lote in lotes:
+        audit_action(
+            request, 'bank_statement_import', lote.id, 'create',
+            new_values={
+                'account_id': lote.account_id, 'source_filename': lote.source_filename, 'row_count': lote.row_count,
+            },
+        )
     for nome, inserted, skipped in resultados:
         messages.success(request, gettext(
             "%(nome)s: linhas novas %(novas)s, duplicadas ignoradas %(duplicadas)s."
@@ -182,6 +189,11 @@ def undo_import_view(request, batch_id):
     """Desfaz um lote de importação inteiro (lançamento, não fatura de cartão)."""
     try:
         line_count, reconciled_count = reconciliation.undo_statement_import(request.user, batch_id=batch_id)
+        audit_action(
+            request, 'bank_statement_import', batch_id, 'undo',
+            summary=gettext("Importação desfeita: %(linhas)s linhas removidas, %(conciliadas)s conciliações revertidas.")
+            % {"linhas": line_count, "conciliadas": reconciled_count},
+        )
         linhas = ngettext(
             "Importação desfeita: %(n)s linha de extrato removida",
             "Importação desfeita: %(n)s linhas de extrato removidas",
@@ -535,6 +547,10 @@ def reconcile_view(request):
             audit_context=audit_request_context(request),
             autorizar_meses=True,
         )
+        audit_action(
+            request, 'bank_statement_line', line_id, 'reconcile',
+            new_values={'entry_id': request.POST.get('entry_id')},
+        )
         correcao = getattr(linha, "correcao", "")
         if correcao:
             messages.success(request, gettext(
@@ -704,6 +720,11 @@ def bulk_action_lines_view(request):
     elif action == 'ignore':
         ignored, errors = reconciliation.bulk_ignore_lines(request.user, line_ids=line_ids)
         if ignored:
+            audit_action(
+                request, 'bank_statement_line', None, 'ignore',
+                summary=gettext("%(n)s linhas ignoradas em lote.") % {"n": ignored},
+                new_values={'line_ids': [str(valor) for valor in line_ids]},
+            )
             messages.success(request, ngettext(
                 "%(n)s linha ignorada.",
                 "%(n)s linhas ignoradas.",
@@ -731,6 +752,7 @@ def undo_reconciliation_view(request):
     line_id = request.POST.get('line_id')
     try:
         reconciliation.undo_reconciliation(request.user, line_id=line_id)
+        audit_action(request, 'bank_statement_line', line_id, 'undo_reconciliation')
         messages.success(
             request,
             gettext(
@@ -775,6 +797,13 @@ def create_attachment_view(request):
             request.POST.get('entry_id'),
             request.FILES.get('attachment_file'),
         )
+        audit_action(
+            request, 'entry_attachment', attachment.id, 'create',
+            new_values={
+                'entry_id': attachment.entry_id, 'original_filename': attachment.original_filename,
+                'file_size': attachment.file_size,
+            },
+        )
         messages.success(request, gettext("Anexo salvo: %(nome)s.") % {"nome": attachment.original_filename})
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -812,6 +841,7 @@ def delete_attachment_view(request, attachment_id):
     """Exclui o metadado e o arquivo físico de um comprovante autorizado."""
     try:
         delete_entry_attachment(request.user, attachment_id=attachment_id)
+        audit_action(request, 'entry_attachment', attachment_id, 'delete')
         messages.success(request, gettext("Comprovante excluído."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -829,6 +859,7 @@ def ignore_line_view(request):
     line_id = request.POST.get('line_id')
     try:
         reconciliation.ignore_statement_line(request.user, line_id=line_id)
+        audit_action(request, 'bank_statement_line', line_id, 'ignore')
         messages.success(request, gettext("Linha do extrato marcada como ignorada."))
     except ValueError as exc:
         messages.error(request, str(exc))

@@ -1,4 +1,6 @@
 """Views de Cadastros: Titulares (AccountOwner) e sessão de conta."""
+from dataclasses import replace
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
@@ -10,6 +12,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext
 from django.views.decorators.http import require_POST
+from sharedauth.logs import sanitizar_log
 
 from accounts.login_lockout import (
     LoginThrottledError,
@@ -28,7 +31,13 @@ from accounts.services import (
 )
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
-from core.services import request_client_ip
+from core.services import (
+    audit_action,
+    audit_request_context,
+    audit_snapshot,
+    log_audit_event,
+    request_client_ip,
+)
 from core.volta import resposta_de_cadastro
 
 
@@ -54,7 +63,8 @@ def owners_view(request):
 @require_POST
 def create_owner_view(request):
     try:
-        create_owner(request.POST.get('name', ''))
+        owner = create_owner(request.POST.get('name', ''))
+        audit_action(request, 'account_owner', owner.id, 'create', new_values=audit_snapshot(owner, 'name'))
         messages.success(request, gettext("Titular cadastrado."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -68,8 +78,13 @@ def create_owner_view(request):
 @require_POST
 def update_owner_view(request, owner_id):
     owner = get_object_or_404(AccountOwner, id=owner_id)
+    antes = audit_snapshot(owner, 'name')
     try:
         update_owner(request.user, owner, request.POST.get('name', ''))
+        audit_action(
+            request, 'account_owner', owner.id, 'update',
+            old_values=antes, new_values=audit_snapshot(owner, 'name'),
+        )
         messages.success(request, gettext("Titular atualizado."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -83,8 +98,10 @@ def update_owner_view(request, owner_id):
 @require_POST
 def delete_owner_view(request, owner_id):
     owner = get_object_or_404(AccountOwner, id=owner_id)
+    antes = audit_snapshot(owner, 'name')
     try:
         delete_owner(request.user, owner)
+        audit_action(request, 'account_owner', owner_id, 'delete', old_values=antes)
         messages.success(request, gettext("Titular excluído."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -104,6 +121,28 @@ def _safe_next_url(request, default_url: str) -> str:
     return default_url
 
 
+def _auditar_login(request, action: str, result: str, username, *, user=None) -> None:
+    """Registra tentativa, bloqueio e entrada na trilha de auditoria.
+
+    O nome digitado entra no resumo (sem quebra de linha e truncado): numa
+    falha não há usuário autenticado, e é ele que diz de quem foi a tentativa.
+    A senha nunca entra.
+    """
+    nome = sanitizar_log((username or '').strip())[:80]
+    resumos = {
+        'login': gettext("Entrada no sistema."),
+        'failed': gettext("Usuário ou senha inválidos. Usuário informado: %(nome)s.") % {'nome': nome or '-'},
+        'throttled': gettext("Tentativa recusada pelo bloqueio de login. Usuário informado: %(nome)s.") % {'nome': nome or '-'},
+    }
+    contexto = audit_request_context(request)
+    if user is not None:
+        contexto = replace(contexto, user=user)
+    log_audit_event(
+        'auth_login', user.id if user is not None else None, action,
+        request_context=contexto, result=result, summary=resumos[action],
+    )
+
+
 class AppLoginView(LoginView):
     """LoginView padrao com bloqueio de tentativas e desvio para troca obrigatoria de senha."""
 
@@ -114,6 +153,7 @@ class AppLoginView(LoginView):
         try:
             assert_login_not_throttled(request.POST.get('username'), remote_addr)
         except LoginThrottledError as exc:
+            _auditar_login(request, 'throttled', 'failure', request.POST.get('username'))
             messages.error(request, str(exc))
             return self.render_to_response(self.get_context_data())
         return super().post(request, *args, **kwargs)
@@ -122,6 +162,7 @@ class AppLoginView(LoginView):
         clear_login_failures(form.get_user().username, request_client_ip(self.request))
         response = super().form_valid(form)
         user = form.get_user()
+        _auditar_login(self.request, 'login', 'success', user.get_username(), user=user)
         if getattr(user, 'must_change_password', False):
             next_url = self.get_success_url()
             change_url = reverse('accounts:change_password')
@@ -132,6 +173,7 @@ class AppLoginView(LoginView):
         attempts_remaining, wait_seconds = register_failed_login_attempt(
             self.request.POST.get('username'), request_client_ip(self.request)
         )
+        _auditar_login(self.request, 'failed', 'failure', self.request.POST.get('username'))
         messages.error(self.request, failed_login_message(attempts_remaining, wait_seconds))
         return super().form_invalid(form)
 

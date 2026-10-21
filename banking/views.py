@@ -23,6 +23,7 @@ from core.domain.finance import (
 from core.htmx import quer_fragmento
 from core.patrimonio import saldo_da_conta
 from core.permissions import permission_required
+from core.services import audit_action, audit_snapshot
 from core.volta import resposta_de_cadastro
 from reports.services import month_input_value
 from transactions.models import AccountMonthClose
@@ -161,7 +162,11 @@ def institutions_view(request):
 @require_POST
 def create_institution_view(request):
     try:
-        create_institution(request.POST.get('institution_name', ''), request.POST.get('institution_type', ''))
+        institution = create_institution(request.POST.get('institution_name', ''), request.POST.get('institution_type', ''))
+        audit_action(
+            request, 'financial_institution', institution.id, 'create',
+            new_values=audit_snapshot(institution, 'institution_name', 'institution_type'),
+        )
         messages.success(request, gettext("Instituição cadastrada."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -175,12 +180,17 @@ def create_institution_view(request):
 @require_POST
 def update_institution_view(request, institution_id):
     institution = get_object_or_404(FinancialInstitution, id=institution_id)
+    antes = audit_snapshot(institution, 'institution_name', 'institution_type')
     try:
         update_institution(
             institution,
             request.POST.get('institution_name', ''),
             request.POST.get('institution_type', ''),
             user=request.user,
+        )
+        audit_action(
+            request, 'financial_institution', institution.id, 'update',
+            old_values=antes, new_values=audit_snapshot(institution, 'institution_name', 'institution_type'),
         )
         messages.success(request, gettext("Instituição atualizada."))
     except ValueError as exc:
@@ -195,8 +205,10 @@ def update_institution_view(request, institution_id):
 @require_POST
 def delete_institution_view(request, institution_id):
     institution = get_object_or_404(FinancialInstitution, id=institution_id)
+    antes = audit_snapshot(institution, 'institution_name', 'institution_type')
     try:
         delete_institution(institution)
+        audit_action(request, 'financial_institution', institution_id, 'delete', old_values=antes)
         messages.success(request, gettext("Instituição excluída."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -249,6 +261,13 @@ def accounts_view(request):
     return render(request, 'tables/accounts.html', context)
 
 
+def _conta_para_auditoria(account) -> dict:
+    return audit_snapshot(
+        account, 'owner_id', 'institution_id', 'account_name', 'currency', 'account_kind',
+        'purpose', 'initial_balance', 'initial_balance_date', 'statement_identifier',
+    )
+
+
 def _card_fields_from_post(request) -> dict[str, str]:
     return {
         "purpose": request.POST.get("purpose", ""),
@@ -273,7 +292,7 @@ def _owners_for_form(user):
 @require_POST
 def create_account_view(request):
     try:
-        create_account(
+        account = create_account(
             request.user,
             owner_id=request.POST.get('owner_id', ''),
             institution_id=request.POST.get('institution_id', ''),
@@ -284,6 +303,7 @@ def create_account_view(request):
             statement_identifier=request.POST.get('statement_identifier', ''),
             **_card_fields_from_post(request),
         )
+        audit_action(request, 'financial_account', account.id, 'create', new_values=_conta_para_auditoria(account))
         messages.success(request, gettext("Conta cadastrada."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -297,6 +317,7 @@ def create_account_view(request):
 @require_POST
 def update_account_view(request, account_id):
     account = get_object_or_404(FinancialAccount, id=account_id)
+    antes = _conta_para_auditoria(account)
     try:
         update_account(
             request.user,
@@ -315,6 +336,10 @@ def update_account_view(request, account_id):
         from bank_statements.fatura_projetada import atualizar
 
         atualizar(account)
+        audit_action(
+            request, 'financial_account', account.id, 'update',
+            old_values=antes, new_values=_conta_para_auditoria(account),
+        )
         messages.success(request, gettext("Conta atualizada."))
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -328,8 +353,10 @@ def update_account_view(request, account_id):
 @require_POST
 def delete_account_view(request, account_id):
     account = get_object_or_404(FinancialAccount, id=account_id)
+    antes = _conta_para_auditoria(account)
     try:
         delete_account(request.user, account)
+        audit_action(request, 'financial_account', account_id, 'delete', old_values=antes)
         messages.success(request, gettext("Conta excluída."))
     except ValueError as exc:
         messages.error(request, str(exc))

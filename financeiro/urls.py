@@ -5,10 +5,12 @@ from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path
+from django.utils.translation import gettext
 from django.views.generic import RedirectView
 from django_htmx.http import HttpResponseClientRedirect
 
 from accounts.views import AppLoginView
+from core.services import audit_action
 
 
 def health_check(_request):
@@ -39,6 +41,8 @@ def logout_and_redirect(request):
     client-side explicito: um 302 comum some no meio do swap, deixando a
     sessao encerrada no servidor mas a tela intacta na tela do usuario.
     """
+    if request.user.is_authenticated:
+        audit_action(request, "auth_login", request.user.id, "logout", summary=gettext("Saída do sistema."))
     logout(request)
     if getattr(request, "htmx", False):
         return HttpResponseClientRedirect(redirect('login').url)

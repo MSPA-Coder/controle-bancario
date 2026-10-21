@@ -4,6 +4,7 @@ mensal, Banco de dados, Parâmetros)."""
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date, datetime
 from ipaddress import ip_address, ip_network
@@ -33,6 +34,8 @@ from core.domain.settings import (
 )
 from core.memo_requisicao import esquecer, lembrar
 from core.models import AppSetting
+
+logger = logging.getLogger(__name__)
 
 
 def get_app_setting(setting_key: str, default: str | None = None) -> str | None:
@@ -283,6 +286,47 @@ def log_audit_event(
         result=result,
         summary=summary[:255],
     )
+
+
+def audit_action(
+    request,
+    entity_name: str,
+    entity_id,
+    action: str,
+    *,
+    old_values=None,
+    new_values=None,
+    result: str = "success",
+    summary: str = "",
+):
+    """Registra na trilha uma ação feita por uma requisição (origem, IP e usuário).
+
+    É o atalho das views de cadastro, anexos, importação e acesso, que não têm um
+    service próprio para auditar. Falhar ao auditar não derruba a ação já feita.
+    """
+    try:
+        return log_audit_event(
+            entity_name,
+            entity_id,
+            action,
+            old_values=old_values,
+            new_values=new_values,
+            request_context=audit_request_context(request),
+            result=result,
+            summary=summary,
+        )
+    except Exception:  # noqa: BLE001 - a trilha nunca pode impedir a operação
+        logger.exception("audit_action_failed entity=%s action=%s", entity_name, action)
+        return None
+
+
+def audit_snapshot(obj, *fields: str) -> dict:
+    """Valores simples de `fields` em `obj`, prontos para a trilha (JSON)."""
+    snapshot = {}
+    for name in fields:
+        value = getattr(obj, name, None)
+        snapshot[name] = value if value is None or isinstance(value, (bool, int, float)) else str(value)
+    return snapshot
 
 
 # --- Parâmetros: política de senha ---
