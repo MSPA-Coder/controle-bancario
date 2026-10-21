@@ -25,6 +25,7 @@ Antes de alterar, leia a fonte pertinente:
 - `README.md`: entrada e preparação do ambiente;
 - `docs/architecture.md`: componentes e responsabilidades;
 - `docs/domain.md`: invariantes financeiras;
+- `docs/CONCEITOS_FINANCEIROS.md`: vocabulário comum com o CRV e o Wealthfolio;
 - `docs/development.md`: comandos e critérios de validação;
 - `docs/operations.md`: configuração, volumes, backup e VPS;
 - `compose.yaml`, `compose.dev.yaml` e `Dockerfile`: execução efetiva;
