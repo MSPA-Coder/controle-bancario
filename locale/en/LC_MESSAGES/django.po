@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 23:36-0300\n"
+"POT-Creation-Date: 2026-10-21 00:00-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2726,6 +2726,10 @@ msgid "Número inválido em %(campo)s."
 msgstr "Invalid number in %(campo)s."
 
 #: fechamento/myprofit.py
+msgid "As posições do pacote estão num formato inválido."
+msgstr "The package positions are in an invalid format."
+
+#: fechamento/myprofit.py
 msgid "Envie o pacote .json da coleta."
 msgstr "Send the collection .json package."
 
@@ -2745,10 +2749,6 @@ msgstr "The file is not a %(formato)s package."
 #: fechamento/myprofit.py
 msgid "O período do pacote é inválido."
 msgstr "The package period is invalid."
-
-#: fechamento/myprofit.py
-msgid "As posições do pacote estão num formato inválido."
-msgstr "The package positions are in an invalid format."
 
 #: fechamento/myprofit.py
 msgid "O pacote traz posição depois da data da coleta."

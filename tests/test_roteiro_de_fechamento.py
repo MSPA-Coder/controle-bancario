@@ -248,9 +248,9 @@ def _pacote(**extra) -> bytes:
     dados = {
         "formato": "myprofit-coleta/1", "de": "2026-09-01", "ate": "2026-10-19",
         "posicoes": {
+            # No passado o myProfit não publica o caixa em dólar: a linha não vem.
             "2026-09-30": [
                 {"ticker": "Tesouro IPCA+ 2032", "corretora": "XP", "classe": "TREASURY", "quantidade": "4.32", "valor_brl": "1000.00", "valor_usd": "180"},
-                {"ticker": "Conta corrente em dólar Avenue", "corretora": "Avenue", "classe": "CASH_USD", "quantidade": "0", "valor_brl": "0", "valor_usd": "0"},
             ],
             "2026-10-19": [
                 {"ticker": "Tesouro IPCA+ 2032", "corretora": "XP", "classe": "TREASURY", "quantidade": "4.32", "valor_brl": "1100.00", "valor_usd": "200"},
@@ -285,8 +285,9 @@ def test_coleta_marca_o_tesouro_e_espera_a_remessa_que_falta(cenario):
     tesouro = por_conta[(c.tesouro.id, date(2026, 9, 30))]
     assert (tesouro.acao, tesouro.destino, tesouro.diferenca) == ("lancar", "marcacao", Decimal("100.00"))
     assert (c.tesouro.id, date(2026, 10, 19)) not in por_conta
-    # Caixa em dólar: a remessa de 07/10 não está no CB, então 19/10 espera.
-    assert por_conta[(c.avenue_usd.id, date(2026, 9, 30))].acao == "conferir"
+    # Caixa em dólar: sem a linha em 30/09, a data não entra (não é saldo zero);
+    # e a remessa de 07/10 não está no CB, então 19/10 espera.
+    assert (c.avenue_usd.id, date(2026, 9, 30)) not in por_conta
     assert por_conta[(c.avenue_usd.id, date(2026, 10, 19))].acao == "pular"
     assert any("Remessa de 07/10/2026" in p for p in plano.pendencias)
     assert any("Renda fixa EUA na Avenue" in p for p in plano.pendencias)

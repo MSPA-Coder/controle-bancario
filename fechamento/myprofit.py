@@ -191,6 +191,20 @@ def _texto(valor, limite: int = 80) -> str:
     return " ".join(str(valor or "").split())[:limite]
 
 
+def _linhas_da_tabela(posicoes) -> list[dict]:
+    """As posições de uma data como dicionários: o pacote as manda como tabela
+    (`{"colunas": [...], "linhas": [[...], ...]}`) ou como lista de objetos."""
+    if isinstance(posicoes, dict):
+        colunas = posicoes.get("colunas")
+        linhas = posicoes.get("linhas")
+        if not isinstance(colunas, list) or not isinstance(linhas, list):
+            raise PacoteInvalidoError(gettext("As posições do pacote estão num formato inválido."))
+        return [dict(zip(colunas, linha, strict=False)) for linha in linhas if isinstance(linha, list)]
+    if isinstance(posicoes, list):
+        return [linha for linha in posicoes if isinstance(linha, dict)]
+    raise PacoteInvalidoError(gettext("As posições do pacote estão num formato inválido."))
+
+
 def ler(conteudo: bytes) -> Pacote:
     if not conteudo:
         raise PacoteInvalidoError(gettext("Envie o pacote .json da coleta."))
@@ -213,7 +227,7 @@ def ler(conteudo: bytes) -> Pacote:
         dia = _data(chave, "posicoes")
         if dia > ate:
             raise PacoteInvalidoError(gettext("O pacote traz posição depois da data da coleta."))
-        for linha in linhas if isinstance(linhas, list) else []:
+        for linha in _linhas_da_tabela(linhas):
             if not isinstance(linha, dict):
                 continue
             posicoes.append(Posicao(
@@ -249,10 +263,15 @@ def _mesma(a: str, b: str) -> bool:
 
 
 def _valor(pacote: Pacote, dia: date, classe_conta: str, corretora: str) -> Decimal | None:
+    """O saldo da conta no myProfit naquele dia, ou `None` quando o pacote não o diz.
+
+    Posição de ativo ausente numa data que veio no pacote é zero (o papel não
+    existia). Já o caixa em dólar só é publicado pelo myProfit na data de hoje:
+    nas datas passadas a linha não vem, e ausência ali é "não sei", não zero."""
     grupo, _, campo = CLASSES[classe_conta]
     linhas = [p for p in pacote.posicoes if p.data == dia and p.classe == grupo and _mesma(p.corretora, corretora)]
-    if not linhas and not any(p.data == dia for p in pacote.posicoes):
-        return None  # a data não veio no pacote
+    if not linhas and (classe_conta == CLASSE_CAIXA_USD or not any(p.data == dia for p in pacote.posicoes)):
+        return None
     return sum((getattr(p, campo) for p in linhas), Decimal("0")).quantize(_CENTAVO)
 
 
@@ -326,6 +345,7 @@ def planejar(user, pacote: Pacote) -> Plano:
                 "conta": f"{conta.institution.institution_name} / {conta.account_name}", "moeda": conta.currency, "esperada": moeda,
             })
             continue
+        conferidos = sorted(SaldoConferido.objects.filter(account=conta).values_list("data", flat=True))
         anterior = conta.initial_balance_date
         for dia in pacote.datas:
             if dia <= conta.initial_balance_date:
@@ -335,6 +355,9 @@ def planejar(user, pacote: Pacote) -> Plano:
             valor = _valor(pacote, dia, fonte.classe_myprofit, fonte.corretora_myprofit)
             if valor is None:
                 continue
+            # Os proventos que entram como rendimento são os pagos depois do
+            # último saldo já conferido: os de antes já estão no saldo do CB.
+            anterior = max([anterior, *(d for d in conferidos if d < dia)])
             plano.linhas.append(_linha(user, conta, fonte.classe_myprofit, dia, valor, anterior, pacote, remessas_faltando))
             anterior = dia
     return plano
