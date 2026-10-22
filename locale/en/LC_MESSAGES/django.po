@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 20:24-0300\n"
+"POT-Creation-Date: 2026-10-22 03:50-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -447,8 +447,8 @@ msgstr "Invalid username or password. Username entered: %(nome)s."
 
 #: accounts/views.py
 #, python-format
-msgid "Tentativa recusada pelo bloqueio de login. Usuário informado: %(nome)s."
-msgstr "Attempt refused by the login lockout. Username entered: %(nome)s."
+msgid "Bloqueio de login acionado. Usuário informado: %(nome)s."
+msgstr "Login lockout triggered. Username entered: %(nome)s."
 
 #: accounts/views.py
 msgid "Senha alterada."
@@ -1858,7 +1858,7 @@ msgstr "Cannot delete this account: there are entries linked to it."
 msgid "Data informada é inválida."
 msgstr "The date entered is invalid."
 
-#: banking/views.py reports/services.py reports/views.py
+#: banking/views.py core/views.py reports/services.py reports/views.py
 msgid "Período informado é inválido."
 msgstr "The period entered is invalid."
 

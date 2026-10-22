@@ -270,7 +270,8 @@ def _parse_initial_balance_date(raw_value: str | None) -> date:
 
 
 def _assert_account_unique(
-    owner_id: int, institution_id: int, name: str, statement_identifier: str, *, exclude_id: int | None = None
+    owner_id: int, institution_id: int, name: str, statement_identifier: str,
+    *, current: FinancialAccount | None = None,
 ) -> None:
     """Nome e identificador de extrato não se repetem onde a importação procura a conta.
 
@@ -278,12 +279,27 @@ def _assert_account_unique(
     instituição: dois cadastros com o mesmo identificador deixam a escolha
     ambígua. O nome repetido para o mesmo titular na mesma instituição
     é indistinguível nos seletores.
+
+    Na edição (`current`), só vale o que mudou: uma conta que já divide nome ou
+    identificador com outra, de antes desta regra, continua editável em tudo o
+    mais, e só é recusada se a pessoa for repetir o nome ou o identificador.
     """
-    others = FinancialAccount.objects.exclude(id=exclude_id) if exclude_id else FinancialAccount.objects.all()
-    if others.filter(owner_id=owner_id, institution_id=institution_id, account_name__iexact=name).exists():
-        raise ValueError(gettext("Este titular já tem uma conta com esse nome nesta instituição."))
+    others = FinancialAccount.objects.exclude(id=current.id) if current else FinancialAccount.objects.all()
     identifier = (statement_identifier or "").strip()
-    if identifier and others.filter(institution_id=institution_id, statement_identifier=identifier).exists():
+    mesma_instituicao = current is not None and current.institution_id == institution_id
+    mesmo_nome = (
+        mesma_instituicao and current.owner_id == owner_id
+        and (current.account_name or "").casefold() == name.casefold()
+    )
+    mesmo_identificador = mesma_instituicao and (current.statement_identifier or "").strip() == identifier
+    if not mesmo_nome and others.filter(
+        owner_id=owner_id, institution_id=institution_id, account_name__iexact=name
+    ).exists():
+        raise ValueError(gettext("Este titular já tem uma conta com esse nome nesta instituição."))
+    if (
+        identifier and not mesmo_identificador
+        and others.filter(institution_id=institution_id, statement_identifier=identifier).exists()
+    ):
         raise ValueError(gettext("Já existe uma conta desta instituição com esse identificador de extrato."))
 
 
@@ -521,7 +537,7 @@ def update_account(
         raise ValueError(gettext("Acesso negado: você não tem permissão para transferir a conta para este titular."))
     if not FinancialInstitution.objects.filter(id=clean_institution_id).exists():
         raise ValueError(gettext("Instituição não encontrada."))
-    _assert_account_unique(clean_owner_id, clean_institution_id, clean_name, statement_identifier, exclude_id=account.id)
+    _assert_account_unique(clean_owner_id, clean_institution_id, clean_name, statement_identifier, current=account)
     # Trocar a moeda de uma conta com lançamento reescreveria em silêncio o
     # significado de todo o passado dela: os mesmos valores passariam a valer
     # em outra moeda, sem nenhum registro de conversão. Conta com histórico não

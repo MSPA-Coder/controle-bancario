@@ -46,7 +46,6 @@ um centavo de saldo; move o significado.
 from __future__ import annotations
 
 import re
-import unicodedata
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -68,6 +67,7 @@ from core.domain.finance import (
     ENTRY_TYPE_INCOME,
     OPERATION_INTERNAL_TRANSFER,
 )
+from core.texto import sem_acentos
 from transactions.models import AccountMonthClose, BankOperation, CashFlowCategory, CashFlowEntry
 
 # --- Destinos possíveis de uma família -------------------------------------
@@ -216,9 +216,7 @@ REGRAS: tuple[Regra, ...] = (
 
 def normalizar(texto: str | None) -> str:
     """Minúsculas, sem acento, espaços colapsados."""
-    decomposto = unicodedata.normalize("NFKD", texto or "")
-    sem_acento = "".join(c for c in decomposto if not unicodedata.combining(c))
-    return re.sub(r"\s+", " ", sem_acento).strip().lower()
+    return re.sub(r"\s+", " ", sem_acentos(texto)).strip().lower()
 
 
 def regra_para(entry: CashFlowEntry, categoria_atual: str) -> Regra | None:

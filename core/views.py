@@ -622,7 +622,9 @@ def settings_close_month_view(request):
             raise ValueError(gettext("Acesso negado: você não tem permissão para fechar este mês."))
         # Mês que ainda não acabou não tem extrato nem fatura completos para
         # conferir, e fechá-lo travaria o que ainda vai acontecer nele.
-        if 1 <= month <= 12 and date(year, month, calendar.monthrange(year, month)[1]) >= localdate():
+        if not (1 <= month <= 12 and date.min.year <= year < date.max.year):
+            raise ValueError(gettext("Período informado é inválido."))
+        if date(year, month, calendar.monthrange(year, month)[1]) >= localdate():
             raise ValueError(gettext(
                 "O mês %(mes)02d/%(ano)s ainda não terminou: só se fecha um mês depois do último dia dele."
             ) % {"mes": month, "ano": year})

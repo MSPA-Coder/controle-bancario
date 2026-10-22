@@ -1,6 +1,5 @@
 """Serviços de domínio para transações e fluxo de caixa."""
 import calendar
-import unicodedata
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -36,6 +35,7 @@ from core.domain.finance import (
     VALID_ENTRY_TYPES,
     assert_money_in_range,
 )
+from core.texto import sem_acentos
 from transactions.calculations import MONEY_QUANT, _monthly_amount_for
 from transactions.calculations import installment_amount_for as installment_amount_for
 from transactions.contracts import TransactionRequest as TransactionRequest
@@ -246,7 +246,7 @@ def realize_transaction(
     if getattr(entry, "operation_type", None) == OPERATION_INTERNAL_TRANSFER:
         assert_transfer_destination_authorized(user, entry, "update")
 
-    final_date = realized_date or date.today()
+    final_date = realized_date or timezone.localdate()
     _recusa_realizacao_no_futuro(final_date)
     # Os dois meses precisam estar abertos: o do vencimento e o da data de
     # realização informada agora. Fechar um mês tem de impedir tanto mexer no
@@ -536,8 +536,7 @@ def _clean_category_group(raw_value) -> CashFlowCategoryGroup | None:
 
 def _chave_do_nome(name: str) -> str:
     """Nome sem caixa nem acento: "Saúde", "SAUDE" e "saude" são a mesma categoria para quem lê."""
-    decomposto = unicodedata.normalize("NFKD", name.strip())
-    return "".join(c for c in decomposto if not unicodedata.combining(c)).casefold()
+    return sem_acentos(name.strip()).casefold()
 
 
 def _assert_nome_livre(queryset, field: str, name: str, mensagem: str, *, exclude_id: int | None = None) -> None:
@@ -1070,7 +1069,7 @@ def _apply_fields(
 
 def _recusa_realizacao_no_futuro(realized_date: date | None) -> None:
     """Realizado é o que já aconteceu: data de realização depois de hoje não vale."""
-    if realized_date is not None and realized_date > date.today():
+    if realized_date is not None and realized_date > timezone.localdate():
         raise ValueError(gettext(
             "A data de realização não pode ser depois de hoje: realizado é o que já aconteceu. "
             "Deixe o lançamento a vencer até a data."
@@ -1093,8 +1092,6 @@ def _validate_common_payload(req: TransactionRequest, monthly_amount: Decimal, i
             "Informe a data de realização: sem ela o lançamento realizado "
             "não aparece no saldo realizado."
         ))
-    if req.status == STATUS_REALIZED:
-        _recusa_realizacao_no_futuro(req.realized_date)
     if req.realized_amount is not None and req.realized_amount <= 0:
         raise ValueError(gettext("O valor realizado deve ser positivo."))
     if not 1 <= installments <= MAX_TRANSACTION_INSTALLMENTS:
@@ -1122,6 +1119,8 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
         category = CashFlowCategory.objects.get(id=req.category_id)
     except CashFlowCategory.DoesNotExist as exc:
         raise ValueError(gettext("Categoria inválida.")) from exc
+    if req.status == STATUS_REALIZED:
+        _recusa_realizacao_no_futuro(req.realized_date)
     eh_transferencia = category.requires_counterparty
 
     counterparty_account = None
@@ -1781,6 +1780,10 @@ def update_transaction_operation(
         )
     else:
         entries = operation_entries(tx)
+    # Só a data nova é recusada: um realizado antigo com data futura continua
+    # editável em tudo o mais, desde que a data não seja a que a pessoa mexeu.
+    if req.status == STATUS_REALIZED and req.realized_date != tx.realized_date:
+        _recusa_realizacao_no_futuro(req.realized_date)
     if operation_scope == OPERATION_SCOPE_CURRENT_FUTURE:
         _assert_current_future_confirmation(tx.id, current_future_confirmation_token)
     scoped = scoped_entries(tx, entries, operation_scope)

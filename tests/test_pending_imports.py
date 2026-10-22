@@ -556,3 +556,26 @@ def test_resolve_pending_uploads_does_not_keep_a_batch_of_only_duplicates(cenari
     assert resultados[1][0] == [("segunda.ofx", 0, 1)]
     assert resultados[1][2] == []
     assert BankStatementImport.objects.filter(account=conta).count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_resolve_pending_uploads_keeps_a_duplicate_batch_that_moves_the_period_end(cenario):
+    """Sem linha nova, mas com DTEND: o fim do período vale para a trava do saldo."""
+    from bank_statements.models import BankStatementImport
+    from bank_statements.pending_imports import pending_storage_dir
+
+    conta = cenario["conta_ofx"]
+    conteudo = _ofx("41861-7").replace(
+        b"<BANKTRANLIST>", b"<BANKTRANLIST>\n<DTSTART>20260901\n<DTEND>20260930"
+    )
+    for nome in ("p1.ofx", "p2.ofx"):
+        (pending_storage_dir() / nome).write_bytes(conteudo)
+        upload = PendingStatementUpload.objects.create(
+            uploaded_by=cenario["usuario"], original_filename=nome, stored_filename=nome,
+            stored_path=f"pending_imports/{nome}", detected_account=conta,
+        )
+        resolve_pending_uploads(cenario["usuario"], {upload.id: str(conta.id)})
+
+    lotes = BankStatementImport.objects.filter(account=conta)
+    assert lotes.count() == 2
+    assert all(lote.statement_period_end is not None for lote in lotes)

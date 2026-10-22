@@ -371,10 +371,17 @@ def resolve_pending_uploads(
                 user, account_id=account_id, uploaded_file=file_like
             )
             resultados.append((upload.original_filename, inserted, skipped))
-            if inserted == 0 and batch.statement_balance is None:
-                # Só duplicatas e sem saldo: o lote não guarda nada e ficaria no
-                # histórico como uma importação de 0 linhas. A mensagem do
-                # resultado já diz que tudo era repetido.
+            vazio = (
+                inserted == 0
+                and batch.statement_balance is None
+                and batch.statement_period_end is None
+                and not batch.account.is_credit_card
+            )
+            if vazio:
+                # Só duplicatas, sem saldo nem fim de período: o lote não guarda
+                # nada e ficaria no histórico como uma importação de 0 linhas.
+                # Fatura de cartão fica: ela segue para a prévia de processamento.
+                # A mensagem do resultado já diz que tudo era repetido.
                 batch.delete()
             else:
                 lotes.append(batch)

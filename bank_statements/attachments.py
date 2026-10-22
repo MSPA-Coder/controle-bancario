@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-import unicodedata
 from contextlib import suppress
 from pathlib import Path
 from uuid import uuid4
@@ -25,6 +24,7 @@ from django.db import transaction as db_transaction
 from django.utils.translation import gettext
 
 from banking.services import accessible_account_ids, can_access_account
+from core.texto import sem_acentos
 from transactions.models import CashFlowEntry
 
 from .models import EntryAttachment
@@ -60,7 +60,7 @@ def _sanitize_filename(raw_name: str | None) -> str:
     name = os.path.basename((raw_name or "").strip()) or "anexo"
     # "comprovante ação.pdf" vira "comprovante_acao.pdf", e não "comprovante_a_o.pdf":
     # as letras acentuadas perdem só o acento, que o nome seguro não comporta.
-    name = "".join(c for c in unicodedata.normalize("NFKD", name) if not unicodedata.combining(c))
+    name = sem_acentos(name)
     name = _UNSAFE_FILENAME_CHARS.sub("_", name)
     return name[:_MAX_FILENAME_LENGTH] or "anexo"
 
@@ -120,7 +120,9 @@ def remover_arquivo_do_anexo(sender, instance: EntryAttachment, **kwargs) -> Non
     """
     try:
         caminho = _attachment_removal_path(instance)
-    except ValueError:
+    except (OSError, ValueError):
+        # Pasta de anexos inacessível ou caminho fora dela: o arquivo fica, e a
+        # exclusão do registro (que pode ser a de um lançamento inteiro) segue.
         logger.warning("anexo_fora_do_armazenamento id=%s", instance.pk)
         return
 
@@ -206,9 +208,10 @@ def save_entry_attachment(user, entry_id, uploaded_file: UploadedFile | None) ->
 def delete_entry_attachment(user, *, attachment_id) -> None:
     """Exclui um comprovante autorizado e seu arquivo após o commit.
 
-    O caminho é validado antes de apagar o registro e o unlink é agendado com
-    ``on_commit``. Assim, uma falha no banco não remove um arquivo cujo
-    metadado ainda possa permanecer, e um rollback não cria um novo órfão.
+    O caminho é validado antes de apagar o registro e o unlink acontece com
+    ``on_commit``, no ``post_delete``. Assim, uma falha no banco não remove um
+    arquivo cujo metadado ainda possa permanecer, e um rollback não cria um
+    novo órfão.
     """
     if not attachment_id:
         raise ValueError(gettext("Anexo inválido."))
@@ -219,9 +222,10 @@ def delete_entry_attachment(user, *, attachment_id) -> None:
     if not can_access_entry(user, attachment.entry, "update"):
         raise ValueError(gettext("Acesso negado: você não tem permissão para gerenciar este comprovante."))
 
-    path = _attachment_removal_path(attachment)
+    # Valida o caminho antes de apagar o registro; o arquivo sai depois do commit,
+    # pelo `post_delete` (`remover_arquivo_do_anexo`).
+    _attachment_removal_path(attachment)
     attachment.delete()
-    db_transaction.on_commit(lambda: _unlink_attachment_file(path))
 
 
 def recent_attachments_for_user(user, target_attachment_id: int | None = None, limit: int = 50):

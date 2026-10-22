@@ -132,7 +132,7 @@ def _auditar_login(request, action: str, result: str, username, *, user=None) ->
     resumos = {
         'login': gettext("Entrada no sistema."),
         'failed': gettext("Usuário ou senha inválidos. Usuário informado: %(nome)s.") % {'nome': nome or '-'},
-        'throttled': gettext("Tentativa recusada pelo bloqueio de login. Usuário informado: %(nome)s.") % {'nome': nome or '-'},
+        'throttled': gettext("Bloqueio de login acionado. Usuário informado: %(nome)s.") % {'nome': nome or '-'},
     }
     contexto = audit_request_context(request)
     if user is not None:
@@ -153,7 +153,6 @@ class AppLoginView(LoginView):
         try:
             assert_login_not_throttled(request.POST.get('username'), remote_addr)
         except LoginThrottledError as exc:
-            _auditar_login(request, 'throttled', 'failure', request.POST.get('username'))
             messages.error(request, str(exc))
             return self.render_to_response(self.get_context_data())
         return super().post(request, *args, **kwargs)
@@ -174,6 +173,10 @@ class AppLoginView(LoginView):
             self.request.POST.get('username'), request_client_ip(self.request)
         )
         _auditar_login(self.request, 'failed', 'failure', self.request.POST.get('username'))
+        if wait_seconds is not None:
+            # Uma linha quando o bloqueio é acionado. As requisições recusadas
+            # enquanto ele vale não gravam nada: senão quem insiste enche a trilha.
+            _auditar_login(self.request, 'throttled', 'failure', self.request.POST.get('username'))
         messages.error(self.request, failed_login_message(attempts_remaining, wait_seconds))
         return super().form_invalid(form)
 

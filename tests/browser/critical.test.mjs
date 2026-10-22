@@ -140,6 +140,11 @@ test('no celular o menu começa recolhido e o botão Menu o abre', { timeout: 60
     assert.equal(await menu.isVisible(), true);
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
     assert.equal(await menu.isVisible(), false);
+    // Escolher um item fecha a lista: a navegação é por hx-boost e a barra não recarrega.
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await menu.locator('a[href]:visible').first().click();
+    await page.waitForLoadState('networkidle');
+    assert.equal(await menu.isVisible(), false);
   } catch (error) {
     await page.screenshot({ path: '/results/cb-menu-celular.png', fullPage: true });
     throw error;

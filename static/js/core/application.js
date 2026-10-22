@@ -949,9 +949,17 @@
         /* Celular: o menu começa fechado e o botão "Menu" abre/fecha a lista. */
         var _mobileToggle = document.querySelector('[data-sidebar-mobile-toggle]');
         if (_mobileToggle && _sidebarNav) {
-            _mobileToggle.addEventListener('click', function () {
-                var aberto = _sidebarNav.classList.toggle('is-mobile-open');
+            var _definirMenuMobile = function (aberto) {
+                _sidebarNav.classList.toggle('is-mobile-open', aberto);
                 _mobileToggle.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+            };
+            _mobileToggle.addEventListener('click', function () {
+                _definirMenuMobile(!_sidebarNav.classList.contains('is-mobile-open'));
+            });
+            /* A navegação é por hx-boost: a barra lateral não recarrega, então escolher
+               um item tem de fechar a lista, senão ela continua cobrindo a tela. */
+            _sidebarNav.querySelector('.sidebar-menu').addEventListener('click', function (event) {
+                if (event.target.closest && event.target.closest('a[href]')) _definirMenuMobile(false);
             });
         }
         /* A largura das telas muda com o menu: refaz o que depende dela ao fim da transicao. */

@@ -53,7 +53,6 @@ import logging
 import os
 import re
 import secrets
-import unicodedata
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import date, timedelta
 from decimal import Decimal
@@ -90,6 +89,7 @@ from core.domain.finance import (
     VIEW_REALIZED,
 )
 from core.models import PatrimonioV4ChangeCounter, PatrimonioV4Outbox
+from core.texto import sem_acentos
 from reports.services import decimal_balances_before_by_account
 from transactions.models import BankOperation, CashFlowCategory, CashFlowEntry
 
@@ -206,9 +206,7 @@ def identidade(nome: str) -> str:
     dentro de um sistema. "Mercado Pago", "mercado pago" e "Mercado  Pago" são
     a mesma instituição para quem consolida.
     """
-    decomposto = unicodedata.normalize("NFKD", nome or "")
-    sem_acento = "".join(c for c in decomposto if not unicodedata.combining(c))
-    return re.sub(r"[^a-z0-9]+", "-", sem_acento.lower()).strip("-")
+    return re.sub(r"[^a-z0-9]+", "-", sem_acentos(nome).lower()).strip("-")
 
 
 def _token_configurado(nome_do_segredo: str = NOME_DO_SEGREDO_V4) -> str | None:

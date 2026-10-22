@@ -32,7 +32,7 @@
                 {% for titular, contas_do_titular in contas|por_titular %}
                 <optgroup label="{{ titular }}">
                     {% for conta in contas_do_titular %}
-                    <option value="{{ conta.id }}" {% if escolhas.conta == conta.id|stringformat:"s" %}selected{% endif %}>{{ conta.owner.name }} / {{ conta.institution.institution_name }} / {{ conta.account_name }}</option>
+                    <option value="{{ conta.id }}" {% if escolhas.conta == conta.id|stringformat:"s" %}selected{% endif %}>{{ conta|rotulo_conta }}</option>
                     {% endfor %}
                 </optgroup>
                 {% endfor %}

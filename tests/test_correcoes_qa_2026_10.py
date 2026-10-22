@@ -287,3 +287,141 @@ def test_usuario_inexistente_tambem_gasta_o_custo_do_hash(monkeypatch):
     auth_backends.CaseInsensitiveUsernameBackend().authenticate(None, username="ninguem", password="x")
 
     assert chamadas == ["x"]
+
+
+# --- Revisão: ajustes depois do code review -------------------------------
+
+
+def _requisicao(conta, categoria, **campos):
+    from transactions.services import TransactionRequest
+
+    padrao = {
+        "account_id": conta.id,
+        "category_id": categoria.id,
+        "entry_type": ENTRY_TYPE_EXPENSE,
+        "description": "Lançamento QA",
+        "entry_amount": Decimal("10.00"),
+        "installments": 1,
+        "due_date": date(2026, 6, 10),
+        "status": "realizado",
+        "realized_date": date(2026, 6, 10),
+    }
+    padrao.update(campos)
+    return TransactionRequest(**padrao)
+
+
+def test_criar_realizado_no_futuro_e_recusado(conta, usuario):
+    from transactions.services import create_transaction_batch
+
+    categoria = CashFlowCategory.objects.create(category_name="Cat futura")
+    futuro = localdate() + timedelta(days=10)
+
+    with pytest.raises(ValueError, match="depois de hoje"):
+        create_transaction_batch(_requisicao(conta, categoria, realized_date=futuro), user=usuario)
+
+
+def test_editar_realizado_antigo_com_data_futura_so_recusa_data_nova(conta, usuario):
+    from core.domain.finance import OPERATION_SCOPE_SINGLE
+    from transactions.services import update_transaction_operation
+
+    futuro = localdate() + timedelta(days=10)
+    categoria = CashFlowCategory.objects.create(category_name="Cat antiga")
+    entrada = _lancamento(
+        conta, category=categoria, status="realizado", realized_date=futuro,
+        realized_amount=Decimal("10.00"), due_date=futuro,
+    )
+
+    # Mexer só na descrição mantém a data de antes: segue editável.
+    atualizadas = update_transaction_operation(
+        entrada,
+        _requisicao(conta, categoria, description="Nova descrição", due_date=futuro, realized_date=futuro),
+        OPERATION_SCOPE_SINGLE, user=usuario,
+    )
+    assert atualizadas[0].description == "Nova descrição"
+
+    outra = futuro + timedelta(days=1)
+    with pytest.raises(ValueError, match="depois de hoje"):
+        update_transaction_operation(
+            entrada,
+            _requisicao(conta, categoria, due_date=futuro, realized_date=outra),
+            OPERATION_SCOPE_SINGLE, user=usuario,
+        )
+
+
+def test_editar_conta_que_ja_dividia_identificador_nao_e_recusado(usuario, titular, instituicao):
+    from banking.services import update_account
+
+    a = FinancialAccount.objects.create(
+        owner=titular, institution=instituicao, account_name="Conta A", statement_identifier="999-9"
+    )
+    FinancialAccount.objects.create(
+        owner=titular, institution=instituicao, account_name="Conta B", statement_identifier="999-9"
+    )
+
+    campos = _campos(titular, instituicao, account_name="Conta A", statement_identifier="999-9")
+    update_account(usuario, a, **{**campos, "initial_balance": "250,00"})
+    a.refresh_from_db()
+    assert a.initial_balance == Decimal("250.00")
+
+    with pytest.raises(ValueError, match="Este titular já tem uma conta"):
+        update_account(usuario, a, **{**campos, "account_name": "conta b"})
+
+
+def test_fechar_mes_com_ano_fora_do_intervalo_nao_vira_500(client, usuario, conta):
+    client.force_login(usuario)
+
+    resposta = client.post(reverse("core:settings_close_month"), {"account_id": conta.id, "year": 0, "month": 1})
+
+    assert resposta.status_code == 302
+    from transactions.models import AccountMonthClose
+
+    assert not AccountMonthClose.objects.filter(account=conta).exists()
+
+
+def test_excluir_lancamento_nao_falha_se_a_pasta_de_anexos_esta_inacessivel(
+    conta, settings, tmp_path, monkeypatch
+):
+    from bank_statements import attachments
+    from bank_statements.models import EntryAttachment
+
+    settings.MEDIA_ROOT = str(tmp_path)
+    entrada = _lancamento(conta)
+    EntryAttachment.objects.create(
+        entry=entrada, original_filename="r.txt", stored_filename="r.txt",
+        stored_path="attachments/r.txt", mime_type="text/plain", file_size=1,
+    )
+
+    def sem_acesso():
+        raise PermissionError("somente leitura")
+
+    monkeypatch.setattr(attachments, "attachment_storage_dir", sem_acesso)
+
+    entrada.delete()
+
+    assert not CashFlowEntry.objects.filter(id=entrada.id).exists()
+    assert EntryAttachment.objects.count() == 0
+
+
+def test_bloqueio_de_login_grava_uma_linha_e_nao_uma_por_requisicao(client, usuario):
+    from core.services import get_login_lockout_policy_settings
+
+    limite = get_login_lockout_policy_settings().max_failures
+    for _ in range(limite + 3):
+        client.post(reverse("login"), {"username": "qa-admin", "password": "errada"})
+
+    eventos = AuditLog.objects.filter(entity_name="auth_login")
+    assert eventos.filter(action="failed").count() == limite
+    assert eventos.filter(action="throttled").count() == 1
+
+
+def test_sem_acentos_so_tira_o_acento():
+    from core.texto import sem_acentos
+
+    assert sem_acentos("Ação Saúde") == "Acao Saude"
+    assert sem_acentos(None) == ""
+
+
+def test_rotulo_conta_traz_titular_instituicao_e_conta(conta, titular, instituicao):
+    from core.templatetags.contas import rotulo_conta
+
+    assert rotulo_conta(conta) == "Titular QA / Banco QA / Conta QA"
