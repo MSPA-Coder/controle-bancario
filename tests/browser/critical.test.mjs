@@ -21,7 +21,7 @@ test('gravação HTMX atualiza saldo, renova a chave e preserva filtros', { time
     await page.getByRole('button', { name: 'Incluir', exact: true }).click();
     const form = page.locator('#newTransactionCard form');
     const initialToken = await form.locator('[name="submit_token"]').inputValue();
-    await form.getByLabel('Conta', { exact: true }).selectOption({ label: 'Banco browser / Conta browser' });
+    await form.getByLabel('Conta', { exact: true }).selectOption({ label: 'Titular browser / Banco browser / Conta browser' });
     await form.getByLabel('Categoria', { exact: true }).selectOption({ label: 'Despesa browser' });
     await form.getByLabel('Tipo', { exact: true }).selectOption('despesa');
     await form.getByLabel('Status', { exact: true }).selectOption('realizado');
@@ -82,27 +82,66 @@ test('trocar titular ou instituição reabre a lista de contas', { timeout: 6000
     await page.goto(`${base}/transactions/?currency=ALL&grupos=bancos`);
 
     await escolher('Titular', { label: 'Titular browser' });
-    await escolher('Conta', { label: 'Banco browser / Conta browser' });
+    await escolher('Conta', { label: 'Titular browser / Banco browser / Conta browser' });
     assert.ok(parametro('owner_id') && parametro('account_id'));
     // O relato: com a conta escolhida, as outras contas do titular sumiam.
-    assert.deepEqual(await contas(), ['Todas as contas', 'Banco browser / Conta browser', 'Banco dois / Conta dois']);
+    assert.deepEqual(await contas(), ['Todas as contas', 'Titular browser / Banco browser / Conta browser', 'Titular browser / Banco dois / Conta dois']);
     assert.ok((await filtros.getByLabel('Instituição', { exact: true }).locator('option').allTextContents()).includes('Banco dois'));
 
     await escolher('Titular', { label: 'Todos os titulares' });
     assert.equal(parametro('owner_id'), null);
     assert.equal(parametro('account_id'), null);
     assert.equal(await filtros.getByLabel('Conta', { exact: true }).inputValue(), '');
-    assert.ok((await contas()).includes('Banco dois / Conta três'));
+    assert.ok((await contas()).includes('Titular dois / Banco dois / Conta três'));
 
     // Conta compatível com a instituição escolhida também sai: escolher a
     // instituição é pedir para ver por ela.
-    await escolher('Conta', { label: 'Banco dois / Conta três' });
+    await escolher('Conta', { label: 'Titular dois / Banco dois / Conta três' });
     await escolher('Instituição', { label: 'Banco dois' });
     assert.ok(parametro('institution_id'));
     assert.equal(parametro('account_id'), null);
-    assert.deepEqual(await contas(), ['Todas as contas', 'Banco dois / Conta dois', 'Banco dois / Conta três']);
+    assert.deepEqual(await contas(), ['Todas as contas', 'Titular browser / Banco dois / Conta dois', 'Titular dois / Banco dois / Conta três']);
   } catch (error) {
     await page.screenshot({ path: '/results/cb-filtros.png', fullPage: true });
+    throw error;
+  } finally { await browser.close(); }
+});
+
+// Duas guardas de front-end que só o navegador exercita: o diálogo de confirmação
+// não abre antes da validação nativa, e o menu começa recolhido no celular.
+test('novo lançamento inválido não abre a confirmação', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  page.setDefaultTimeout(15000);
+  try {
+    await entrar(page);
+    await page.goto(`${base}/transactions/`);
+    await page.getByRole('button', { name: 'Incluir', exact: true }).click();
+    const form = page.locator('#newTransactionCard form');
+    await form.getByRole('button', { name: 'Salvar', exact: true }).click();
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    assert.equal(await form.evaluate(el => el.checkValidity()), false);
+  } catch (error) {
+    await page.screenshot({ path: '/results/cb-confirmacao.png', fullPage: true });
+    throw error;
+  } finally { await browser.close(); }
+});
+
+test('no celular o menu começa recolhido e o botão Menu o abre', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 375, height: 812 } });
+  page.setDefaultTimeout(15000);
+  try {
+    await entrar(page);
+    await page.goto(`${base}/transactions/`);
+    const menu = page.locator('#appSidebar .sidebar-menu');
+    assert.equal(await menu.isVisible(), false);
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    assert.equal(await menu.isVisible(), true);
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    assert.equal(await menu.isVisible(), false);
+  } catch (error) {
+    await page.screenshot({ path: '/results/cb-menu-celular.png', fullPage: true });
     throw error;
   } finally { await browser.close(); }
 });
