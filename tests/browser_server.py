@@ -15,7 +15,7 @@ def main():
 
     from accounts.models import AccountOwner, AppUser
     from banking.models import FinancialAccount, FinancialInstitution
-    from transactions.models import CashFlowCategory
+    from transactions.models import CashFlowCategory, CashFlowEntry
 
     call_command("migrate", interactive=False, verbosity=0)
     if AppUser.objects.exists():
@@ -27,6 +27,10 @@ def main():
         owner=owner, institution=institution, account_name="Conta browser",
         initial_balance=Decimal("1000.00"), initial_balance_date=date.today().replace(day=1),
     )
+    card = FinancialAccount.objects.create(
+        owner=owner, institution=institution, account_name="Cartão browser",
+        account_kind="cartao_credito", card_closing_day=25, card_due_day=5,
+    )
     # Filtros em cascata: o titular browser tem conta em dois bancos, e um
     # segundo titular divide um deles. Saldo zero para não mexer nos totais.
     segundo_banco = FinancialInstitution.objects.create(institution_name="Banco dois", institution_type="Banco")
@@ -34,7 +38,13 @@ def main():
     FinancialAccount.objects.create(
         owner=AccountOwner.objects.create(name="Titular dois"), institution=segundo_banco, account_name="Conta três",
     )
-    CashFlowCategory.objects.create(category_name="Despesa browser")
+    category = CashFlowCategory.objects.create(category_name="Despesa browser")
+    for description, amount in (("Compra browser A", "20.00"), ("Compra browser B", "30.00")):
+        CashFlowEntry.objects.create(
+            account=card, category=category, entry_type="despesa", description=description,
+            entry_amount=Decimal(amount), due_date=date.today(), realized_date=date.today(),
+            realized_amount=Decimal(amount), status="realizado",
+        )
     call_command("runserver", "0.0.0.0:8000", use_reloader=False)
 
 

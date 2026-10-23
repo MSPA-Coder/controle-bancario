@@ -200,6 +200,16 @@ Lançamentos usa (edição inline e opções de filtro/formulário). O detalhe d
 conta resolve o recorte uma vez e calcula previsto e realizado sobre ele, sem
 tocar a sessão.
 
+Quando o recorte contém cartões e mais de uma conta, Lançamentos parte da
+visualização **Resumo por fechamento**: compras e estornos gerenciais de cada
+cartão viram uma linha líquida no dia de fechamento, sem alterar os lançamentos
+originais. Categoria, data ou operação específica exigem o modo detalhado, pois
+precisam revelar a linha de origem; a pessoa também pode escolhê-lo no seletor.
+O saldo diário não aparece no resumo — ele pertence às datas reais das compras,
+não à data de apresentação consolidada. Um ícone discreto antes da descrição
+identifica a conta quando a tabela reúne mais de uma; o nome completo fica no
+tooltip e no foco por teclado.
+
 ### Custo em consultas: o que foi medido e o que ficou de fora
 
 `tests/test_teto_consultas.py` guarda Lançamentos e dashboard de dois jeitos:

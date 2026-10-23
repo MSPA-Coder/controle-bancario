@@ -107,6 +107,31 @@ test('trocar titular ou instituição reabre a lista de contas', { timeout: 6000
   } finally { await browser.close(); }
 });
 
+test('cartões são resumidos no fechamento e cada linha identifica a conta', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  page.setDefaultTimeout(15000);
+  try {
+    await entrar(page);
+    await page.goto(`${base}/transactions/?grupos=bancos,cartoes&mode=realizado`);
+    assert.equal(await page.getByLabel('Exibição dos cartões', { exact: true }).inputValue(), 'resumo');
+    const summary = page.locator('.card-statement-summary');
+    assert.equal(await summary.count(), 1);
+    assert.match(await summary.innerText(), /Fatura fechada.*2 lançamentos/);
+    const indicator = summary.locator('.account-indicator');
+    assert.equal(await indicator.count(), 1);
+    assert.match(await indicator.getAttribute('title'), /Titular browser \/ Banco browser \/ Cartão browser/);
+
+    await page.getByLabel('Exibição dos cartões', { exact: true }).selectOption('detalhes');
+    await page.waitForURL(url => url.searchParams.get('card_presentation') === 'detalhes');
+    await page.locator('#transactions-table-container').getByText('Compra browser A', { exact: true }).waitFor();
+    assert.equal(await page.locator('.card-statement-summary').count(), 0);
+  } catch (error) {
+    await page.screenshot({ path: '/results/cb-cartoes.png', fullPage: true });
+    throw error;
+  } finally { await browser.close(); }
+});
+
 // Duas guardas de front-end que só o navegador exercita: o diálogo de confirmação
 // não abre antes da validação nativa, e o menu começa recolhido no celular.
 test('novo lançamento inválido não abre a confirmação', { timeout: 60000 }, async () => {

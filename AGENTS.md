@@ -54,7 +54,7 @@ docker compose --env-file .env.docker -f compose.yaml -f compose.dev.yaml up --b
 docker compose --env-file .env.docker -f compose.yaml run --rm web python manage.py check
 
 # Ruff e pytest.
-docker compose --env-file .env.docker -f compose.yaml --profile quality run --build --rm quality
+.\scripts\quality.ps1
 ```
 
 `--build` mantém a validação explícita e reproduzível: o serviço `quality` não
@@ -71,7 +71,7 @@ O `.venv` padronizado em Python 3.15 é runtime-only e usa `uv sync --locked`.
 Ruff, pytest, `collectstatic`, migrações e PostgreSQL rodam no Compose:
 
 ```powershell
-docker compose --env-file .env.docker -f compose.yaml --profile quality run --build --rm quality
+.\scripts\quality.ps1
 ```
 
 A suíte `quality` executa as camadas sem banco e `django_db` contra o serviço
@@ -90,6 +90,13 @@ imagem Django, e o `uv.lock` registra essa escolha.
 
 O `quality`, com `uv sync --locked`, é a fonte oficial das versões de teste,
 lint e auditoria usadas pela CI.
+
+Nunca rode o serviço `quality` diretamente pelo Compose no host. Use
+`scripts\quality.ps1`, inclusive em execuções especializadas: ele serializa as
+suítes por um mutex do Windows antes que o Compose recrie `postgres-teste`.
+Isso impede que uma segunda execução interrompa o banco efêmero da primeira e
+mascare o resultado com erros em cascata. `scripts\mensagens.ps1` já passa pela
+mesma trava.
 
 ## Dados e ações destrutivas
 

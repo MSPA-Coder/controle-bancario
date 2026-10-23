@@ -29,7 +29,7 @@ docker compose --env-file .env.docker -f compose.yaml run --rm web python manage
 Ruff, piloto mypy e suíte automatizada:
 
 ```powershell
-docker compose --env-file .env.docker -f compose.yaml --profile quality run --build --rm quality
+.\scripts\quality.ps1
 ```
 
 O mypy verifica em modo estrito somente os arquivos de `[tool.mypy]`: vocabulário
@@ -38,13 +38,30 @@ Imports fora da fronteira não são analisados (`follow_imports=skip`); não é 
 promessa de verificar os models dinâmicos do Django. `django-stubs` fica apenas
 no extra de desenvolvimento, sem plugin que inicialize o ORM. Não foram
 adicionados `Any` ou supressões para deixar o piloto verde. Execução isolada:
-`docker compose --env-file .env.docker --profile quality run --build --rm quality mypy`.
+`.\scripts\quality.ps1 run --build --rm quality mypy`.
 
 **`--build` não é opcional.** O serviço `quality` não monta o código do
 host: o que ele executa é o que foi copiado para a imagem. `docker compose
 run` reconstrói sem cache a partir das tags base atuais antes de executar os
 testes. A CI semanal repete build, testes e auditorias para conferir as
 atualizações automáticas do sistema e das dependências.
+
+### Exclusão mútua da suíte quality
+
+Execute o portão local exclusivamente por `./scripts/quality.ps1`; não rode
+`docker compose ... --profile quality run` diretamente. O script toma um mutex
+do Windows antes de o Compose preparar os serviços e libera-o mesmo se a
+execução terminar de modo inesperado. Assim, uma segunda suíte aguarda até 45
+minutos, em vez de recriar o único `postgres-teste` efêmero durante os testes
+da primeira e produzir erros em cascata. `scripts/mensagens.ps1` usa a mesma
+trava automaticamente.
+
+Para uma execução especializada, passe o restante do `docker compose run` ao
+script, por exemplo:
+
+```powershell
+.\scripts\quality.ps1 run --build --rm quality mypy
+```
 
 O mesmo vale para os comandos de diagnóstico que usam `run --rm web` sem o
 override de desenvolvimento — `manage.py check` e `showmigrations`: eles

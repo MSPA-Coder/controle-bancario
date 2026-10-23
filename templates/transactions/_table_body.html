@@ -1,4 +1,4 @@
-{% load static l10n money_filters icons navegacao regional_filters i18n %}
+{% load static l10n money_filters icons navegacao regional_filters contas i18n %}
 {# Partial HTMX: corpo da tabela de lançamentos + cartões de resumo (OOB). #}
 <div class="table-container" id="transactions-table-container">
     <table class="tx-table">
@@ -56,11 +56,29 @@
         {% endcomment %}
         <tbody id="transactions-tbody" hx-trigger="tableRefresh from:body" hx-get="{% url 'transactions:transactions_view' %}" hx-include="#contextForm, [data-table-filter]" hx-target="#transactions-table-container" hx-swap="outerHTML">
             {% for t in txs %}
+            {% if t.is_card_summary %}
+            <tr class="card-statement-summary">
+                <td>{{ t.display_date|udate }}</td>
+                <td>{% if t.entry_type == 'receita' %}{% trans "Receita" %}{% else %}{% trans "Despesa" %}{% endif %}</td>
+                <td>{% trans "Fatura do cartão" %}</td>
+                <td>
+                    {% if show_account_indicator %}<span class="account-indicator" tabindex="0" role="img" title="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}" aria-label="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}">{% icon 'account' %}</span>{% endif %}
+                    {% blocktrans count counter=t.entry_count %}Fatura fechada · {{ counter }} lançamento{% plural %}Fatura fechada · {{ counter }} lançamentos{% endblocktrans %}
+                </td>
+                <td>-</td>
+                {% if t.entry_type == 'receita' %}<td class="amount {{ t.entry_amount|amount_class }}">{{ t.entry_amount|money_signed:t.account.currency }}</td>{% else %}<td class="amount {{ t.entry_amount|neg|amount_class }}">{{ t.entry_amount|neg|money_signed:t.account.currency }}</td>{% endif %}
+                {% if view_mode == 'realizado' %}
+                {% if t.entry_type == 'receita' %}<td class="amount {{ t.entry_amount|amount_class }}">{{ t.entry_amount|money_signed:t.account.currency }}</td>{% else %}<td class="amount {{ t.entry_amount|neg|amount_class }}">{{ t.entry_amount|neg|money_signed:t.account.currency }}</td>{% endif %}
+                {% endif %}
+                {% if show_balance_column %}<td class="amount">-</td>{% endif %}
+                {% if show_actions_column %}<td class="actions"><span class="card-summary-note">{% trans "Consolidado" %}</span></td>{% endif %}
+            </tr>
+            {% else %}
             <tr id="tx-row-{{ t.id }}" class="{% if entry_id and t.id == entry_id %}tx-highlight{% endif %}">
                 <td>{% if t.display_date %}{{ t.display_date|udate }}{% else %}-{% endif %}</td>
                 <td>{{ t.get_entry_type_display }}</td>
                 <td>{{ t.category.category_name }}</td>
-                <td>{{ t.description }}</td>
+                <td>{% if show_account_indicator %}<span class="account-indicator" tabindex="0" role="img" title="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}" aria-label="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}">{% icon 'account' %}</span>{% endif %}{{ t.description }}</td>
                 <td>{% if t.installments > 1 %}{{ t.current_installment }}/{{ t.installments }}{% else %}-{% endif %}</td>
                 {% if t.status == 'realizado' and t.realized_amount != None %}{% if t.entry_type == 'receita' %}<td class="amount {{ t.realized_amount|amount_class }}">{{ t.realized_amount|money_signed:t.account.currency }}</td>{% else %}<td class="amount {{ t.realized_amount|neg|amount_class }}">{{ t.realized_amount|neg|money_signed:t.account.currency }}</td>{% endif %}{% else %}{% if t.entry_type == 'receita' %}<td class="amount {{ t.entry_amount|amount_class }}">{{ t.entry_amount|money_signed:t.account.currency }}</td>{% else %}<td class="amount {{ t.entry_amount|neg|amount_class }}">{{ t.entry_amount|neg|money_signed:t.account.currency }}</td>{% endif %}{% endif %}
                 {% if view_mode == 'realizado' %}
@@ -100,6 +118,7 @@
                     </form>
                 </td>
             </tr>
+            {% endif %}
             {% endif %}
             {% empty %}
             <tr><td colspan="{{ table_columns }}" data-ui="empty-2">{% trans "Nenhum lançamento encontrado." %}</td></tr>

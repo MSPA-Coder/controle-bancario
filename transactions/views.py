@@ -220,7 +220,14 @@ def transactions_view(request):
         )
     except ValueError as exc:
         return invalid_period_response(request, str(exc))
-    show_balance_column = not context["dashboard_drilldown"]
+    # O saldo diário pertence às datas originais das compras. Na visualização
+    # por fechamento ele seria uma precisão falsa, pois as compras aparecem na
+    # tabela na data consolidada da fatura; os cartões de resumo seguem
+    # mostrando o saldo inicial e final corretos do período.
+    show_balance_column = (
+        not context["dashboard_drilldown"]
+        and context["card_presentation"] != "resumo"
+    )
     show_actions_column = not context["dashboard_drilldown"]
     table_columns = 6 + (1 if context["view_mode"] == STATUS_REALIZED else 0) \
         + (1 if show_balance_column else 0) + (1 if show_actions_column else 0)

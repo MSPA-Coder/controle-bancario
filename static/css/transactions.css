@@ -48,6 +48,21 @@ th {
 .tx-table .filter-date select, .tx-table .filter-type select { min-width:0; width:100%; }
 .tx-table td.amount, .tx-table th.amount { text-align:right; white-space:nowrap; }
 .tx-table tr.tx-highlight { background:var(--primary-light); outline:2px solid var(--primary); outline-offset:-2px; }
+.tx-table tr.card-statement-summary { background:color-mix(in srgb, var(--primary-light) 45%, var(--card)); }
+.tx-table tr.card-statement-summary td { border-bottom-color:var(--primary-light); }
+.card-summary-note { color:var(--muted); font-size:0.76rem; font-style:italic; }
+.account-indicator {
+    display:inline-flex;
+    width:1rem;
+    height:1rem;
+    margin-right:0.35rem;
+    vertical-align:-0.15rem;
+    color:var(--muted);
+    cursor:help;
+    outline-offset:2px;
+}
+.account-indicator svg { width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:1.8; }
+.account-indicator:focus { color:var(--primary); outline:2px solid var(--primary); border-radius:2px; }
 
 /* === ACOES === */
 .actions { display:flex; gap:0.2rem; white-space:nowrap; }

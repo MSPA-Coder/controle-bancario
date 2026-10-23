@@ -32,6 +32,6 @@ if ($Conferir) {
 
 $montagem = "${raiz}/locale:/workspace/locale"
 $ErrorActionPreference = 'Continue'
-docker compose --env-file .env.docker -f compose.yaml --profile quality run --build --rm `
+& "$PSScriptRoot\quality.ps1" run --build --rm `
     -v $montagem quality sh -c $comando 2>&1 | Out-Host
 exit $LASTEXITCODE

@@ -2039,8 +2039,91 @@ def counterparty_accounts_for_transfer(user):
 TRANSACTIONS_QUERY_PARAMS = (
     "period", "year", "month", "mode", "owner_id", "institution_id", "account_id",
     "filter_type", "filter_category", "filter_group", "filter_date", "operation_id", "entry_id",
-    "dashboard_drilldown",
+    "dashboard_drilldown", "card_presentation",
 )
+
+CARD_PRESENTATION_SUMMARY = "resumo"
+CARD_PRESENTATION_DETAILS = "detalhes"
+VALID_CARD_PRESENTATIONS = (CARD_PRESENTATION_SUMMARY, CARD_PRESENTATION_DETAILS)
+
+
+@dataclass(frozen=True)
+class CardStatementSummary:
+    """Linha apenas de apresentação: lançamentos do cartão reunidos no fechamento.
+
+    O razão continua composto pelos lançamentos originais. Isso preserva
+    categoria, parcela, conciliação e auditoria; só a tabela troca várias
+    compras do mesmo ciclo por uma linha que aponta para o fechamento.
+    """
+
+    account: FinancialAccount
+    display_date: date
+    entry_type: str
+    entry_amount: Decimal
+    entry_count: int
+    is_card_summary: bool = True
+
+    @property
+    def account_id(self) -> int:
+        return self.account.id
+
+
+def _card_closing_date(entry: CashFlowEntry) -> date:
+    """Primeiro fechamento do cartão na data da compra ou depois dela."""
+    day = entry.account.card_closing_day
+    assert day is not None  # A constraint da conta de cartão garante o dia.
+    purchase_date = entry.due_date
+    closing = date(
+        purchase_date.year,
+        purchase_date.month,
+        min(day, calendar.monthrange(purchase_date.year, purchase_date.month)[1]),
+    )
+    if purchase_date <= closing:
+        return closing
+    next_month = purchase_date.month % 12 + 1
+    next_year = purchase_date.year + (purchase_date.month == 12)
+    return date(next_year, next_month, min(day, calendar.monthrange(next_year, next_month)[1]))
+
+
+def _is_card_purchase_for_summary(entry: CashFlowEntry) -> bool:
+    """Compra ou estorno que ainda não é, por si só, uma fatura projetada."""
+    operation_key = entry.bank_operation.operation_key if entry.bank_operation else ""
+    return (
+        entry.account.is_credit_card
+        and not entry.category.is_internal
+        and not operation_key.startswith("cartao-estimativa:")
+    )
+
+
+def card_statement_summaries(entries: list[CashFlowEntry]) -> list[CashFlowEntry | CardStatementSummary]:
+    """Troca compras do cartão por uma linha líquida de cada ciclo de fechamento."""
+    grouped: dict[tuple[int, date], list[CashFlowEntry]] = {}
+    rows: list[CashFlowEntry | CardStatementSummary] = []
+    for entry in entries:
+        if not _is_card_purchase_for_summary(entry):
+            rows.append(entry)
+            continue
+        grouped.setdefault((entry.account_id, _card_closing_date(entry)), []).append(entry)
+
+    for (_account_id, closing_date), grouped_entries in grouped.items():
+        signed_total = sum(
+            (
+                entry.entry_amount if entry.entry_type == ENTRY_TYPE_EXPENSE else -entry.entry_amount
+                for entry in grouped_entries
+            ),
+            Decimal("0.00"),
+        )
+        rows.append(CardStatementSummary(
+            account=grouped_entries[0].account,
+            display_date=closing_date,
+            entry_type=ENTRY_TYPE_EXPENSE if signed_total >= 0 else ENTRY_TYPE_INCOME,
+            entry_amount=abs(signed_total).quantize(MONEY_QUANT),
+            entry_count=len(grouped_entries),
+        ))
+    return sorted(
+        rows,
+        key=lambda entry: (entry.display_date, -1 if entry.entry_type == ENTRY_TYPE_INCOME else 0, entry.account_id),
+    )
 
 
 def _parse_int(value) -> int | None:
@@ -2364,6 +2447,28 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
     current_txs, blocos = compute_statement(scope, view_mode)
     _decorate_rows_for_editing(current_txs)
 
+    # Um filtro por categoria/data/operação precisa revelar o lançamento que
+    # o originou. Fora desses casos, a visão resumida reduz o ruído dos cartões
+    # sem alterar o razão, os totais ou as opções dos filtros de coluna.
+    has_card_accounts = any(account.is_credit_card for account in options.accounts)
+    summary_compatible = not any((
+        scope.filter_category, scope.filter_group, scope.filter_date,
+        scope.operation_key, scope.entry_id,
+    ))
+    requested_card_presentation = get_params.get("card_presentation")
+    if requested_card_presentation not in VALID_CARD_PRESENTATIONS:
+        requested_card_presentation = ""
+    card_presentation = requested_card_presentation or (
+        CARD_PRESENTATION_SUMMARY
+        if has_card_accounts and len(options.account_ids) > 1 and summary_compatible and not ctx.account_id
+        else CARD_PRESENTATION_DETAILS
+    )
+    if card_presentation == CARD_PRESENTATION_SUMMARY and not summary_compatible:
+        card_presentation = CARD_PRESENTATION_DETAILS
+    displayed_txs: list[CashFlowEntry | CardStatementSummary] = current_txs
+    if card_presentation == CARD_PRESENTATION_SUMMARY:
+        displayed_txs = card_statement_summaries(current_txs)
+
     # As opções de Tipo e Data saem das linhas filtradas por todos os OUTROS
     # filtros, não por elas mesmas: com "Despesa" escolhida a lista de tipos
     # mostrava só "Despesa", e trocar para "Receita" exigia passar por "Todos".
@@ -2393,7 +2498,7 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
     available_categories = list_category_names(include_internal=not scope.exclude_internal)
 
     return {
-        "txs": current_txs,
+        "txs": displayed_txs,
         "today": today,
         # Uma fileira de cartões por moeda: os totais são das contas
         # selecionadas, e contas de moedas diferentes não têm um total comum.
@@ -2408,6 +2513,9 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
         "operation_id": scope.operation_key,
         "entry_id": scope.entry_id,
         "dashboard_drilldown": scope.exclude_internal,
+        "has_card_accounts": has_card_accounts,
+        "card_presentation": card_presentation,
+        "show_account_indicator": len({tx.account_id for tx in displayed_txs}) > 1,
         "available_types": available_types,
         "available_categories": available_categories,
         "available_dates": available_dates,
