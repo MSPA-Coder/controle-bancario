@@ -1,7 +1,22 @@
-{% load i18n %}
+{% load i18n money_filters %}
 {% if currency_notice %}
 <p class="dashboard-currency-notice" role="status">{% blocktrans trimmed with moeda=currency_label %}O painel mostra uma moeda por vez: exibindo {{ moeda }}. Para ver outra, escolha a moeda no filtro global.{% endblocktrans %}</p>
 {% endif %}
+{% with display_currency=currency|default:"BRL" %}
+<section class="orbe-overview" aria-label="{% trans 'Resumo financeiro do mês' %}">
+    <div class="orbe-overview-main">
+        <p class="orbe-eyebrow">{% trans "Visão do mês" %} · {{ currency_label }}</p>
+        <h1>{% blocktrans trimmed with periodo=selected_period %}Panorama de {{ periodo }}{% endblocktrans %}</h1>
+        <p>{% blocktrans trimmed with modo=view_mode_label %}Dados no modo {{ modo }}.{% endblocktrans %}</p>
+        <div class="orbe-balance"><span>{% trans "Saldo no fim do período" %}</span><strong class="{{ selected_month_summary.balance|default:0|amount_class }}" data-sensitive-value="true">{{ selected_month_summary.balance|default:0|money_signed:display_currency }}</strong></div>
+    </div>
+    <dl class="orbe-overview-metrics">
+        <div><dt>{% trans "Receitas" %}</dt><dd class="amount-positive" data-sensitive-value="true">{{ selected_month_summary.income|default:0|money_signed:display_currency }}</dd></div>
+        <div><dt>{% trans "Despesas" %}</dt><dd class="amount-negative" data-sensitive-value="true">{{ selected_month_summary.expense|default:0|neg|money_signed:display_currency }}</dd></div>
+        <div><dt>{% trans "Geração de caixa" %}</dt><dd class="{{ selected_month_summary.generation|default:0|amount_class }}" data-sensitive-value="true">{{ selected_month_summary.generation|default:0|money_signed:display_currency }}</dd></div>
+    </dl>
+</section>
+{% endwith %}
 <div class="charts-grid">
     <div class="chart-card">
         <div class="chart-header chart-header-inline">
