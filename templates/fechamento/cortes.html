@@ -33,7 +33,7 @@
         {% for corte in cortes %}
             <tr>
                 <td>{{ corte.data|udate }}</td>
-                <td>{{ corte.concluido_em|udatetime }}</td>
+                <td class="date-time">{{ corte.concluido_em|udatetime }}</td>
                 <td>{{ corte.em_dia }} / {{ corte.total }}</td>
                 <td><a class="btn-sm btn-ghost" href="{% url 'fechamento:painel' %}?corte={{ corte.data|date:'Y-m-d' }}&amp;ver=tudo">{% trans "Abrir" %}</a></td>
             </tr>

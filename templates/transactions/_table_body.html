@@ -7,7 +7,7 @@
                 <th class="col-date">{% if view_mode == 'realizado' %}{% trans "Realização" %}{% else %}{% trans "Vencimento" %}{% endif %}</th>
                 <th class="col-type">{% trans "Tipo" %}</th>
                 <th>{% trans "Categoria" %}</th>
-                <th>{% trans "Descrição" %}</th>
+                <th class="transaction-description">{% trans "Descrição" %}</th>
                 <th>{% trans "Parcelas" %}</th>
                 <th class="amount col-value">{% trans "Valor" %}</th>
                 {% if view_mode == 'realizado' %}<th class="amount col-realized">{% trans "Valor realizado" %}</th>{% endif %}
@@ -61,7 +61,7 @@
                 <td>{{ t.display_date|udate }}</td>
                 <td>{% if t.entry_type == 'receita' %}{% trans "Receita" %}{% else %}{% trans "Despesa" %}{% endif %}</td>
                 <td>{% trans "Fatura do cartão" %}</td>
-                <td>
+                <td class="transaction-description">
                     {% if show_account_indicator %}<span class="account-indicator" tabindex="0" role="img" title="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}" aria-label="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}">{% icon 'account' %}</span>{% endif %}
                     {% blocktrans count counter=t.entry_count %}Fatura fechada · {{ counter }} lançamento{% plural %}Fatura fechada · {{ counter }} lançamentos{% endblocktrans %}
                 </td>
@@ -78,7 +78,7 @@
                 <td>{% if t.display_date %}{{ t.display_date|udate }}{% else %}-{% endif %}</td>
                 <td>{{ t.get_entry_type_display }}</td>
                 <td>{{ t.category.category_name }}</td>
-                <td>{% if show_account_indicator %}<span class="account-indicator" tabindex="0" role="img" title="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}" aria-label="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}">{% icon 'account' %}</span>{% endif %}{{ t.description }}</td>
+                <td class="transaction-description">{% if show_account_indicator %}<span class="account-indicator" tabindex="0" role="img" title="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}" aria-label="{% trans 'Conta' %}: {{ t.account|rotulo_conta }}">{% icon 'account' %}</span>{% endif %}{{ t.description }}</td>
                 <td>{% if t.installments > 1 %}{{ t.current_installment }}/{{ t.installments }}{% else %}-{% endif %}</td>
                 {% if t.status == 'realizado' and t.realized_amount != None %}{% if t.entry_type == 'receita' %}<td class="amount {{ t.realized_amount|amount_class }}">{{ t.realized_amount|money_signed:t.account.currency }}</td>{% else %}<td class="amount {{ t.realized_amount|neg|amount_class }}">{{ t.realized_amount|neg|money_signed:t.account.currency }}</td>{% endif %}{% else %}{% if t.entry_type == 'receita' %}<td class="amount {{ t.entry_amount|amount_class }}">{{ t.entry_amount|money_signed:t.account.currency }}</td>{% else %}<td class="amount {{ t.entry_amount|neg|amount_class }}">{{ t.entry_amount|neg|money_signed:t.account.currency }}</td>{% endif %}{% endif %}
                 {% if view_mode == 'realizado' %}

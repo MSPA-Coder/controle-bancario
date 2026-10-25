@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-24 21:25-0300\n"
+"POT-Creation-Date: 2026-10-25 14:40-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -4245,10 +4245,6 @@ msgid "Anexar comprovantes"
 msgstr "Attach receipts"
 
 #: templates/banking/attachments.html
-msgid "Vincule comprovantes a lançamentos existentes."
-msgstr "Link receipts to existing entries."
-
-#: templates/banking/attachments.html
 msgid "Anexar comprovante a lançamento"
 msgstr "Attach receipt to entry"
 
@@ -4290,8 +4286,8 @@ msgid "Movimentação • Saldo aplicações"
 msgstr "Activity • Investment balances"
 
 #: templates/banking/atualizar_saldo.html
-msgid "Informe o saldo real de uma conta numa data. A diferença para o saldo do CB vira um lançamento realizado, com destino explícito (rendimento, IR/IOF, perda ou ajuste assumido), em vez de mexer no saldo inicial."
-msgstr "Enter the actual balance of an account on a date. The difference from the CB balance becomes a settled entry, with an explicit destination (yield, IR/IOF, loss, or assumed adjustment), instead of changing the opening balance."
+msgid "Compare o saldo informado com o saldo calculado pelo Controle Bancário."
+msgstr "Compare the entered balance with the balance calculated by Controle Bancário."
 
 #: templates/banking/atualizar_saldo.html
 msgid "1. Informe o saldo"
@@ -4703,10 +4699,6 @@ msgstr "No credit card added. A card is an account of type “Credit card” und
 #: templates/banking/imports.html
 msgid "Movimentação • Importar extratos e faturas"
 msgstr "Activity • Import bank statements and card statements"
-
-#: templates/banking/imports.html
-msgid "Importe extratos CSV, OFX, OFC, QFX ou PDF de corretora homologada e acompanhe os lotes importados."
-msgstr "Import CSV, OFX, OFC, QFX, or PDF statements from an approved brokerage and track the imported batches."
 
 #: templates/banking/imports.html
 msgid "Importar extrato bancário"
