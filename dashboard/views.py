@@ -282,6 +282,10 @@ def dashboard_view(request):
 	chart_expense = [_to_float(v) for v in saude["expense"]]
 	chart_generation = saude["summary"]["generation"]
 	chart_saldo = [_to_float(m["saldo"]) for m in months]
+	# Resumo do mês selecionado para o cabeçalho executivo do painel. Os quatro
+	# valores já foram calculados por `projection_months_between`; expô-los à
+	# camada de apresentação não cria uma segunda regra de saldo ou de geração.
+	selected_month_summary = months[selected_index]
 
 	financial_health = {**saude["summary"], "labels": chart_labels}
 	account_groups = ctx.account_groups
@@ -349,6 +353,12 @@ def dashboard_view(request):
 		"daily_dates": chart_data["dailyDates"],
 		"financial_health": financial_health,
 		"chart_data": chart_data,
+		"selected_month_summary": {
+			"income": selected_month_summary["receita"],
+			"expense": selected_month_summary["despesa"],
+			"generation": (selected_month_summary["receita"] - selected_month_summary["despesa"]).quantize(MONEY_QUANT),
+			"balance": selected_month_summary["saldo"],
+		},
 	}
 
 	if quer_fragmento(request):

@@ -17,7 +17,7 @@
         <tbody>
         {% for batch in imports %}
             <tr>
-                <td>{{ batch.created_at|udatetime }}</td>
+                <td class="date-time">{{ batch.created_at|udatetime }}</td>
                 <td>{{ batch.account.owner.name }} / {{ batch.account.institution.institution_name }} / {{ batch.account.account_name }}</td>
                 <td>{{ batch.source_filename }}</td>
                 <td>{{ batch.row_count }}</td>
