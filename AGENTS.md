@@ -227,8 +227,8 @@ proporcional"), faça commit direto no `main` e `git push`, sem PR e sem esperar
 nada. A regra "Proteção do main" continua impedindo apagar o `main` ou
 reescrever o histórico: nada de push forçado nem de rebase do `main`. A CI do
 GitHub roda depois de cada push só como aviso e não bloqueia nada; se falhar,
-investigue. O Dependabot continua por PR, com os checks obrigatórios e
-auto-merge.
+investigue. O Dependabot continua por PR, com os checks obrigatórios; o merge é
+manual (o workflow de auto-merge foi removido).
 
 O deploy (`~/deploy.sh bancario`) só roda quando o usuário mandar. O servidor
 monta a imagem a partir do código do `main`, sem esperar nem baixar nada da
