@@ -47,7 +47,6 @@
 .annual-heading-actions { display: flex; align-items: center; flex-wrap: nowrap; gap: 0.7rem; }
 .annual-heading-actions { margin-left: auto; }
 .annual-planning-heading h2 { margin: 0; font-size: 1.1rem; color: var(--text); }
-.annual-planning-heading p { margin: 0.2rem 0 0; font-size: 0.82rem; }
 .annual-reference-label { color: var(--text); font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
 .annual-layout-badge {
     color: var(--primary);

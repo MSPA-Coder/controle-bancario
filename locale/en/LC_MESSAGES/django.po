@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-25 14:40-0300\n"
+"POT-Creation-Date: 2026-10-25 23:46-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -4286,10 +4286,6 @@ msgid "Movimentação • Saldo aplicações"
 msgstr "Activity • Investment balances"
 
 #: templates/banking/atualizar_saldo.html
-msgid "Compare o saldo informado com o saldo calculado pelo Controle Bancário."
-msgstr "Compare the entered balance with the balance calculated by Controle Bancário."
-
-#: templates/banking/atualizar_saldo.html
 msgid "1. Informe o saldo"
 msgstr "1. Enter the balance"
 
@@ -4475,10 +4471,6 @@ msgid "Movimentação • Extratos importados"
 msgstr "Activity • Imported statements"
 
 #: templates/banking/extratos.html
-msgid "Contas correntes e aplicações: saldo realizado, extratos importados e quanto de cada um já foi conciliado."
-msgstr "Checking accounts and investments: settled balance, imported statements, and how much of each has been reconciled."
-
-#: templates/banking/extratos.html
 #, python-format
 msgid "identificador do extrato %(identificador)s"
 msgstr "statement ID %(identificador)s"
@@ -4653,10 +4645,6 @@ msgid "Movimentação • Faturas e projeção"
 msgstr "Activity • Card statements and projections"
 
 #: templates/banking/faturas.html
-msgid "Cartões de crédito: saldo em aberto, faturas importadas e as próximas faturas projetadas."
-msgstr "Credit cards: open balance, imported card statements, and upcoming projected card statements."
-
-#: templates/banking/faturas.html
 #, python-format
 msgid "fecha dia %(dia)s"
 msgstr "closes on day %(dia)s"
@@ -4733,10 +4721,6 @@ msgid "Confirmar importação"
 msgstr "Confirm import"
 
 #: templates/banking/pending_imports_confirm.html
-msgid "Nada foi gravado ainda. Confira a conta sugerida para cada arquivo (ou escolha outra) antes de importar."
-msgstr "Nothing has been saved yet. Check the suggested account for each file (or choose another) before importing."
-
-#: templates/banking/pending_imports_confirm.html
 #, python-format
 msgid "%(counter)s arquivo enviado"
 msgid_plural "%(counter)s arquivos enviados"
@@ -4797,10 +4781,6 @@ msgstr "Do not import"
 #: templates/banking/reclassificacao.html
 msgid "Movimentação • Reclassificação"
 msgstr "Activity • Reclassification"
-
-#: templates/banking/reclassificacao.html
-msgid "Marque vários lançamentos e dê a mesma categoria de uma vez. A prévia mostra tudo o que muda antes de gravar, e o que você escolher aqui passa a ser a sugestão das próximas faturas importadas."
-msgstr "Select several entries and assign the same category at once. The preview shows everything that will change before saving, and whatever you choose here becomes the suggestion for future imported card statements."
 
 #: templates/banking/reclassificacao.html
 #, python-format
@@ -4951,17 +4931,9 @@ msgstr "Activity • Reconciliation"
 msgid "Conciliação de lançamentos"
 msgstr "Entry reconciliation"
 
-#: templates/banking/reconciliation.html
-msgid "Concilie linhas de extrato com lançamentos e revise as conciliações recentes."
-msgstr "Reconcile statement lines with entries and review recent reconciliations."
-
 #: templates/banking/situacao_das_contas.html
 msgid "Movimentação • Situação das contas"
 msgstr "Activity • Account status"
-
-#: templates/banking/situacao_das_contas.html
-msgid "Para cada conta e mês: se o extrato (ou a fatura) foi importado e se as linhas já foram conciliadas."
-msgstr "For each account and month: whether the statement (or card statement) was imported and whether its lines have been reconciled."
 
 #: templates/banking/situacao_das_contas.html
 msgid "Resumo de"
@@ -5125,11 +5097,6 @@ msgid "Panorama de %(periodo)s"
 msgstr "Overview of %(periodo)s"
 
 #: templates/dashboard/_content.html
-#, python-format
-msgid "Dados no modo %(modo)s."
-msgstr "Data in %(modo)s mode."
-
-#: templates/dashboard/_content.html
 msgid "Saldo no fim do período"
 msgstr "Period-end balance"
 
@@ -5270,10 +5237,6 @@ msgid "Movimentação • Cortes do fechamento"
 msgstr "Activity • Closing cutoffs"
 
 #: templates/fechamento/cortes.html
-msgid "Cada corte é uma conferência até uma data, sem trava. A trava continua sendo o fechamento do mês, no último corte."
-msgstr "Each cutoff is a check up to a date, with no lock. The lock is still the monthly close, at the last cutoff."
-
-#: templates/fechamento/cortes.html
 msgid "Reimportar um período que já passou por um corte é seguro: as linhas que já existem são reconhecidas e ignoradas, e um saldo informado de novo para o mesmo dia só lança uma diferença nova."
 msgstr "Importing again a period that already went through a cutoff is safe: existing lines are recognized and skipped, and a balance entered again for the same day only posts a new difference."
 
@@ -5303,10 +5266,6 @@ msgstr "No cutoff completed yet. Complete one in the Checklist when everything i
 #: templates/fechamento/fontes.html
 msgid "Movimentação • Fontes do fechamento"
 msgstr "Activity • Closing sources"
-
-#: templates/fechamento/fontes.html
-msgid "De onde vem o dado de cada conta. O roteiro lê este cadastro para dizer o que falta e em que formato."
-msgstr "Where each account's data comes from. The checklist reads this record to say what is missing and in which format."
 
 #: templates/fechamento/fontes.html
 msgid "Conta sem cadastro mostra a fonte deduzida do que o CB já sabe dela (o último arquivo importado, o tipo de conta), marcada como “deduzida”. Gravar a linha fixa a escolha. “Ainda não tenho” deixa a conta visível como pendência, sem travar as outras. Conta que vem do myProfit diz o que é lá (Tesouro, renda fixa EUA ou caixa em dólar) e o nome da corretora no myProfit."
@@ -5355,10 +5314,6 @@ msgstr "Save"
 #: templates/fechamento/painel.html
 msgid "Movimentação • Roteiro de fechamento"
 msgstr "Activity • Closing checklist"
-
-#: templates/fechamento/painel.html
-msgid "O que falta, conta a conta, para conferir tudo até a data escolhida. Cortes no meio do mês não travam nada; reimportar um período já tratado é seguro."
-msgstr "What is missing, account by account, to check everything up to the chosen date. Mid-month cutoffs lock nothing; importing again a period already handled is safe."
 
 #: templates/fechamento/painel.html
 msgid "Conferir até"
@@ -5580,10 +5535,6 @@ msgstr "Month"
 #: templates/management/partials/management_content.html
 msgid "Painel gerencial"
 msgstr "Management dashboard"
-
-#: templates/management/partials/management_content.html
-msgid "Tags, projetos/centros de custo e orçamento mensal por categoria. Esta camada não altera o núcleo bancário de contas, saldos e lançamentos."
-msgstr "Tags, projects/cost centers, and monthly budget by category. This layer does not change the core banking data of accounts, balances, and entries."
 
 #: templates/management/partials/management_content.html
 msgid "Criar tag"
@@ -6346,10 +6297,6 @@ msgid "Segurança • Trilha de auditoria"
 msgstr "Security • Audit trail"
 
 #: templates/settings/audit_log.html
-msgid "Eventos recentes de auditoria operacional."
-msgstr "Recent operational audit events."
-
-#: templates/settings/audit_log.html
 msgid "Eventos recentes"
 msgstr "Recent events"
 
@@ -6392,10 +6339,6 @@ msgstr "Clear filters"
 #: templates/settings/database.html
 msgid "Configurações • Banco de dados"
 msgstr "Settings • Database"
-
-#: templates/settings/database.html
-msgid "Diagnóstico de integridade e otimização (VACUUM ANALYZE)."
-msgstr "Integrity check and optimization (VACUUM ANALYZE)."
 
 #: templates/settings/database.html
 msgid "Manutenção"
@@ -6460,10 +6403,6 @@ msgstr "Empty table."
 #: templates/settings/index.html
 msgid "Configurações • Parâmetros"
 msgstr "Settings • Parameters"
-
-#: templates/settings/index.html
-msgid "Projeções recorrentes e parâmetros operacionais."
-msgstr "Recurring projections and operational parameters."
 
 #: templates/settings/index.html
 msgid "Configuração de senha"
@@ -6566,10 +6505,6 @@ msgid "Movimentação • Fechamento mensal"
 msgstr "Activity • Monthly close"
 
 #: templates/settings/monthly_close.html
-msgid "Bloqueia alterações em lançamentos de meses já consolidados."
-msgstr "Blocks changes to entries in months that are already closed."
-
-#: templates/settings/monthly_close.html
 msgid "Ano"
 msgstr "Year"
 
@@ -6637,10 +6572,6 @@ msgstr "No monthly close recorded."
 #: templates/settings/profile.html
 msgid "Configurações • Perfil"
 msgstr "Settings • Profile"
-
-#: templates/settings/profile.html
-msgid "Aparência, idioma, formatos e preferências pessoais de grade."
-msgstr "Appearance, language, formats and personal grid preferences."
 
 #: templates/settings/profile.html
 msgid "Aparência"

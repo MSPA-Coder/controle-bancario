@@ -7,7 +7,6 @@
     <div class="orbe-overview-main">
         <p class="orbe-eyebrow">{% trans "Visão do mês" %} · {{ currency_label }}</p>
         <h1>{% blocktrans trimmed with periodo=selected_period %}Panorama de {{ periodo }}{% endblocktrans %}</h1>
-        <p>{% blocktrans trimmed with modo=view_mode_label %}Dados no modo {{ modo }}.{% endblocktrans %}</p>
         <div class="orbe-balance"><span>{% trans "Saldo no fim do período" %}</span><strong class="{{ selected_month_summary.balance|default:0|amount_class }}" data-sensitive-value="true">{{ selected_month_summary.balance|default:0|money_signed:display_currency }}</strong></div>
     </div>
     <dl class="orbe-overview-metrics">

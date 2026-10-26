@@ -5,7 +5,6 @@
         <div class="annual-planning-title-group">
             <h2 id="annual-planning-title">{% trans "Planejamento anual" %}</h2>
             <span class="annual-reference-label">{% trans "Mês de referência" %} · {{ blocos.0.report.reference_month_label }}</span>
-            {% if blocos.0.report.subtitle %}<p class="text-muted">{{ blocos.0.report.subtitle }}</p>{% endif %}
         </div>
         <div class="annual-heading-actions">
             <span class="annual-layout-badge">{% if layout == 'rolling' %}{% trans "Janela móvel" %}{% else %}{% trans "Ano calendário" %}{% endif %}</span>

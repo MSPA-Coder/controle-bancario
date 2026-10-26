@@ -104,7 +104,6 @@ td { padding: .7rem .65rem; } tbody tr { transition: background .14s ease; } tbo
 .orbe-overview-main { padding: 1.15rem 1.4rem; background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary) 45%, transparent), transparent 44%); }
 .orbe-eyebrow { margin: 0 0 .42rem; color: #b8d7c1; font-size: .66rem; letter-spacing: .09em; text-transform: uppercase; font-weight: 700; }
 .orbe-overview h1 { font-family: var(--orbe-serif); font-size: clamp(1.6rem, 3vw, 2.45rem); letter-spacing: -.05em; font-weight: 600; line-height: 1.08; margin: 0; color: #fff; }
-.orbe-overview-main > p:not(.orbe-eyebrow) { color: #c2d7c9; font-size: .82rem; margin-top: .4rem; }
 .orbe-balance { margin-top: .95rem; }.orbe-balance span { display: block; color: #b9d3c1; font-size: .72rem; margin-bottom: .2rem; }.orbe-balance strong { color: #fff !important; font-family: var(--orbe-serif); font-size: clamp(1.5rem, 2.5vw, 2.1rem); letter-spacing: -.045em; }
 .orbe-overview-metrics { align-self: stretch; display: grid; grid-template-columns: 1fr; margin: 0; padding: .45rem 1.25rem .45rem 0; }
 .orbe-overview-metrics div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid rgba(255,255,255,.13); }.orbe-overview-metrics div:last-child { border-bottom: 0; }.orbe-overview-metrics dt { color: #bdd3c3; font-size: .72rem; }.orbe-overview-metrics dd { margin: 0; color: #fff !important; font-size: 1.04rem; font-weight: 700; font-variant-numeric: tabular-nums; }
