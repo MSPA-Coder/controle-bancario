@@ -107,7 +107,7 @@ test('trocar titular ou instituição reabre a lista de contas', { timeout: 6000
   } finally { await browser.close(); }
 });
 
-test('cartões são resumidos no fechamento e cada linha identifica a conta', { timeout: 60000 }, async () => {
+test('cartões ficam em faturas separadas do extrato misto', { timeout: 60000 }, async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   page.setDefaultTimeout(15000);
@@ -115,17 +115,17 @@ test('cartões são resumidos no fechamento e cada linha identifica a conta', { 
     await entrar(page);
     await page.goto(`${base}/transactions/?grupos=bancos,cartoes&mode=realizado`);
     assert.equal(await page.getByLabel('Exibição dos cartões', { exact: true }).inputValue(), 'resumo');
-    const summary = page.locator('.card-statement-summary');
-    assert.equal(await summary.count(), 1);
-    assert.match(await summary.innerText(), /Fatura fechada.*2 lançamentos/);
-    const indicator = summary.locator('.account-indicator');
-    assert.equal(await indicator.count(), 1);
-    assert.match(await indicator.getAttribute('title'), /Titular browser \/ Banco browser \/ Cartão browser/);
+    const invoices = page.locator('#card-invoices-panel');
+    assert.equal(await invoices.count(), 1);
+    assert.match(await invoices.innerText(), /Faturas dos cartões.*Importada/);
+    assert.equal(await page.locator('.card-statement-summary').count(), 0);
+    assert.equal(await page.locator('#transactions-table-container').getByText('Compra browser A', { exact: true }).count(), 0);
 
     await page.getByLabel('Exibição dos cartões', { exact: true }).selectOption('detalhes');
     await page.waitForURL(url => url.searchParams.get('card_presentation') === 'detalhes');
     await page.locator('#transactions-table-container').getByText('Compra browser A', { exact: true }).waitFor();
-    assert.equal(await page.locator('.card-statement-summary').count(), 0);
+    assert.equal(await page.locator('#card-invoices-panel').count(), 0);
+    assert.match(await page.locator('#transactions-table-container').getByText('Compra browser A', { exact: true }).locator('xpath=..').innerText(), /Fatura: fecha/);
   } catch (error) {
     await page.screenshot({ path: '/results/cb-cartoes.png', fullPage: true });
     throw error;

@@ -48,9 +48,23 @@ th {
 .tx-table .filter-date select, .tx-table .filter-type select { min-width:0; width:100%; }
 .tx-table td.amount, .tx-table th.amount { text-align:right; white-space:nowrap; }
 .tx-table tr.tx-highlight { background:var(--primary-light); outline:2px solid var(--primary); outline-offset:-2px; }
-.tx-table tr.card-statement-summary { background:color-mix(in srgb, var(--primary-light) 45%, var(--card)); }
-.tx-table tr.card-statement-summary td { border-bottom-color:var(--primary-light); }
-.card-summary-note { color:var(--muted); font-size:0.76rem; font-style:italic; }
+.card-invoices-panel {
+    margin:-0.05rem -0.05rem 1rem;
+    padding:0.85rem;
+    border:1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+    border-radius:calc(var(--radius) - 0.2rem);
+    background:color-mix(in srgb, var(--primary-light) 35%, var(--card));
+}
+.card-invoices-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:0.7rem; }
+.card-invoices-heading h2 { margin:0; font-size:0.98rem; }
+.card-invoices-heading p { margin:0.18rem 0 0; color:var(--muted); font-size:0.8rem; }
+.card-invoices-scroll { overflow-x:auto; }
+.card-invoices-table { min-width:650px; font-size:0.82rem; }
+.card-invoices-table th { background:transparent; }
+.invoice-status { display:inline-flex; padding:0.18rem 0.45rem; border-radius:999px; font-size:0.73rem; font-weight:700; white-space:nowrap; }
+.invoice-status-imported { color:var(--success); background:color-mix(in srgb, var(--success) 12%, transparent); }
+.invoice-status-projected { color:var(--primary); background:var(--primary-light); }
+.card-cycle-tag { display:block; margin-top:0.12rem; color:var(--muted); font-size:0.72rem; white-space:nowrap; }
 .account-indicator {
     display:inline-flex;
     width:1rem;
@@ -108,4 +122,5 @@ th {
 @media (max-width:900px) {
     .tx-form { grid-template-columns:1fr 1fr; }
     .tx-form .span-2, .tx-form .span-4 { grid-column:1 / -1; }
+    .card-invoices-heading { align-items:stretch; flex-direction:column; }
 }

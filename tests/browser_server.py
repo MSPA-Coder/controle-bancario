@@ -14,6 +14,7 @@ def main():
     from django.core.management import call_command
 
     from accounts.models import AccountOwner, AppUser
+    from bank_statements.models import BankStatementImport, BankStatementLine
     from banking.models import FinancialAccount, FinancialInstitution
     from transactions.models import CashFlowCategory, CashFlowEntry
 
@@ -29,7 +30,7 @@ def main():
     )
     card = FinancialAccount.objects.create(
         owner=owner, institution=institution, account_name="Cartão browser",
-        account_kind="cartao_credito", card_closing_day=25, card_due_day=5,
+        account_kind="cartao_credito", card_closing_day=1, card_due_day=5,
     )
     # Filtros em cascata: o titular browser tem conta em dois bancos, e um
     # segundo titular divide um deles. Saldo zero para não mexer nos totais.
@@ -44,6 +45,12 @@ def main():
             account=card, category=category, entry_type="despesa", description=description,
             entry_amount=Decimal(amount), due_date=date.today(), realized_date=date.today(),
             realized_amount=Decimal(amount), status="realizado",
+        )
+    batch = BankStatementImport.objects.create(account=card, source_filename="fatura-browser.csv", row_count=2)
+    for index, (description, amount) in enumerate((("Compra browser A", "-20.00"), ("Compra browser B", "-30.00")), 1):
+        BankStatementLine.objects.create(
+            import_batch=batch, account=card, statement_date=date.today().replace(day=1), description=description,
+            amount=Decimal(amount), line_hash=f"browser-card-{index}",
         )
     call_command("runserver", "0.0.0.0:8000", use_reloader=False)
 

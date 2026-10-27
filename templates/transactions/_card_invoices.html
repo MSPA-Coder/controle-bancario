@@ -1,0 +1,52 @@
+{% load i18n money_filters regional_filters contas %}
+<section class="card-invoices-panel" aria-labelledby="card-invoices-title">
+    <div class="card-invoices-heading">
+        <div>
+            <h2 id="card-invoices-title">{% trans "Faturas dos cartões" %}</h2>
+            <p>{% trans "Faturas são mostradas pelo vencimento. O extrato abaixo permanece apenas com as contas de movimentação e aplicação." %}</p>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="{% url 'bank_statements:faturas' %}" hx-boost="true">{% trans "Ver todas as faturas" %}</a>
+    </div>
+    {% if card_invoices %}
+    <div class="card-invoices-scroll">
+        <table class="card-invoices-table">
+            <thead>
+                <tr>
+                    <th>{% trans "Cartão" %}</th>
+                    <th>{% trans "Fecha" %}</th>
+                    <th>{% trans "Vence" %}</th>
+                    <th>{% trans "Situação" %}</th>
+                    <th class="amount">{% trans "Total" %}</th>
+                    <th>{% trans "Detalhe" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for invoice in card_invoices %}
+                <tr>
+                    <td><strong>{{ invoice.account|rotulo_conta }}</strong></td>
+                    <td>{{ invoice.closing_date|udate }}</td>
+                    <td>{{ invoice.due_date|udate }}</td>
+                    <td>
+                        {% if invoice.source == "importada" %}
+                        <span class="invoice-status invoice-status-imported">{% trans "Importada" %}</span>
+                        {% else %}
+                        <span class="invoice-status invoice-status-projected">{% trans "Projetada" %}</span>
+                        {% endif %}
+                    </td>
+                    <td class="amount"><strong>{{ invoice.total|money:invoice.account.currency }}</strong></td>
+                    <td>
+                        {% if invoice.import_batch_id %}
+                        <a href="{% url 'bank_statements:fatura' invoice.import_batch_id %}" hx-boost="true">{% trans "Ver fatura" %}</a>
+                        {% else %}
+                        <a href="{% url 'bank_statements:faturas' %}" hx-boost="true">{% trans "Ver projeção" %}</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">{% trans "Nenhuma fatura com vencimento no período selecionado." %}</p>
+    {% endif %}
+</section>

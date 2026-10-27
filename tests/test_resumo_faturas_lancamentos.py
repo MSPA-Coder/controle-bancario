@@ -1,4 +1,4 @@
-"""Resumo visual de cartões na tela de Lançamentos."""
+"""Cartões separados do extrato misto na tela de Lançamentos."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from accounts.models import AccountOwner
+from bank_statements.models import BankStatementImport, BankStatementLine
 from banking.models import FinancialAccount, FinancialInstitution
 from core.domain.finance import (
     ACCOUNT_KIND_CREDIT_CARD,
@@ -22,7 +23,6 @@ from transactions.models import CashFlowCategory, CashFlowEntry
 from transactions.services import (
     CARD_PRESENTATION_DETAILS,
     CARD_PRESENTATION_SUMMARY,
-    CardStatementSummary,
     build_transactions_view_context,
 )
 
@@ -65,7 +65,18 @@ def scenario():
     entry(regular, "Débito em conta", "25.00", date(2026, 10, 10))
     entry(card, "Mercado no cartão", "100.00", date(2026, 10, 5))
     entry(card, "Estorno no cartão", "20.00", date(2026, 10, 12), ENTRY_TYPE_INCOME)
-    return user, regular, card, category
+    # Esta é a fonte da fatura fechada: ela é exibida pelo vencimento (25/10),
+    # e não recomputada a partir dos lançamentos que por acaso caíram no mês.
+    batch = BankStatementImport.objects.create(account=card, source_filename="fatura-outubro.csv", row_count=2)
+    BankStatementLine.objects.create(
+        import_batch=batch, account=card, statement_date=date(2026, 10, 5),
+        description="Mercado", amount=Decimal("-100.00"), line_hash="fatura-out-1",
+    )
+    BankStatementLine.objects.create(
+        import_batch=batch, account=card, statement_date=date(2026, 10, 12),
+        description="Estorno", amount=Decimal("20.00"), line_hash="fatura-out-2",
+    )
+    return user, regular, card, category, batch
 
 
 def _context(user, **params):
@@ -76,41 +87,44 @@ def _context(user, **params):
     )
 
 
-def test_varias_compras_do_cartao_viram_uma_fatura_no_fechamento(scenario):
-    user, regular, card, _category = scenario
+def test_modo_misto_separa_fatura_real_do_extrato_e_dos_totais(scenario):
+    user, regular, card, _category, batch = scenario
 
     context = _context(user)
 
-    summaries = [row for row in context["txs"] if isinstance(row, CardStatementSummary)]
     assert context["card_presentation"] == CARD_PRESENTATION_SUMMARY
-    assert context["show_account_indicator"] is True
-    assert len(summaries) == 1
-    summary = summaries[0]
-    assert summary.account_id == card.id
-    assert summary.display_date == date(2026, 10, 19)
-    assert summary.entry_count == 2
-    assert summary.entry_type == ENTRY_TYPE_EXPENSE
-    assert summary.entry_amount == Decimal("80.00")
-    assert [row.description for row in context["txs"] if not isinstance(row, CardStatementSummary)] == ["Débito em conta"]
-    assert context["blocos"][0]["total_despesas"] == Decimal("125.00")
+    assert [row.description for row in context["txs"]] == ["Débito em conta"]
+    assert context["blocos"][0]["total_despesas"] == Decimal("25.00")
+    assert context["show_card_invoices"] is True
+    assert len(context["card_invoices"]) == 1
+    invoice = context["card_invoices"][0]
+    assert invoice.account.id == card.id
+    assert invoice.closing_date == date(2026, 10, 19)
+    assert invoice.due_date == date(2026, 10, 25)
+    assert invoice.total == Decimal("80.00")
+    assert invoice.import_batch_id == batch.id
+    assert regular.id in context["blocos"][0]["account_ids"]
+    assert card.id not in context["blocos"][0]["account_ids"]
 
 
-def test_detalhe_e_filtros_de_categoria_preservam_lancamentos_originais(scenario):
-    user, _regular, card, category = scenario
+def test_detalhe_e_filtros_preservam_lancamentos_originais_e_indicam_ciclo(scenario):
+    user, _regular, card, category, _batch = scenario
 
     explicit_detail = _context(user, card_presentation=CARD_PRESENTATION_DETAILS)
     category_filter = _context(user, filter_category=category.category_name)
     card_filter = _context(user, account_id=str(card.id))
 
-    assert not any(isinstance(row, CardStatementSummary) for row in explicit_detail["txs"])
+    detailed_card_entry = next(row for row in explicit_detail["txs"] if row.description == "Mercado no cartão")
+    assert detailed_card_entry.card_invoice_closing_date == date(2026, 10, 19)
+    assert detailed_card_entry.card_invoice_due_date == date(2026, 10, 25)
+    assert explicit_detail["show_card_invoices"] is False
     assert category_filter["card_presentation"] == CARD_PRESENTATION_DETAILS
-    assert not any(isinstance(row, CardStatementSummary) for row in category_filter["txs"])
     assert card_filter["card_presentation"] == CARD_PRESENTATION_DETAILS
     assert card_filter["show_account_indicator"] is False
 
 
-def test_tabela_mostra_icones_de_conta_e_o_resumo_de_fechamento(client, scenario):
-    user, _regular, _card, _category = scenario
+def test_tabela_mostra_painel_de_faturas_sem_linha_sintetica(client, scenario):
+    user, _regular, _card, _category, _batch = scenario
     client.force_login(user)
 
     response = client.get("/transactions/?period=2026-10&mode=todos&grupos=bancos,cartoes")
@@ -118,6 +132,8 @@ def test_tabela_mostra_icones_de_conta_e_o_resumo_de_fechamento(client, scenario
     html = response.content.decode()
     assert response.status_code == 200
     assert 'value="resumo" selected' in html
-    assert 'class="card-statement-summary"' in html
-    assert 'class="account-indicator"' in html
-    assert "Fatura fechada" in html
+    assert 'id="card-invoices-title"' in html
+    assert "Faturas dos cartões" in html
+    assert "fatura-outubro.csv" not in html
+    assert 'class="card-statement-summary"' not in html
+    assert "Débito em conta" in html

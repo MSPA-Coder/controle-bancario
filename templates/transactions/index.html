@@ -43,7 +43,7 @@
         <label class="top-filter-field compact">
             {% trans "Cartões" %}
             <select name="card_presentation" aria-label="{% trans 'Exibição dos cartões' %}">
-                <option value="resumo" {% if card_presentation == 'resumo' %}selected{% endif %}>{% trans "Resumo por fechamento" %}</option>
+                <option value="resumo" {% if card_presentation == 'resumo' %}selected{% endif %}>{% trans "Faturas separadas" %}</option>
                 <option value="detalhes" {% if card_presentation == 'detalhes' %}selected{% endif %}>{% trans "Lançamentos detalhados" %}</option>
             </select>
         </label>

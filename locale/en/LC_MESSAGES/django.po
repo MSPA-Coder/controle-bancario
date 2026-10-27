@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-25 23:46-0300\n"
+"POT-Creation-Date: 2026-10-26 15:05-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2742,7 +2742,6 @@ msgid "Extrato em arquivo"
 msgstr "Statement file"
 
 #: fechamento/models.py templates/banking/fatura.html
-#: templates/transactions/_table_body.html
 msgid "Fatura do cartão"
 msgstr "Card statement"
 
@@ -3787,10 +3786,12 @@ msgid "Próximas faturas (projeção)"
 msgstr "Upcoming card statements (projection)"
 
 #: templates/banking/_fatura_projetada.html
+#: templates/transactions/_card_invoices.html
 msgid "Fecha"
 msgstr "Closes"
 
 #: templates/banking/_fatura_projetada.html
+#: templates/transactions/_card_invoices.html
 msgid "Vence"
 msgstr "Due"
 
@@ -3890,6 +3891,7 @@ msgid "Revisar fatura"
 msgstr "Review card statement"
 
 #: templates/banking/_import_table.html templates/banking/faturas.html
+#: templates/transactions/_card_invoices.html
 msgid "Ver fatura"
 msgstr "View card statement"
 
@@ -4636,7 +4638,7 @@ msgstr[1] "%(n)s lines already processed in this import."
 msgid "Ver em Conciliação"
 msgstr "View in reconciliation"
 
-#: templates/banking/fatura.html
+#: templates/banking/fatura.html templates/transactions/_card_invoices.html
 msgid "Ver todas as faturas"
 msgstr "View all card statements"
 
@@ -6131,6 +6133,7 @@ msgstr "No data found."
 #: templates/reports/partials/account_position_content.html
 #: templates/reports/partials/annual_planning_content.html
 #: templates/reports/partials/upcoming_movements_content.html
+#: templates/transactions/_card_invoices.html
 msgid "Total"
 msgstr "Total"
 
@@ -7022,6 +7025,42 @@ msgstr "New account holder"
 msgid "Nome do titular…"
 msgstr "Account holder name…"
 
+#: templates/transactions/_card_invoices.html
+msgid "Faturas dos cartões"
+msgstr "Card statements"
+
+#: templates/transactions/_card_invoices.html
+msgid "Faturas são mostradas pelo vencimento. O extrato abaixo permanece apenas com as contas de movimentação e aplicação."
+msgstr "Statements are shown by due date. The ledger below contains only transaction and investment accounts."
+
+#: templates/transactions/_card_invoices.html
+msgid "Cartão"
+msgstr "Card"
+
+#: templates/transactions/_card_invoices.html
+msgid "Situação"
+msgstr "Status"
+
+#: templates/transactions/_card_invoices.html
+msgid "Detalhe"
+msgstr "Details"
+
+#: templates/transactions/_card_invoices.html
+msgid "Importada"
+msgstr "Imported"
+
+#: templates/transactions/_card_invoices.html
+msgid "Projetada"
+msgstr "Projected"
+
+#: templates/transactions/_card_invoices.html
+msgid "Ver projeção"
+msgstr "View projection"
+
+#: templates/transactions/_card_invoices.html
+msgid "Nenhuma fatura com vencimento no período selecionado."
+msgstr "No card statement is due in the selected period."
+
 #: templates/transactions/_fields.html
 msgid "Ex: Supermercado, salário…"
 msgstr "E.g., Supermarket, salary…"
@@ -7179,15 +7218,22 @@ msgid "Filtrar por categoria"
 msgstr "Filter by category"
 
 #: templates/transactions/_table_body.html
-#, python-format
-msgid "Fatura fechada · %(counter)s lançamento"
-msgid_plural "Fatura fechada · %(counter)s lançamentos"
-msgstr[0] "Card statement closed · %(counter)s entry"
-msgstr[1] "Card statement closed · %(counter)s entries"
+#, fuzzy
+#| msgid "Faturas"
+msgid "Fatura"
+msgstr "Card statements"
 
 #: templates/transactions/_table_body.html
-msgid "Consolidado"
-msgstr "Consolidated"
+#, fuzzy
+#| msgid "fechado"
+msgid "fecha"
+msgstr "closed"
+
+#: templates/transactions/_table_body.html
+#, fuzzy
+#| msgid "Vence"
+msgid "vence"
+msgstr "Due"
 
 #: templates/transactions/_table_body.html
 msgid "Realizar"
@@ -7210,8 +7256,8 @@ msgid "Exibição dos cartões"
 msgstr "Card display"
 
 #: templates/transactions/index.html
-msgid "Resumo por fechamento"
-msgstr "Summary by closing date"
+msgid "Faturas separadas"
+msgstr "Separate card statements"
 
 #: templates/transactions/index.html
 msgid "Lançamentos detalhados"

@@ -1,6 +1,6 @@
 """Serviços de domínio para transações e fluxo de caixa."""
 import calendar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import uuid4
@@ -13,7 +13,7 @@ from django.utils.translation import gettext
 
 from accounts.services import can_use_transfer_destination, transfer_destination_access_ids
 from banking.models import FinancialAccount
-from banking.services import can_access_account, currency_blocks
+from banking.services import accessible_account_ids, can_access_account, currency_blocks
 from core.currency_filter import ALL_CURRENCIES, selected_currency
 from core.domain.finance import (
     CATEGORY_KIND_MANAGERIAL,
@@ -2048,20 +2048,22 @@ VALID_CARD_PRESENTATIONS = (CARD_PRESENTATION_SUMMARY, CARD_PRESENTATION_DETAILS
 
 
 @dataclass(frozen=True)
-class CardStatementSummary:
-    """Linha apenas de apresentação: lançamentos do cartão reunidos no fechamento.
+class CardInvoice:
+    """Fatura apresentada fora do razão quando há cartões e contas correntes.
 
-    O razão continua composto pelos lançamentos originais. Isso preserva
-    categoria, parcela, conciliação e auditoria; só a tabela troca várias
-    compras do mesmo ciclo por uma linha que aponta para o fechamento.
+    Uma fatura importada é a fonte para valores já fechados; uma projetada é
+    uma previsão explícita. Nenhuma delas se faz passar por lançamento do
+    extrato: compra, pagamento e transferência continuam no seu próprio
+    regime e no modo detalhado.
     """
 
     account: FinancialAccount
-    display_date: date
-    entry_type: str
-    entry_amount: Decimal
-    entry_count: int
-    is_card_summary: bool = True
+    closing_date: date
+    due_date: date
+    total: Decimal
+    item_count: int
+    source: str
+    import_batch_id: int | None = None
 
     @property
     def account_id(self) -> int:
@@ -2085,45 +2087,48 @@ def _card_closing_date(entry: CashFlowEntry) -> date:
     return date(next_year, next_month, min(day, calendar.monthrange(next_year, next_month)[1]))
 
 
-def _is_card_purchase_for_summary(entry: CashFlowEntry) -> bool:
-    """Compra ou estorno que ainda não é, por si só, uma fatura projetada."""
-    operation_key = entry.bank_operation.operation_key if entry.bank_operation else ""
-    return (
-        entry.account.is_credit_card
-        and not entry.category.is_internal
-        and not operation_key.startswith("cartao-estimativa:")
+def card_invoices_for_period(
+    accounts: list[FinancialAccount], *, start: date, end: date, today: date,
+) -> list[CardInvoice]:
+    """Faturas reais e previstas cujo *vencimento* cai no período escolhido.
+
+    O filtro de Lançamentos é mensal; para cartões, o marcador compreensível
+    para a pessoa é o vencimento da fatura, e não a data de cada compra nem o
+    dia de fechamento. Isso evita que uma compra posterior ao corte apareça
+    como se já pertencesse à fatura anterior.
+    """
+    from bank_statements.fatura import resumir
+    from bank_statements.fatura_projetada import (
+        faturas_importadas,
+        planejar,
+        vencimento_da_fatura,
     )
 
-
-def card_statement_summaries(entries: list[CashFlowEntry]) -> list[CashFlowEntry | CardStatementSummary]:
-    """Troca compras do cartão por uma linha líquida de cada ciclo de fechamento."""
-    grouped: dict[tuple[int, date], list[CashFlowEntry]] = {}
-    rows: list[CashFlowEntry | CardStatementSummary] = []
-    for entry in entries:
-        if not _is_card_purchase_for_summary(entry):
-            rows.append(entry)
-            continue
-        grouped.setdefault((entry.account_id, _card_closing_date(entry)), []).append(entry)
-
-    for (_account_id, closing_date), grouped_entries in grouped.items():
-        signed_total = sum(
-            (
-                entry.entry_amount if entry.entry_type == ENTRY_TYPE_EXPENSE else -entry.entry_amount
-                for entry in grouped_entries
-            ),
-            Decimal("0.00"),
-        )
-        rows.append(CardStatementSummary(
-            account=grouped_entries[0].account,
-            display_date=closing_date,
-            entry_type=ENTRY_TYPE_EXPENSE if signed_total >= 0 else ENTRY_TYPE_INCOME,
-            entry_amount=abs(signed_total).quantize(MONEY_QUANT),
-            entry_count=len(grouped_entries),
-        ))
-    return sorted(
-        rows,
-        key=lambda entry: (entry.display_date, -1 if entry.entry_type == ENTRY_TYPE_INCOME else 0, entry.account_id),
-    )
+    invoices: list[CardInvoice] = []
+    for account in accounts:
+        for imported in faturas_importadas(account):
+            due_date = vencimento_da_fatura(imported.fechamento, account.card_due_day)
+            if start <= due_date <= end:
+                invoices.append(CardInvoice(
+                    account=account,
+                    closing_date=imported.fechamento,
+                    due_date=due_date,
+                    total=resumir(imported.linhas).total_da_fatura,
+                    item_count=len(imported.linhas),
+                    source="importada",
+                    import_batch_id=min(line.import_batch_id for line in imported.linhas),
+                ))
+        for projected in planejar(account, hoje=today, fim=end):
+            if start <= projected.vencimento <= end:
+                invoices.append(CardInvoice(
+                    account=account,
+                    closing_date=projected.fechamento,
+                    due_date=projected.vencimento,
+                    total=projected.total,
+                    item_count=0,
+                    source="projetada",
+                ))
+    return sorted(invoices, key=lambda invoice: (invoice.due_date, invoice.account_id, invoice.closing_date))
 
 
 def _parse_int(value) -> int | None:
@@ -2270,12 +2275,14 @@ def resolve_statement_request(user, get_params, session, *, request=None) -> Sta
 
     # O índice de operações abre a lista sem um ``account_id`` explícito. Não
     # pode herdar uma conta persistida em sessão para calcular saldo/resumo de
-    # linhas que pertencem a outra conta da mesma operação.
+    # linhas que pertencem a outra conta da mesma operação. A operação pode
+    # incluir um cartão mesmo quando o grupo global o oculta; autorização vem
+    # das contas acessíveis, não do filtro visual que havia ficado na sessão.
     if operation_key and not ctx.account_id:
         operation_account_ids = list(
             CashFlowEntry.objects.filter(
                 bank_operation__operation_key=operation_key,
-                account_id__in=account_ids,
+                account_id__in=accessible_account_ids(user),
             ).values_list("account_id", flat=True).distinct()
         )
         if operation_account_ids:
@@ -2409,6 +2416,8 @@ def compute_statement(scope: StatementScope, view_mode: str) -> tuple[list[CashF
 
 def _decorate_rows_for_editing(current_txs: list[CashFlowEntry]) -> None:
     """Anota nas linhas o que a edição inline da tela Lançamentos consulta."""
+    from bank_statements.fatura_projetada import vencimento_da_fatura
+
     counterparty_map = counterparty_entry_map(current_txs)
     attachment_loss_map = current_future_attachment_counts(current_txs)
     for tx in current_txs:
@@ -2425,6 +2434,14 @@ def _decorate_rows_for_editing(current_txs: list[CashFlowEntry]) -> None:
         tx.supports_scope = supports_operation_scope(tx)
         tx.current_future_attachment_count = attachment_loss_map.get(tx.id, 0)
         tx.current_future_confirmation_token = current_future_confirmation_token(tx.id)
+        # No modo detalhado, a linha do cartão continua sendo a compra real,
+        # mas ganha seu ciclo para deixar claro que a data não é o vencimento
+        # da fatura. Transferências de pagamento não pertencem a um ciclo.
+        if tx.account.is_credit_card and not tx.category.is_internal:
+            tx.card_invoice_closing_date = _card_closing_date(tx)
+            tx.card_invoice_due_date = vencimento_da_fatura(
+                tx.card_invoice_closing_date, tx.account.card_due_day,
+            )
 
 
 def build_transactions_view_context(user, get_params, session, *, request=None) -> dict:
@@ -2444,13 +2461,15 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
     options = resolved.options
     minimum_date = resolved.minimum_date
 
-    current_txs, blocos = compute_statement(scope, view_mode)
-    _decorate_rows_for_editing(current_txs)
+    selected_accounts = [account for account in options.accounts if account.id in scope.account_ids]
+    card_accounts = [account for account in selected_accounts if account.is_credit_card]
+    ledger_account_ids = tuple(account.id for account in selected_accounts if not account.is_credit_card)
+    has_card_accounts = bool(card_accounts)
 
     # Um filtro por categoria/data/operação precisa revelar o lançamento que
-    # o originou. Fora desses casos, a visão resumida reduz o ruído dos cartões
-    # sem alterar o razão, os totais ou as opções dos filtros de coluna.
-    has_card_accounts = any(account.is_credit_card for account in options.accounts)
+    # o originou. Fora desses casos, separar cartões evita que uma fatura
+    # (fechada e com vencimento próprio) seja apresentada como uma linha
+    # cronológica comum no meio do extrato bancário.
     summary_compatible = not any((
         scope.filter_category, scope.filter_group, scope.filter_date,
         scope.operation_key, scope.entry_id,
@@ -2460,14 +2479,33 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
         requested_card_presentation = ""
     card_presentation = requested_card_presentation or (
         CARD_PRESENTATION_SUMMARY
-        if has_card_accounts and len(options.account_ids) > 1 and summary_compatible and not ctx.account_id
+        if has_card_accounts and ledger_account_ids and summary_compatible and not ctx.account_id
         else CARD_PRESENTATION_DETAILS
     )
-    if card_presentation == CARD_PRESENTATION_SUMMARY and not summary_compatible:
+    if card_presentation == CARD_PRESENTATION_SUMMARY and (
+        not summary_compatible or not ledger_account_ids or ctx.account_id
+    ):
         card_presentation = CARD_PRESENTATION_DETAILS
-    displayed_txs: list[CashFlowEntry | CardStatementSummary] = current_txs
+
+    all_current_txs, all_blocos = compute_statement(scope, view_mode)
     if card_presentation == CARD_PRESENTATION_SUMMARY:
-        displayed_txs = card_statement_summaries(current_txs)
+        # A tabela e seus totais passam a responder apenas pelas contas que se
+        # movimentam diretamente. A obrigação do cartão aparece no painel de
+        # faturas, pela fonte (importada ou projetada) e pelo vencimento.
+        ledger_scope = replace(scope, account_ids=ledger_account_ids)
+        current_txs, blocos = compute_statement(ledger_scope, view_mode)
+    else:
+        current_txs, blocos = all_current_txs, all_blocos
+    _decorate_rows_for_editing(current_txs)
+
+    card_invoices: list[CardInvoice] = []
+    if card_presentation == CARD_PRESENTATION_SUMMARY:
+        card_invoices = card_invoices_for_period(
+            card_accounts,
+            start=scope.start_selected,
+            end=scope.end_selected,
+            today=today,
+        )
 
     # As opções de Tipo e Data saem das linhas filtradas por todos os OUTROS
     # filtros, não por elas mesmas: com "Despesa" escolhida a lista de tipos
@@ -2475,10 +2513,10 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
     # O valor ESCOLHIDO fica sempre entre elas: quando a combinação de filtros
     # não traz linha, o seletor sumia com o próprio filtro e mostrava "Todos"
     # com o filtro ainda valendo na URL (auditoria de 09/10/2026, reteste R1.1).
-    facet_txs = current_txs
+    facet_txs = all_current_txs
     if scope.filter_type or scope.filter_date:
         facet_txs = list_transactions_for_view(
-            account_ids=sorted(account_id for bloco in blocos for account_id in bloco["account_ids"]),
+            account_ids=sorted(account_id for bloco in all_blocos for account_id in bloco["account_ids"]),
             view_mode=view_mode, start_selected=scope.start_selected, end_selected=scope.end_selected,
             filter_category=scope.filter_category, operation_key=scope.operation_key, entry_id=scope.entry_id,
             exclude_internal=scope.exclude_internal, filter_group=scope.filter_group,
@@ -2498,10 +2536,10 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
     available_categories = list_category_names(include_internal=not scope.exclude_internal)
 
     return {
-        "txs": displayed_txs,
+        "txs": current_txs,
         "today": today,
-        # Uma fileira de cartões por moeda: os totais são das contas
-        # selecionadas, e contas de moedas diferentes não têm um total comum.
+        # Uma fileira por moeda. Na visão de faturas separadas, os totais são
+        # apenas das contas que realmente aparecem no extrato.
         "blocos": blocos,
         "selected_period": report_services.month_input_value(scope.start_selected),
         "current_period": report_services.month_input_value(date(today.year, today.month, 1)),
@@ -2515,7 +2553,9 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
         "dashboard_drilldown": scope.exclude_internal,
         "has_card_accounts": has_card_accounts,
         "card_presentation": card_presentation,
-        "show_account_indicator": len({tx.account_id for tx in displayed_txs}) > 1,
+        "card_invoices": card_invoices,
+        "show_card_invoices": card_presentation == CARD_PRESENTATION_SUMMARY,
+        "show_account_indicator": len({tx.account_id for tx in current_txs}) > 1,
         "available_types": available_types,
         "available_categories": available_categories,
         "available_dates": available_dates,
