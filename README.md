@@ -10,6 +10,13 @@ mensais, projeções, relatórios e permissões funcionais. Investimentos,
 tributação, patrimônio completo e funções de ERP não fazem parte do escopo
 atual.
 
+## Ambiente oficial
+
+| Atividade | Ambiente |
+| --- | --- |
+| Aplicação, PostgreSQL, migrações, lint e testes | Docker Compose |
+| Runtime auxiliar local | `.venv` Python 3.15, sincronizada com `uv sync --locked`; não use para qualidade |
+
 ## Início rápido
 
 Requisitos no host: Docker Desktop com WSL 2, Git e um editor. Python,
