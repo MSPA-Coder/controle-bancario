@@ -138,6 +138,22 @@ def test_recolhimento_preserva_ocorrencia_em_mes_fechado(cenario):
     assert _datas(operacao) == datas_antes
 
 
+def test_extensao_nao_cria_em_mes_fechado_nem_abre_lacuna(cenario):
+    user, corrente, _poupanca, mercado, _transferencia = cenario
+    update_recurring_projection_settings(horizon_months=1, run_day=28)
+    operacao = _criar(user, corrente, mercado)
+    datas_antes = _datas(operacao)
+    proxima = add_months(max(datas_antes), 1)
+    services.close_month(corrente, proxima.year, proxima.month, None, user)
+
+    ensure_recurring_projection_horizon(today=HOJE, horizon_months=3, update_last_run=False)
+
+    assert _datas(operacao) == datas_antes
+    services.reopen_month(corrente, proxima.year, proxima.month, "Corrigir projeção", user)
+    ensure_recurring_projection_horizon(today=HOJE, horizon_months=3, update_last_run=False)
+    assert proxima in _datas(operacao)
+
+
 def test_serie_recolhida_volta_a_crescer_quando_o_horizonte_aumenta(cenario):
     user, corrente, _poupanca, mercado, _transferencia = cenario
     operacao = _criar(user, corrente, mercado)

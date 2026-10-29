@@ -196,6 +196,39 @@ def test_atualizar_cria_estimativa_e_pagamento_e_refazer_nao_duplica(cenario):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("conta_fechada", ["cartao", "corrente"])
+def test_atualizar_preserva_projecoes_de_mes_fechado(cenario, conta_fechada):
+    from transactions.services import close_month
+
+    _tres_faturas(cenario.cartao)
+    fatura_projetada.atualizar(cenario.cartao, hoje=HOJE, fim=FIM)
+    prefixo = "cartao-" if conta_fechada == "cartao" else PREFIXO_PAGAMENTO
+    antes = set(CashFlowEntry.objects.filter(
+        account=cenario.cartao, due_date__year=2026, due_date__month=10,
+        bank_operation__operation_key__startswith=prefixo,
+    ).values_list("id", flat=True))
+    assert antes
+    close_month(getattr(cenario, conta_fechada), 2026, 10, None, cenario.usuario)
+    fatura_projetada.atualizar(cenario.cartao, hoje=HOJE, fim=FIM)
+    depois = set(CashFlowEntry.objects.filter(
+        account=cenario.cartao, due_date__year=2026, due_date__month=10,
+        bank_operation__operation_key__startswith=prefixo,
+    ).values_list("id", flat=True))
+    assert depois == antes
+
+
+@pytest.mark.django_db
+def test_atualizar_nao_cria_pagamento_em_conta_fechada(cenario):
+    from transactions.services import close_month
+
+    _tres_faturas(cenario.cartao)
+    close_month(cenario.corrente, 2026, 10, None, cenario.usuario)
+    fatura_projetada.atualizar(cenario.cartao, hoje=HOJE, fim=FIM)
+    assert all(data.month != 10 for data, _ in _pagamentos(cenario.corrente, cenario.cartao))
+    assert _pagamentos(cenario.corrente, cenario.cartao)
+
+
+@pytest.mark.django_db
 def test_pagamento_ja_agendado_e_respeitado(cenario):
     _tres_faturas(cenario.cartao)
     create_transaction_batch(

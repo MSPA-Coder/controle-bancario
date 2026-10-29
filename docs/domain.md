@@ -95,6 +95,11 @@ reverte o conjunto.
 Ao reduzir o horizonte de recorrências, ocorrências em meses fechados são
 preservadas, assim como as anteriores necessárias para não abrir lacunas na
 série. O recolhimento coordena suas alterações com o fechamento das contas.
+Ao estender uma série, a projeção para antes do primeiro mês fechado em
+qualquer conta envolvida, sem criar lacunas; depois da reabertura, a projeção
+manual pode ser executada novamente. A atualização das faturas projetadas
+preserva operações com ocorrências em meses fechados e não cria estimativas ou
+pagamentos em meses fechados das contas envolvidas.
 
 Para conferir estados resumidos antigos, o comando administrativo
 `reconciliar_status_operacoes --usuario <administrador>` apenas conta divergências.

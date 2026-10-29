@@ -289,6 +289,7 @@ def _extend_operation(
     horizon_end: date,
     today: date,
     meses_avulsos: set[tuple[int, int]] | None = None,
+    meses_fechados: set[tuple[int, int, int]] | None = None,
 ) -> int:
     """Estende uma operação a partir da maior data recorrente.
 
@@ -323,6 +324,13 @@ def _extend_operation(
                 template_rows, canonico = _moldes_sem_duplicata(
                     [entry for entry in entries if entry.due_date == latest_due_date]
                 )
+            # Interromper, em vez de saltar, evita abrir uma lacuna que a
+            # extensão posterior (que parte da última data) nunca preencheria.
+            if meses_fechados and any(
+                (row.account_id, next_due_date.year, next_due_date.month) in meses_fechados
+                for row in template_rows
+            ):
+                break
             generated_count += _copy_occurrence(
                 template_rows, next_due_date, today, canonico
             )
@@ -361,6 +369,18 @@ def ensure_recurring_projection_horizon(
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_advisory_xact_lock(81288431)")
 
+    # O fechamento usa a mesma trava de conta. Tomar todas em ordem também
+    # mantém essa ordem antes das projeções dos cartões feitas mais abaixo.
+    from banking.models import FinancialAccount
+    from transactions.models import AccountMonthClose
+    from transactions.services import _lock_accounts
+
+    contas = set(FinancialAccount.objects.values_list("id", flat=True))
+    _lock_accounts(contas)
+    meses_fechados = set(AccountMonthClose.objects.filter(
+        account_id__in=contas, active=True
+    ).values_list("account_id", "year", "month"))
+
     all_entries = (
         CashFlowEntry.objects.filter(
             is_recurring=True,
@@ -389,10 +409,12 @@ def ensure_recurring_projection_horizon(
     processed_operations = 0
     for bank_operation_id, group in groupby(all_entries, key=lambda e: e.bank_operation_id):
         entries = list(group)
+        if any(entry.account_id not in contas for entry in entries):
+            continue  # uma conta apareceu depois do levantamento; tente na próxima execução
         if entries[0].operation_type == "internal_transfer" and not _can_extend_internal_transfer(entries):
             continue
         generated_count += _extend_operation(
-            entries, horizon_end, base_date, meses_avulsos.get(bank_operation_id)
+            entries, horizon_end, base_date, meses_avulsos.get(bank_operation_id), meses_fechados
         )
         processed_operations += 1
 

@@ -40,6 +40,7 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Q
+from django.utils.translation import gettext
 
 from banking.models import FinancialAccount
 from core.domain.finance import (
@@ -293,11 +294,21 @@ def _operacao(chave: str, tipo: str, descricao: str) -> BankOperation:
     )
 
 
-def _apagar_projecao_anterior(conta: FinancialAccount) -> None:
+def _apagar_projecao_anterior(conta: FinancialAccount, fechados: set[tuple[int, int, int]]) -> set[str]:
     operacoes = BankOperation.objects.filter(
         Q(operation_key__startswith=f"{PREFIXO_ESTIMATIVA}:{conta.id}:")
         | Q(operation_key__startswith=f"{PREFIXO_PAGAMENTO}:{conta.id}:")
     )
+    # Uma transferência deve ser preservada inteira se uma das contas estiver
+    # fechada. Preservamos também a chave para não recriá-la por cima.
+    protegidos = {
+        operacao_id for operacao_id, account_id, data in
+        CashFlowEntry.objects.filter(bank_operation__in=operacoes).values_list(
+            "bank_operation_id", "account_id", "due_date"
+        ) if (account_id, data.year, data.month) in fechados
+    }
+    chaves = set(operacoes.filter(id__in=protegidos).values_list("operation_key", flat=True))
+    operacoes = operacoes.exclude(id__in=protegidos)
     # Ocorrência realizada (a pessoa marcou o pagamento projetado como pago)
     # deixa de ser projeção: fica, e a operação com ela.
     linhas = CashFlowEntry.objects.filter(bank_operation__in=operacoes).exclude(status=STATUS_REALIZED)
@@ -306,23 +317,36 @@ def _apagar_projecao_anterior(conta: FinancialAccount) -> None:
     operacoes.filter(entries__isnull=True).delete()
     # A que sobrou tem ocorrência realizada e deixa de ser da projeção: sai do
     # prefixo, para a próxima atualização não a apagar nem colidir com a chave.
-    for operacao in BankOperation.objects.filter(
-        Q(operation_key__startswith=f"{PREFIXO_ESTIMATIVA}:{conta.id}:")
-        | Q(operation_key__startswith=f"{PREFIXO_PAGAMENTO}:{conta.id}:")
-    ):
+    for operacao in operacoes:
         operacao.operation_key = f"realizado-{operacao.operation_key}"[:80]
         operacao.save(update_fields=["operation_key", "updated_at"])
+    return chaves
 
 
 @transaction.atomic
 def atualizar(conta: FinancialAccount, *, hoje: date | None = None, fim: date | None = None) -> list[FaturaProjetada]:
     """Refaz os lançamentos da fatura projetada do cartão."""
-    from transactions.services import _account_label
+    from transactions.models import AccountMonthClose
+    from transactions.services import _account_label, _lock_accounts
+
+    ids_contas = set(FinancialAccount.objects.values_list("id", flat=True))
+    _lock_accounts(ids_contas)
 
     conta = FinancialAccount.objects.select_for_update(of=("self",)).select_related(
         "card_payment_account__owner", "card_payment_account__institution", "owner", "institution"
     ).get(id=conta.id)
-    _apagar_projecao_anterior(conta)
+    contas_associadas = set(CashFlowEntry.objects.filter(
+        Q(bank_operation__operation_key__startswith=f"{PREFIXO_ESTIMATIVA}:{conta.id}:")
+        | Q(bank_operation__operation_key__startswith=f"{PREFIXO_PAGAMENTO}:{conta.id}:")
+    ).values_list("account_id", flat=True))
+    if conta.id not in ids_contas or not contas_associadas.issubset(ids_contas) or (
+        conta.card_payment_account_id is not None and conta.card_payment_account_id not in ids_contas
+    ):
+        raise ValueError(gettext("As contas mudaram durante a projeção; tente novamente."))
+    fechados = set(AccountMonthClose.objects.filter(
+        account_id__in=ids_contas, active=True
+    ).values_list("account_id", "year", "month"))
+    protegidas = _apagar_projecao_anterior(conta, fechados)
     if not conta.is_credit_card:
         return []
     hoje = hoje or date.today()
@@ -334,15 +358,18 @@ def atualizar(conta: FinancialAccount, *, hoje: date | None = None, fim: date | 
     transferencia = _categoria_de_transferencia(conta)
     pagadora = conta.card_payment_account
     for plano in planos:
-        if plano.estimativa.valor > 0:
-            quando = max(plano.fechamento, hoje)
+        chave_estimativa = f"{PREFIXO_ESTIMATIVA}:{conta.id}:{plano.fechamento.isoformat()}"
+        chave_pagamento = f"{PREFIXO_PAGAMENTO}:{conta.id}:{plano.vencimento.isoformat()}"
+        quando = max(plano.fechamento, hoje)
+        if (plano.estimativa.valor > 0 and chave_estimativa not in protegidas
+                and (conta.id, quando.year, quando.month) not in fechados):
             descricao = (
                 "Gasto estimado (valor fixado no cartão)"
                 if plano.estimativa.origem == "fixado"
                 else f"Gasto estimado (mediana de {plano.estimativa.faturas} faturas)"
             )
             operacao = _operacao(
-                f"{PREFIXO_ESTIMATIVA}:{conta.id}:{plano.fechamento.isoformat()}",
+                chave_estimativa,
                 OPERATION_SINGLE, descricao,
             )
             CashFlowEntry.objects.create(
@@ -351,9 +378,11 @@ def atualizar(conta: FinancialAccount, *, hoje: date | None = None, fim: date | 
                 due_date=quando, status=STATUS_PROJECTED,
                 operation_type=OPERATION_SINGLE, bank_operation=operacao,
             )
-        if plano.pagamento > 0 and transferencia is not None:
+        if (plano.pagamento > 0 and transferencia is not None and chave_pagamento not in protegidas
+                and (conta.id, plano.vencimento.year, plano.vencimento.month) not in fechados
+                and (pagadora.id, plano.vencimento.year, plano.vencimento.month) not in fechados):
             operacao = _operacao(
-                f"{PREFIXO_PAGAMENTO}:{conta.id}:{plano.vencimento.isoformat()}",
+                chave_pagamento,
                 OPERATION_INTERNAL_TRANSFER,
                 f"Fatura projetada {conta.account_name} {plano.vencimento:%d/%m/%Y}",
             )

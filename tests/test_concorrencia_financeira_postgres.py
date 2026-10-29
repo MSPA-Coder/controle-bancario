@@ -257,3 +257,56 @@ def test_recolhimento_aguarda_fechamento_e_preserva_mes_fechado(cenario):
                 futuro.result(timeout=1)
         assert futuro.result(timeout=15) is None
     assert CashFlowEntry.objects.filter(pk=protegida.pk).exists()
+
+
+def test_extensao_aguarda_fechamento_e_nao_grava_no_mes_fechado(cenario):
+    from core.services import update_recurring_projection_settings
+    from reports.services import add_months
+    from transactions.recurring_projection import ensure_recurring_projection_horizon
+
+    hoje = date.today()
+    update_recurring_projection_settings(horizon_months=1, run_day=28)
+    linhas = t.create_transaction_batch(t.TransactionRequest(
+        account_id=cenario.conta.pk, category_id=cenario.categoria.pk, entry_type=ENTRY_TYPE_EXPENSE,
+        description="Recorrência sintética", entry_amount=Decimal("10"), installments=1,
+        due_date=hoje, is_recurring=True, status=STATUS_PROJECTED), user=cenario.admin)
+    operacao = linhas[0].bank_operation_id
+    ultima = CashFlowEntry.objects.filter(bank_operation_id=operacao).order_by("-due_date").first().due_date
+    fechada = add_months(ultima, 1)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with transaction.atomic():
+            t.close_month(cenario.conta, fechada.year, fechada.month, None, cenario.admin)
+            futuro = pool.submit(executar, lambda: ensure_recurring_projection_horizon(
+                today=hoje, horizon_months=3, update_last_run=False))
+            with pytest.raises(TimeoutError):
+                futuro.result(timeout=1)
+        assert futuro.result(timeout=15) is None
+    assert not CashFlowEntry.objects.filter(bank_operation_id=operacao, due_date__gt=ultima).exists()
+
+
+def test_fatura_projetada_aguarda_fechamento_da_conta_pagadora(cenario):
+    from bank_statements.fatura_projetada import atualizar
+    from banking.models import FinancialAccount
+    from core.domain.finance import ACCOUNT_KIND_CREDIT_CARD, CATEGORY_KIND_TRANSFER
+    from reports.services import add_months
+    from transactions.models import CashFlowCategory
+
+    hoje = date.today()
+    mes = add_months(hoje, 1)
+    cartao = FinancialAccount.objects.create(
+        owner=cenario.conta.owner, institution=cenario.conta.institution, account_name="Cartão sintético",
+        account_kind=ACCOUNT_KIND_CREDIT_CARD, card_closing_day=5, card_due_day=10,
+        card_payment_account=cenario.conta, card_estimated_spend=Decimal("50"),
+    )
+    CashFlowCategory.objects.create(category_name="Transferência sintética", kind=CATEGORY_KIND_TRANSFER)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with transaction.atomic():
+            t.close_month(cenario.conta, mes.year, mes.month, None, cenario.admin)
+            futuro = pool.submit(executar, lambda: atualizar(cartao, hoje=hoje, fim=add_months(hoje, 3)))
+            with pytest.raises(TimeoutError):
+                futuro.result(timeout=1)
+        assert futuro.result(timeout=15) is None
+    assert not CashFlowEntry.objects.filter(
+        account=cenario.conta, due_date__year=mes.year, due_date__month=mes.month,
+        bank_operation__operation_key__startswith=f"cartao-pagamento:{cartao.id}:",
+    ).exists()

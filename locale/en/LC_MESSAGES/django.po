@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 04:43-0300\n"
+"POT-Creation-Date: 2026-10-29 13:28-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1017,6 +1017,10 @@ msgstr "The card statement has entries in a closed month of the card (%(meses)s)
 #: bank_statements/reclassificacao.py bank_statements/valorizacao.py
 msgid "Reabrir mês fechado exige a permissão de fechamento mensal."
 msgstr "Reopening a closed month requires the monthly close permission."
+
+#: bank_statements/fatura_projetada.py
+msgid "As contas mudaram durante a projeção; tente novamente."
+msgstr "The accounts changed during projection; please try again."
 
 #: bank_statements/meses.py bank_statements/reclassificacao.py
 #: bank_statements/valorizacao.py
