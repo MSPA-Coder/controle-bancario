@@ -115,17 +115,18 @@ test('cartões ficam em faturas separadas do extrato misto', { timeout: 60000 },
     await entrar(page);
     await page.goto(`${base}/transactions/?grupos=bancos,cartoes&mode=realizado`);
     assert.equal(await page.getByLabel('Exibição dos cartões', { exact: true }).inputValue(), 'resumo');
-    const invoices = page.locator('#card-invoices-panel');
-    assert.equal(await invoices.count(), 1);
-    assert.match(await invoices.innerText(), /Faturas dos cartões.*Importada/);
+    const invoices = page.locator('.card-invoices-panel');
+    await invoices.waitFor({ state: 'visible' });
+    assert.match(await invoices.innerText(), /Faturas dos cartões.*Importada/s);
     assert.equal(await page.locator('.card-statement-summary').count(), 0);
-    assert.equal(await page.locator('#transactions-table-container').getByText('Compra browser A', { exact: true }).count(), 0);
+    const compra = page.locator('#transactions-table-container tr').filter({ hasText: 'Compra browser A' });
+    assert.equal(await compra.count(), 0);
 
     await page.getByLabel('Exibição dos cartões', { exact: true }).selectOption('detalhes');
     await page.waitForURL(url => url.searchParams.get('card_presentation') === 'detalhes');
-    await page.locator('#transactions-table-container').getByText('Compra browser A', { exact: true }).waitFor();
-    assert.equal(await page.locator('#card-invoices-panel').count(), 0);
-    assert.match(await page.locator('#transactions-table-container').getByText('Compra browser A', { exact: true }).locator('xpath=..').innerText(), /Fatura: fecha/);
+    await compra.waitFor();
+    assert.equal(await page.locator('.card-invoices-panel').count(), 0);
+    assert.match(await compra.innerText(), /Fatura: fecha/);
   } catch (error) {
     await page.screenshot({ path: '/results/cb-cartoes.png', fullPage: true });
     throw error;
