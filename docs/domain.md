@@ -92,6 +92,18 @@ duas pontas de transferências preservam o agrupamento durante criação, ediç�
 realização, exclusão e conciliação. Operações compostas são atômicas: uma falha
 reverte o conjunto.
 
+Ao reduzir o horizonte de recorrências, ocorrências em meses fechados são
+preservadas, assim como as anteriores necessárias para não abrir lacunas na
+série. O recolhimento coordena suas alterações com o fechamento das contas.
+
+Para conferir estados resumidos antigos, o comando administrativo
+`reconciliar_status_operacoes --usuario <administrador>` apenas conta divergências.
+Para uma ação automatizada, `--sistema` substitui a identificação de usuário e
+fica explícito na auditoria.
+Com `--aplicar`, ele recalcula os estados a partir das ocorrências atuais e
+registra cada mudança na auditoria, sem alterar lançamentos ou saldos. A
+aplicação em dados existentes exige backup validado e autorização para o destino.
+
 Uma transferência interna tem exatamente uma origem e uma contraparte por
 ocorrência. Além do service, o PostgreSQL confere isso no commit por um gatilho
 de restrição postergado: a gravação transitória da origem antes do destino é
@@ -386,6 +398,16 @@ onde o dinheiro entra (Pix), sai para a conta em dólar (remessa de câmbio) e s
 o IOF. A data de cada linha é a da liquidação, quando o saldo muda; a coluna de
 saldo confere linha a linha a partir do saldo inicial do resumo, e o saldo final
 fecha a cadeia. Formato reconhecido por "www.avenue.us"; conta por "Nº conta".
+
+Na fatura, uma compra avulsa só é conciliada automaticamente com lançamento
+existente quando há um único candidato com a mesma descrição, além do valor e
+da data próximos. Se houver candidatos, mas a descrição não confirmar um deles
+ou houver mais de um com a mesma descrição, a linha permanece em Conciliação
+para revisão, sem criar outro lançamento. Também permanece para revisão quando
+o lançamento já realizado tem data ou valor realizado diferente da fatura;
+essa última regra também vale para parcelas e pagamentos.
+O pagamento vinculado a transferência
+revalida a autorização para o destino mesmo se ela já estiver realizada.
 
 A fatura de cartão quase sempre atravessa dois meses: a de outubro traz as
 compras de meados de setembro em diante, e setembro pode já estar fechado no

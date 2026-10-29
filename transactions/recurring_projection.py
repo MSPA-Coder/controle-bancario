@@ -477,11 +477,14 @@ def recolher_alem_do_horizonte(
     leva de novo adiante quando o horizonte andar.
     """
     from core.services import log_audit_event
-    from transactions.models import BankOperation
-    from transactions.services import _sync_bank_operation_status
+    from transactions.models import AccountMonthClose, BankOperation
+    from transactions.services import _lock_accounts, _sync_bank_operation_status
 
     horizon_end = recurring_projection_horizon_end(today or date.today(), horizon_months)
-    candidatas = list(
+    if connection.vendor == "postgresql":
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_xact_lock(81288431)")
+    consulta = (
         CashFlowEntry.objects.filter(
             is_recurring=True,
             bank_operation__isnull=False,
@@ -489,12 +492,26 @@ def recolher_alem_do_horizonte(
         )
         .exclude(operation_type=OPERATION_INSTALLMENT)
         .exclude(status=STATUS_REALIZED)
-        .order_by("bank_operation_id", "due_date", "id")
     )
+    contas = set(consulta.values_list("account_id", flat=True))
+    _lock_accounts(contas)
+    operacoes = set(consulta.values_list("bank_operation_id", flat=True))
+    list(BankOperation.objects.select_for_update().filter(id__in=operacoes).order_by("id"))
+    candidatas = list(consulta.select_for_update(of=("self",)).order_by("bank_operation_id", "due_date", "id"))
+    # Se uma edição moveu uma ocorrência durante a descoberta, não se pode
+    # adquirir outra conta fora da ordem global nem usar uma verificação antiga.
+    if any(entry.account_id not in contas or entry.bank_operation_id not in operacoes for entry in candidatas):
+        return RecolhimentoResult(horizon_end, 0, 0)
     if not candidatas:
         return RecolhimentoResult(horizon_end, 0, 0)
 
     protegidos = _ids_protegidos([e.id for e in candidatas])
+    fechados = set(AccountMonthClose.objects.filter(
+        active=True, account_id__in=contas,
+    ).values_list("account_id", "year", "month"))
+    protegidos.update(
+        e.id for e in candidatas if (e.account_id, e.due_date.year, e.due_date.month) in fechados
+    )
     ultima_protegida: dict[int, date] = {}
     for entry in candidatas:
         if entry.id in protegidos:

@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from time import monotonic
 
 from transactions.recurring_projection import executar_projecao_mensal_se_devido
 
 logger = logging.getLogger(__name__)
+INTERVALO_NOVA_TENTATIVA = 60.0
 
 
 class ProjecaoRecorrenteMensalMiddleware:
@@ -40,6 +42,7 @@ class ProjecaoRecorrenteMensalMiddleware:
         # dias ANTES do dia marcado, quando a resposta e "ainda nao" e nada
         # mudou. Sem isto seria uma consulta por requisicao ate o dia chegar.
         self._verificado_em: date | None = None
+        self._nova_tentativa_em = 0.0
 
     def __call__(self, request):
         self._verificar(request)
@@ -56,9 +59,10 @@ class ProjecaoRecorrenteMensalMiddleware:
         hoje = date.today()
         if self._mes_resolvido == (hoje.year, hoje.month):
             return
-        if self._verificado_em == hoje:
+        if self._verificado_em == hoje and (not self._nova_tentativa_em or monotonic() < self._nova_tentativa_em):
             return
         self._verificado_em = hoje
+        self._nova_tentativa_em = 0.0
 
         try:
             decisao = executar_projecao_mensal_se_devido(hoje)
@@ -66,7 +70,9 @@ class ProjecaoRecorrenteMensalMiddleware:
             # Uma falha aqui NAO pode derrubar a pagina que o usuario pediu --
             # a projecao e trabalho de fundo. Mas tambem nao pode sumir: fica
             # no log em ERROR, e como nada foi marcado como resolvido, a
-            # proxima verificacao tenta de novo.
+            # proxima verificacao tenta de novo, com intervalo para nao
+            # sobrecarregar o banco enquanto ele estiver indisponivel.
+            self._nova_tentativa_em = monotonic() + INTERVALO_NOVA_TENTATIVA
             logger.exception("Projecao recorrente automatica falhou.")
             return
 

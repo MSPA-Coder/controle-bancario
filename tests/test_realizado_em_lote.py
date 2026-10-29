@@ -244,6 +244,21 @@ def test_operacao_criada_como_realizada_reflete_as_ocorrencias(cenario, extras):
     assert operacao.status == STATUS_PENDING
 
 
+@pytest.mark.parametrize("requisicao", [_requisicao, _transferencia], ids=["lancamento", "transferencia"])
+@pytest.mark.parametrize("extras", [RECORRENTE, PARCELADO])
+def test_realizar_e_desfazer_preservam_status_resumido_da_operacao(cenario, requisicao, extras):
+    entradas = _em_aberto(cenario, requisicao, **extras)
+    primeira = entradas[0]
+    operacao = BankOperation.objects.get(pk=primeira.bank_operation_id)
+    services.realize_transaction(primeira, realized_date=INICIO, user=cenario.usuario)
+    operacao.refresh_from_db()
+    assert operacao.status == STATUS_PENDING
+    _pagar_a_segunda(cenario, entradas)
+    services.unrealize_transaction(primeira, user=cenario.usuario)
+    operacao.refresh_from_db()
+    assert operacao.status == STATUS_PENDING
+
+
 # --- Edição em grupo: o formulário vale para a linha editada ------------------
 
 

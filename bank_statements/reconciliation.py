@@ -288,7 +288,9 @@ def _get_line_in_scope(
         raise ValueError(gettext("Linha de extrato inválida."))
     lines = BankStatementLine.objects.select_related("account")
     if for_update:
-        lines = lines.select_for_update()
+        # Não bloquear a conta incluída pelo select_related: transferências
+        # entre duas contas precisam adquiri-las na ordem de _lock_accounts.
+        lines = lines.select_for_update(of=("self",))
     try:
         line = lines.get(id=line_id)
     except BankStatementLine.DoesNotExist as exc:

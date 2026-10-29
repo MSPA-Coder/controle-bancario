@@ -42,7 +42,12 @@ from core.domain.finance import (
 from core.domain.identity import USER_TYPE_ADMINISTRATOR
 from reports.services import VIEW_REALIZED, decimal_balance_before
 from transactions.models import AccountMonthClose, CashFlowCategory, CashFlowEntry
-from transactions.services import TransactionRequest, close_month, create_transaction_batch
+from transactions.services import (
+    TransactionRequest,
+    close_month,
+    create_transaction_batch,
+    realize_transaction,
+)
 
 CABECALHO_C6 = (
     "Data de Compra;Nome no Cartão;Final do Cartão;Categoria;Descrição;Parcela;"
@@ -386,7 +391,7 @@ def test_compra_lancada_a_mao_e_conciliada_em_vez_de_duplicada(cenario):
     manual = create_transaction_batch(
         TransactionRequest(
             account_id=cenario["cartao"].id, category_id=cenario["mercado"].id, entry_type=ENTRY_TYPE_EXPENSE,
-            description="mercado", entry_amount=Decimal("200.00"), installments=1,
+            description="mercado bom", entry_amount=Decimal("200.00"), installments=1,
             due_date=date(2026, 3, 6), status=STATUS_PROJECTED,
         ),
         user=cenario["usuario"],
@@ -398,6 +403,100 @@ def test_compra_lancada_a_mao_e_conciliada_em_vez_de_duplicada(cenario):
     manual.refresh_from_db()
     assert manual.status == STATUS_REALIZED
     assert not CashFlowEntry.objects.filter(account=cenario["cartao"], description__startswith="MERCADO BOM").exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("descricoes", [("Outra compra",), ("MERCADO BOM", "mercado bom")])
+def test_compra_sem_identificacao_inequivoca_fica_pendente(cenario, descricoes):
+    for descricao in descricoes:
+        create_transaction_batch(
+            TransactionRequest(
+                account_id=cenario["cartao"].id, category_id=cenario["mercado"].id,
+                entry_type=ENTRY_TYPE_EXPENSE, description=descricao, entry_amount=Decimal("200.00"),
+                installments=1, due_date=date(2026, 3, 6), status=STATUS_PROJECTED,
+            ), user=cenario["usuario"],
+        )
+    lote, _, _ = _importar(cenario, FATURA_MARCO)
+    linha = lote.lines.get(description__startswith="MERCADO BOM")
+    plano = next(p for p in fatura.planejar(cenario["cartao"], fatura.linhas_novas(lote)) if p.linha.id == linha.id)
+    assert plano.acao == fatura.COMPRA_PENDENTE
+    assert "revisão" in plano.rotulo
+
+    resultado = fatura.processar(cenario["usuario"], lote.id, {})
+
+    linha.refresh_from_db()
+    assert resultado[fatura.COMPRA_PENDENTE] == 1
+    assert linha.status == "novo" and linha.matched_entry_id is None
+    assert CashFlowEntry.objects.filter(account=cenario["cartao"], entry_amount=Decimal("200.00")).count() == len(descricoes)
+
+
+@pytest.mark.django_db
+def test_pagamento_realizado_nao_contorna_revogacao_do_destino(cenario):
+    origem = _pagamento_de_300(cenario)[0]
+    realize_transaction(origem, date(2026, 3, 25), Decimal("300"), user=cenario["usuario"])
+    lote, _, _ = _importar(cenario, FATURA_MARCO)
+    save_transfer_destination_accesses(cenario["usuario"], {cenario["corrente"].id})
+
+    with pytest.raises(ValueError, match="conta destino"):
+        fatura.processar(cenario["usuario"], lote.id, {})
+
+    assert lote.lines.filter(status="conciliado").count() == 0
+
+
+@pytest.mark.django_db
+def test_compra_realizada_em_data_diferente_fica_para_revisao(cenario):
+    manual = create_transaction_batch(
+        TransactionRequest(
+            account_id=cenario["cartao"].id, category_id=cenario["mercado"].id,
+            entry_type=ENTRY_TYPE_EXPENSE, description="MERCADO BOM", entry_amount=Decimal("200.00"),
+            installments=1, due_date=date(2026, 3, 6), status=STATUS_REALIZED,
+            realized_date=date(2026, 3, 6), realized_amount=Decimal("200.00"),
+        ), user=cenario["usuario"],
+    )[0]
+    lote, _, _ = _importar(cenario, FATURA_MARCO)
+    resultado = fatura.processar(cenario["usuario"], lote.id, {})
+    linha = lote.lines.get(description__startswith="MERCADO BOM")
+    manual.refresh_from_db()
+    assert resultado[fatura.COMPRA_PENDENTE] == 1
+    assert linha.status == "novo" and linha.matched_entry_id is None
+    assert manual.realized_date == date(2026, 3, 6)
+
+
+@pytest.mark.django_db
+def test_pagamento_realizado_em_data_diferente_fica_para_revisao(cenario):
+    origem = _pagamento_de_300(cenario)[0]
+    realize_transaction(origem, date(2026, 3, 24), Decimal("300"), user=cenario["usuario"])
+    lote, _, _ = _importar(cenario, FATURA_MARCO)
+
+    resultado = fatura.processar(cenario["usuario"], lote.id, {})
+
+    linha = lote.lines.get(description__startswith="Pag Fatura Boleto", amount=Decimal("300.00"))
+    origem.refresh_from_db()
+    assert resultado[fatura.REALIZACAO_PENDENTE] == 1
+    assert linha.status == "novo" and linha.matched_entry_id is None
+    assert origem.realized_date == date(2026, 3, 24)
+
+
+@pytest.mark.django_db
+def test_parcela_realizada_em_data_diferente_fica_para_revisao(cenario):
+    parcelas = create_transaction_batch(
+        TransactionRequest(
+            account_id=cenario["cartao"].id, category_id=cenario["mercado"].id,
+            entry_type=ENTRY_TYPE_EXPENSE, description="TV NOVA", entry_amount=Decimal("300.00"),
+            installments=3, due_date=date(2026, 3, 7), status=STATUS_REALIZED,
+            realized_date=date(2026, 3, 6), realized_amount=Decimal("300.00"),
+        ), user=cenario["usuario"],
+    )
+    lote, _, _ = _importar(cenario, FATURA_MARCO)
+
+    resultado = fatura.processar(cenario["usuario"], lote.id, {})
+
+    linha = lote.lines.get(description__startswith="TV NOVA")
+    parcelas[0].refresh_from_db()
+    assert resultado[fatura.REALIZACAO_PENDENTE] == 1
+    assert linha.status == "novo" and linha.matched_entry_id is None
+    assert parcelas[0].realized_date == date(2026, 3, 6)
+    assert CashFlowEntry.objects.filter(account=cenario["cartao"], description="TV NOVA").count() == 3
 
 
 @pytest.mark.django_db

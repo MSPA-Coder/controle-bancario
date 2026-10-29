@@ -279,3 +279,26 @@ def test_middleware_tenta_de_novo_depois_de_falhar(monkeypatch, middleware):
     instancia(_Requisicao())
 
     assert chamadas == [date(2026, 1, 16)]
+
+
+def test_middleware_repete_falha_no_mesmo_dia_sem_sobrecarregar(monkeypatch, middleware):
+    instancia, _, _ = middleware
+    _relogio(monkeypatch, date(2026, 1, 31))
+    relogio = [100.0]
+    chamadas = []
+    monkeypatch.setattr(mw, "monotonic", lambda: relogio[0])
+
+    def projecao(hoje):
+        chamadas.append(hoje)
+        if len(chamadas) == 1:
+            raise RuntimeError("falha temporaria")
+        return rp.DecisaoProjecaoMensal(True, True, "executada")
+
+    monkeypatch.setattr(mw, "executar_projecao_mensal_se_devido", projecao)
+    assert instancia(_Requisicao()) == "resposta"
+    assert instancia(_Requisicao()) == "resposta"
+    assert len(chamadas) == 1
+    relogio[0] += mw.INTERVALO_NOVA_TENTATIVA
+    assert instancia(_Requisicao()) == "resposta"
+    assert instancia(_Requisicao()) == "resposta"
+    assert chamadas == [date(2026, 1, 31)] * 2

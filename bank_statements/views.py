@@ -355,7 +355,9 @@ def processar_fatura_view(request, batch_id):
                 ) % {"mes": f.month, "ano": f.year, "antes": balance_signed(anterior, conta.currency),
                      "depois": balance_signed(f.closing_balance, conta.currency)})
         pendentes = contagem.get(fatura.PAGAMENTO_SEM_PAR, 0)
-        feitas = sum(contagem.values()) - pendentes
+        compras_pendentes = contagem.get(fatura.COMPRA_PENDENTE, 0)
+        realizadas_pendentes = contagem.get(fatura.REALIZACAO_PENDENTE, 0)
+        feitas = sum(contagem.values()) - pendentes - compras_pendentes - realizadas_pendentes
         texto = ngettext(
             "Fatura processada: %(n)s linha.",
             "Fatura processada: %(n)s linhas.",
@@ -367,6 +369,18 @@ def processar_fatura_view(request, batch_id):
                 "%(n)s pagamentos sem transferência ficaram em Conciliação.",
                 pendentes,
             ) % {"n": pendentes}
+        if compras_pendentes:
+            texto += " " + ngettext(
+                "%(n)s compra semelhante ficou em Conciliação para revisão.",
+                "%(n)s compras semelhantes ficaram em Conciliação para revisão.",
+                compras_pendentes,
+            ) % {"n": compras_pendentes}
+        if realizadas_pendentes:
+            texto += " " + ngettext(
+                "%(n)s lançamento realizado com divergência ficou em Conciliação para revisão.",
+                "%(n)s lançamentos realizados com divergência ficaram em Conciliação para revisão.",
+                realizadas_pendentes,
+            ) % {"n": realizadas_pendentes}
         messages.success(request, texto)
     except ValueError as exc:
         messages.error(request, str(exc))

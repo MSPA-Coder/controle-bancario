@@ -128,6 +128,16 @@ def test_recolher_de_novo_nao_remove_nada(cenario):
     assert _recolher().removed_count == 0
 
 
+def test_recolhimento_preserva_ocorrencia_em_mes_fechado(cenario):
+    user, corrente, _poupanca, mercado, _transferencia = cenario
+    operacao = _criar(user, corrente, mercado)
+    protegida = CashFlowEntry.objects.filter(bank_operation_id=operacao, due_date__gt=FIM_CURTO).order_by("-due_date").first()
+    services.close_month(corrente, protegida.due_date.year, protegida.due_date.month, None, user)
+    datas_antes = _datas(operacao)
+    _recolher()
+    assert _datas(operacao) == datas_antes
+
+
 def test_serie_recolhida_volta_a_crescer_quando_o_horizonte_aumenta(cenario):
     user, corrente, _poupanca, mercado, _transferencia = cenario
     operacao = _criar(user, corrente, mercado)

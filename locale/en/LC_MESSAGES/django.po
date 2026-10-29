@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 15:05-0300\n"
+"POT-Creation-Date: 2026-10-29 04:43-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -967,6 +967,14 @@ msgid "Compra já lançada em %(data)s: concilia"
 msgstr "Purchase already entered on %(data)s: reconciles"
 
 #: bank_statements/fatura.py
+msgid "Compra com lançamento semelhante: fica pendente em Conciliação para revisão"
+msgstr "Purchase with a similar entry: stays pending in Reconciliation for review"
+
+#: bank_statements/fatura.py
+msgid "Lançamento realizado com data ou valor diferente: fica pendente em Conciliação para revisão"
+msgstr "Realized entry with a different date or amount: stays pending in Reconciliation for review"
+
+#: bank_statements/fatura.py
 msgid "Estorno ou crédito"
 msgstr "Refund or credit"
 
@@ -1534,6 +1542,20 @@ msgid "%(n)s pagamento sem transferência ficou em Conciliação."
 msgid_plural "%(n)s pagamentos sem transferência ficaram em Conciliação."
 msgstr[0] "%(n)s payment without a transfer stayed in Reconciliation."
 msgstr[1] "%(n)s payments without a transfer stayed in Reconciliation."
+
+#: bank_statements/views.py
+#, python-format
+msgid "%(n)s compra semelhante ficou em Conciliação para revisão."
+msgid_plural "%(n)s compras semelhantes ficaram em Conciliação para revisão."
+msgstr[0] "%(n)s similar purchase stayed in Reconciliation for review."
+msgstr[1] "%(n)s similar purchases stayed in Reconciliation for review."
+
+#: bank_statements/views.py
+#, python-format
+msgid "%(n)s lançamento realizado com divergência ficou em Conciliação para revisão."
+msgid_plural "%(n)s lançamentos realizados com divergência ficaram em Conciliação para revisão."
+msgstr[0] "%(n)s realized entry with a discrepancy stayed in Reconciliation for review."
+msgstr[1] "%(n)s realized entries with discrepancies stayed in Reconciliation for review."
 
 #: bank_statements/views.py
 #, python-format
@@ -7218,22 +7240,16 @@ msgid "Filtrar por categoria"
 msgstr "Filter by category"
 
 #: templates/transactions/_table_body.html
-#, fuzzy
-#| msgid "Faturas"
 msgid "Fatura"
-msgstr "Card statements"
+msgstr "Card statement"
 
 #: templates/transactions/_table_body.html
-#, fuzzy
-#| msgid "fechado"
 msgid "fecha"
-msgstr "closed"
+msgstr "closes"
 
 #: templates/transactions/_table_body.html
-#, fuzzy
-#| msgid "Vence"
 msgid "vence"
-msgstr "Due"
+msgstr "due"
 
 #: templates/transactions/_table_body.html
 msgid "Realizar"

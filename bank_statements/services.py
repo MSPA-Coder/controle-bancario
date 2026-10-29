@@ -12,7 +12,7 @@ import re
 from collections.abc import Iterable
 
 from django.core.files.uploadedfile import UploadedFile
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils.translation import gettext
 
 from banking.models import FinancialAccount
@@ -129,6 +129,14 @@ def import_statement_file(
     filename = _sanitize_filename(uploaded_file.name)
 
     with transaction.atomic():
+        # A unicidade da linha protege o banco, mas sem esta coordenação duas
+        # importações podem ler a ausência e uma falhar ao inserir. A trava
+        # cobre também a primeira importação, quando ainda não há linhas.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                [f"extrato-importacao:{clean_account_id}"],
+            )
         batch = BankStatementImport.objects.create(
             account_id=clean_account_id,
             source_filename=filename,

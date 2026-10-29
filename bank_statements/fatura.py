@@ -21,8 +21,9 @@ O que cada linha vira:
   cartão. Casa pela descrição e pela data (até 5 dias), não pelo número: o CB
   renumera as parcelas quando o grupo é editado ou tem uma parcela excluída;
 - **compra parcelada nova**: cria as parcelas N a M e realiza a N;
-- **compra já lançada**: despesa avulsa lançada à mão no cartão, com o mesmo
-  valor e até 3 dias de distância. É conciliada em vez de duplicada;
+- **compra já lançada**: lançamento avulso com o mesmo valor, descrição e até
+  3 dias de distância. Se houver candidatos sem identificação inequívoca, a
+  linha permanece pendente para conciliação manual;
 - **compra** e **estorno**: criam a despesa ou a receita, já realizadas.
 
 Mês fechado: a fatura de um mês traz compras do mês anterior, que pode já estar
@@ -67,6 +68,7 @@ from transactions.models import AccountMonthClose, CashFlowCategory, CashFlowEnt
 from transactions.services import (
     TransactionRequest,
     assert_entry_period_open,
+    assert_transfer_destination_authorized,
     close_month,
     create_transaction_batch,
     realize_transaction,
@@ -98,6 +100,8 @@ PAGAMENTO_SEM_PAR = "pagamento_sem_par"
 PARCELA_LANCADA = "parcela_lancada"
 PARCELADO_NOVO = "parcelado_novo"
 COMPRA_LANCADA = "compra_lancada"
+COMPRA_PENDENTE = "compra_pendente"
+REALIZACAO_PENDENTE = "realizacao_pendente"
 COMPRA = "compra"
 ESTORNO = "estorno"
 
@@ -171,6 +175,10 @@ class Plano:
             return gettext("Compra já lançada em %(data)s: concilia") % {
                 "data": regional.formatar_data(self.lancamento.due_date),
             }
+        if self.acao == COMPRA_PENDENTE:
+            return gettext("Compra com lançamento semelhante: fica pendente em Conciliação para revisão")
+        if self.acao == REALIZACAO_PENDENTE:
+            return gettext("Lançamento realizado com data ou valor diferente: fica pendente em Conciliação para revisão")
         if self.acao == ESTORNO:
             return gettext("Estorno ou crédito")
         return gettext("Compra")
@@ -225,7 +233,7 @@ def _parcela(conta, linha, data, usados, *, livres=True) -> CashFlowEntry | None
     return _mais_perto(candidatos, data, usados, preferir=lambda c: c.entry_amount == valor)
 
 
-def _compra_lancada(conta, linha, usados) -> CashFlowEntry | None:
+def _compra_lancada(conta, linha, usados) -> tuple[CashFlowEntry | None, bool]:
     candidatos = CashFlowEntry.objects.filter(
         account=conta,
         entry_type=ENTRY_TYPE_EXPENSE if linha.amount < 0 else ENTRY_TYPE_INCOME,
@@ -234,7 +242,15 @@ def _compra_lancada(conta, linha, usados) -> CashFlowEntry | None:
         entry_amount=abs(linha.amount),
         due_date__range=(linha.statement_date - _JANELA_COMPRA, linha.statement_date + _JANELA_COMPRA),
     ).exclude(_conciliados()).exclude(bank_operation__operation_key__startswith=f"{PREFIXO_ESTIMATIVA}:")
-    return _mais_perto(candidatos, linha.statement_date, usados)
+    candidatos = [c for c in candidatos if c.id not in usados]
+    descricoes = {" ".join(d.split()).casefold() for d in _descricoes(linha)}
+    iguais = [c for c in candidatos if " ".join(c.description.split()).casefold() in descricoes]
+    if len(iguais) == 1 and (
+        iguais[0].status != STATUS_REALIZED
+        or (iguais[0].realized_date == linha.statement_date and iguais[0].realized_amount == abs(linha.amount))
+    ):
+        return iguais[0], False
+    return None, bool(candidatos)
 
 
 def _sugerir(plano: Plano) -> None:
@@ -281,11 +297,19 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
             plano.lancamento = _parcela(conta, linha, linha.statement_date, usados)
             plano.acao = PARCELA_LANCADA if plano.lancamento else PARCELADO_NOVO
         else:
-            plano.lancamento = _compra_lancada(conta, linha, usados)
+            plano.lancamento, pendente = _compra_lancada(conta, linha, usados)
             if plano.lancamento:
                 plano.acao = COMPRA_LANCADA
+            elif pendente:
+                plano.acao = COMPRA_PENDENTE
             else:
                 plano.acao = ESTORNO if linha.amount > 0 else COMPRA
+        if plano.lancamento is not None and plano.lancamento.status == STATUS_REALIZED and (
+            plano.lancamento.realized_date != linha.statement_date
+            or plano.lancamento.realized_amount != abs(linha.amount)
+        ):
+            plano.lancamento = None
+            plano.acao = REALIZACAO_PENDENTE
         if plano.cria_lancamento:
             _sugerir(plano)
         if plano.lancamento is not None:
@@ -455,6 +479,8 @@ def _categoria_escolhida(plano: Plano, escolhas: dict) -> CashFlowCategory:
 
 
 def _conciliar(user, linha: BankStatementLine, lancamento: CashFlowEntry, audit_context) -> None:
+    if lancamento.operation_type == OPERATION_INTERNAL_TRANSFER:
+        assert_transfer_destination_authorized(user, lancamento, "update")
     assert_entry_period_open(lancamento, action_label="conciliar")
     if lancamento.status != STATUS_REALIZED:
         realize_transaction(
@@ -504,7 +530,7 @@ def _meses_tocados(planos) -> set[tuple[int, int]]:
                 restantes = linha.installment_total - plano.futuras_a_partir_de + 1
                 datas += [add_months(plano.futuras_vencimento, k) for k in range(restantes)]
             continue
-        if plano.acao == PAGAMENTO_SEM_PAR:
+        if plano.acao in (PAGAMENTO_SEM_PAR, COMPRA_PENDENTE, REALIZACAO_PENDENTE):
             continue
         datas.append(linha.statement_date)
         if plano.lancamento is not None:

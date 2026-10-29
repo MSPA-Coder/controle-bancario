@@ -287,14 +287,8 @@ def realize_transaction(
         counterpart.realized_amount = counterpart_amount
         counterpart.save(update_fields=['status', 'realized_date', 'realized_amount', 'updated_at'])
 
-    # Atualizar status na operação pai se existir. Origem e destino de uma
-    # transferência compartilham a mesma BankOperation (ver
-    # create_internal_transfer), então uma única atualização já cobre o par.
-    if entry.bank_operation_id:
-        BankOperation.objects.filter(
-            id=entry.bank_operation_id,
-            status__in=[STATUS_PROJECTED, STATUS_PENDING],
-        ).update(status=STATUS_REALIZED)
+    # A operação resume todas as ocorrências, não só a que foi realizada.
+    _sync_bank_operation_status(entry.bank_operation_id)
 
     if audit_context is not None:
         from core.services import log_audit_event
@@ -354,14 +348,7 @@ def unrealize_transaction(entry: CashFlowEntry, audit_context=None, user=None) -
         counterpart.realized_amount = None
         counterpart.save(update_fields=['status', 'realized_date', 'realized_amount', 'updated_at'])
 
-    if entry.bank_operation_id:
-        still_realized = CashFlowEntry.objects.filter(
-            bank_operation_id=entry.bank_operation_id, status=STATUS_REALIZED,
-        ).exists()
-        if not still_realized:
-            BankOperation.objects.filter(
-                id=entry.bank_operation_id, status=STATUS_REALIZED,
-            ).update(status=STATUS_PENDING)
+    _sync_bank_operation_status(entry.bank_operation_id)
 
     if audit_context is not None:
         from core.services import log_audit_event
