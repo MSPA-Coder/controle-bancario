@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.db.models import Exists, OuterRef, ProtectedError
 from django.utils.timezone import localdate
 from django.utils.translation import gettext
@@ -284,8 +284,17 @@ def _assert_account_unique(
     identificador com outra, de antes desta regra, continua editável em tudo o
     mais, e só é recusada se a pessoa for repetir o nome ou o identificador.
     """
-    others = FinancialAccount.objects.exclude(id=current.id) if current else FinancialAccount.objects.all()
     identifier = (statement_identifier or "").strip()
+    # Sem constraint única (contas antigas podem repetir nome ou identificador), duas
+    # criações simultâneas leriam "não existe" e criariam as duas. As travas valem até
+    # o fim da transação do chamador, que cobre a checagem e a gravação.
+    with connection.cursor() as cursor:
+        for chave in (
+            f"conta-nome:{owner_id}:{institution_id}",
+            *([f"conta-identificador:{institution_id}"] if identifier else []),
+        ):
+            cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [chave])
+    others = FinancialAccount.objects.exclude(id=current.id) if current else FinancialAccount.objects.all()
     mesma_instituicao = current is not None and current.institution_id == institution_id
     mesmo_nome = (
         mesma_instituicao and current.owner_id == owner_id
@@ -451,6 +460,7 @@ def _clean_purpose(raw: str | None) -> str:
     return purpose
 
 
+@transaction.atomic
 def create_account(
     user,
     *,
@@ -507,6 +517,7 @@ def create_account(
     )
 
 
+@transaction.atomic
 def update_account(
     user,
     account: FinancialAccount,
