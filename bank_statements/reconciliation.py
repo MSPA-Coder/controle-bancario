@@ -151,6 +151,33 @@ def candidate_entries_for_line(line: BankStatementLine, limit: int = _CANDIDATE_
     )
 
 
+def linha_parecida_ja_conciliada(line: BankStatementLine) -> BankStatementLine | None:
+    """Outra linha da mesma conta, data e valor, já conciliada.
+
+    É o sinal de que `line` é a mesma transação, reimportada com o texto do
+    banco levemente diferente: a deduplicação por `line_hash` depende do texto
+    exato, e o mesmo Itaú já exportou a mesma transferência como
+    "PIX TRANSF MARIANO01/10" num PDF e "PIX TRANSF MARIANO01 10" (barra por
+    espaço) num OFX seguinte. A reimportação não é reconhecida como duplicata,
+    e o lançamento que já existe some da lista de candidatos de
+    `candidate_entries_for_line` porque já está vinculado à linha antiga —
+    sem este aviso, a tela cairia direto em "Cria lançamento", e criar
+    lançaria a mesma transferência duas vezes. `None` quando não há sinal."""
+    return (
+        BankStatementLine.objects.filter(
+            account_id=line.account_id,
+            statement_date=line.statement_date,
+            amount=line.amount,
+            status=LINE_STATUS_RECONCILED,
+            matched_entry__isnull=False,
+        )
+        .exclude(id=line.id)
+        .select_related("matched_entry")
+        .order_by("-id")
+        .first()
+    )
+
+
 def desempatar_pelo_dia(line: BankStatementLine, candidates: list[CashFlowEntry]) -> list[CashFlowEntry]:
     """Entre vários candidatos, o único na data da linha (realizado nela, ou
     vencendo nela se ainda aberto), se houver; senão, todos.

@@ -461,7 +461,16 @@ que `fatura.planejar` faz para o cartão). Na ordem em que é decidido:
 6. **transferência sem par**: o texto cita um titular e a outra ponta ainda não
    foi importada. Fica pendente, porque criar receita e despesa para uma
    transferência própria infla as duas pontas do mês;
-7. **criar** lançamento com a categoria sugerida.
+7. **provável duplicata**: mesma conta, data e valor de uma linha já
+   conciliada, sem ter sido candidata em nenhuma etapa anterior. É o sinal de
+   uma reimportação que a deduplicação por hash não pegou, porque o banco
+   exportou a mesma transação com o texto levemente diferente entre dois
+   arquivos (o Itaú já trocou a barra por espaço: "MARIANO01/10" virou
+   "MARIANO01 10"). Fica pendente, com o lançamento já conciliado apontado na
+   tela: confira e ignore se for a mesma transação, crie se for outra (o
+   mesmo valor pode coincidir por acaso no mesmo dia)
+   (`reconciliation.linha_parecida_ja_conciliada`);
+8. **criar** lançamento com a categoria sugerida.
 
 O que o plano não resolve, a linha resolve à mão. O seletor de categoria de cada
 linha pertence ao formulário do lote: "Criar selecionadas", "Aplicar sugestões"

@@ -39,6 +39,7 @@ from bank_statements.classificacao import (
     sugerir_categoria,
 )
 from bank_statements.models import (
+    LINE_STATUS_RECONCILED,
     RULE_ACTION_CATEGORY,
     RULE_ACTION_IGNORE,
     RULE_ACTION_TRANSFER,
@@ -47,7 +48,7 @@ from bank_statements.models import (
     BankStatementLine,
     StatementRule,
 )
-from bank_statements.reconciliation import reconcile_line_with_entry
+from bank_statements.reconciliation import linha_parecida_ja_conciliada, reconcile_line_with_entry
 from banking.models import FinancialAccount, FinancialInstitution
 from core.domain.finance import (
     CATEGORY_KIND_MOVEMENT,
@@ -123,6 +124,20 @@ def _linha(conta, descricao, valor, dia, *, bank_category=""):
     return BankStatementLine.objects.create(
         import_batch=lote, account=conta, statement_date=dia, description=descricao,
         amount=Decimal(valor), line_hash=f"h{contador}-{conta.id}", bank_category=bank_category,
+    )
+
+
+def _linha_reconciliada(conta, descricao, valor, dia, lancamento):
+    """Uma linha já conciliada com `lancamento`, como se tivesse vindo de uma
+    importação anterior (ver `linha_parecida_ja_conciliada`)."""
+    lote, _ = BankStatementImport.objects.get_or_create(
+        account=conta, source_filename="extrato-anterior.pdf", defaults={"row_count": 0}
+    )
+    contador = BankStatementLine.objects.count()
+    return BankStatementLine.objects.create(
+        import_batch=lote, account=conta, statement_date=dia, description=descricao,
+        amount=Decimal(valor), line_hash=f"h{contador}-{conta.id}",
+        status=LINE_STATUS_RECONCILED, matched_entry=lancamento,
     )
 
 
@@ -368,6 +383,77 @@ def test_linha_com_um_candidato_concilia_e_sem_candidato_cria_com_a_categoria_ap
     assert planos[sem_candidato.id].sugestao.categoria == cat["corretagem"]
     feitas, erros = extrato.aplicar(user, [com_candidato, sem_candidato])
     assert erros == [] and feitas[extrato.CONCILIA] == 1 and feitas[extrato.CRIA] == 1
+
+
+# --- provável duplicata -------------------------------------------------------
+#
+# CENÁRIO QUE MOTIVOU (31/10/2026): o Itaú exportou o mesmo Pix de duas formas
+# ("MARIANO01/10" num PDF, "MARIANO01 10" num OFX seguinte). A barra por espaço
+# muda o hash de duplicata (ele depende do texto), a reimportação não é
+# reconhecida, e o lançamento que já existe some dos candidatos porque já está
+# vinculado à linha antiga -- a tela caía direto em "Cria lançamento: Outros",
+# e confirmar teria duplicado a transferência.
+
+
+def test_linha_parecida_com_uma_ja_conciliada_pede_decisao_em_vez_de_criar(mundo):
+    user, contas, cat = mundo
+    conta = contas["bb"]
+    lancamento = _lancar(user, conta, cat["outros"], "Pix Transf Mariano01/10", "261.00", date(2026, 10, 1))
+    antiga = _linha_reconciliada(conta, "PIX TRANSF MARIANO01/10", "-261.00", date(2026, 10, 1), lancamento)
+    reimportada = _linha(conta, "PIX TRANSF MARIANO01 10", "-261.00", date(2026, 10, 1))
+
+    assert linha_parecida_ja_conciliada(reimportada) == antiga
+
+    (plano,) = extrato.planejar(user, [reimportada])
+    assert plano.acao == extrato.PROVAVEL_DUPLICATA
+    assert not plano.executavel and not plano.confiavel
+    assert f"#{lancamento.id}" in plano.rotulo
+
+    feitas, erros = extrato.aplicar(user, [reimportada])
+    assert not feitas and len(erros) == 1
+    reimportada.refresh_from_db()
+    assert reimportada.status == "novo"
+    # O alerta cumpriu o papel: a transferência não foi lançada duas vezes.
+    assert CashFlowEntry.objects.filter(account=conta, entry_amount=Decimal("261.00")).count() == 1
+
+
+def test_duas_linhas_novas_iguais_nao_se_marcam_como_duplicata_uma_da_outra(mundo):
+    _, contas, _ = mundo
+    conta = contas["bb"]
+    a = _linha(conta, "Cafe", "-10.00", date(2026, 10, 1))
+    b = _linha(conta, "Cafe", "-10.00", date(2026, 10, 1))
+    assert linha_parecida_ja_conciliada(a) is None
+    assert linha_parecida_ja_conciliada(b) is None
+
+
+def test_candidato_disponivel_vence_a_checagem_de_duplicata(mundo):
+    user, contas, cat = mundo
+    conta = contas["bb"]
+    # Uma compra antiga, já conciliada: mesma conta, data e valor da linha nova,
+    # mas não é o que a linha nova deve achar.
+    velha = _lancar(user, conta, cat["outros"], "Compra Loja X", "100.00", date(2026, 10, 1))
+    _linha_reconciliada(conta, "Compra Loja X", "-100.00", date(2026, 10, 1), velha)
+    # O lançamento de verdade, ainda sem linha de extrato.
+    nova = _lancar(user, conta, cat["outros"], "Compra Loja X", "100.00", date(2026, 10, 1))
+    linha = _linha(conta, "Compra Loja X", "-100.00", date(2026, 10, 1))
+
+    (plano,) = extrato.planejar(user, [linha])
+    assert plano.acao == extrato.CONCILIA and plano.lancamento.id == nova.id
+
+
+@pytest.mark.parametrize(
+    ("dia", "valor"),
+    [(date(2026, 10, 2), "-100.00"), (date(2026, 10, 1), "-150.00")],
+)
+def test_dia_ou_valor_diferente_nao_e_tratado_como_duplicata(mundo, dia, valor):
+    user, contas, cat = mundo
+    conta = contas["bb"]
+    lancamento = _lancar(user, conta, cat["outros"], "Compra Loja X", "100.00", date(2026, 10, 1))
+    _linha_reconciliada(conta, "Compra Loja X", "-100.00", date(2026, 10, 1), lancamento)
+    diferente = _linha(conta, "Compra Loja X", valor, dia)
+
+    (plano,) = extrato.planejar(user, [diferente])
+    assert plano.acao == extrato.CRIA
 
 
 def _recorrencia(user, conta, categoria, descricao, valor, vencimento):

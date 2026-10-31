@@ -22,6 +22,11 @@ O que uma linha vira, na ordem em que é decidido:
 - **transferência sem par**: o texto cita um titular, mas a outra ponta ainda
   não foi importada. Fica pendente: criar receita e despesa para uma
   transferência própria é exatamente o erro que esta etapa existe para evitar;
+- **provável duplicata**: mesma conta, data e valor de uma linha já conciliada,
+  sem ser candidata de nenhuma etapa anterior — sinal de que é esta mesma
+  transação, reimportada com o texto do banco levemente diferente (o hash de
+  duplicata depende do texto; ver `reconciliation.linha_parecida_ja_conciliada`).
+  Fica pendente: criar lançaria a mesma transferência ou compra duas vezes;
 - **cria**: um lançamento novo, com a categoria de `classificacao.sugerir_categoria`.
 
 Nada aqui altera dados fora de `aplicar`.
@@ -82,6 +87,7 @@ TRANSFERENCIA_SEM_PAR = "transferencia_sem_par"
 IGNORA = "ignora"
 AMBIGUA = "ambigua"
 MANUAL = "manual"
+PROVAVEL_DUPLICATA = "provavel_duplicata"
 
 # Ações que `aplicar` executa sozinha; as demais esperam o usuário.
 EXECUTAVEIS = (
@@ -102,6 +108,7 @@ ROTULOS = {
     IGNORA: gettext_lazy("Ignora (regra)"),
     AMBIGUA: gettext_lazy("Mais de um lançamento candidato: escolha"),
     MANUAL: gettext_lazy("Decida manualmente"),
+    PROVAVEL_DUPLICATA: gettext_lazy("Provável duplicata de uma linha já conciliada"),
 }
 
 # Cada rótulo recebe a quantidade e devolve "<quantidade> <descrição>" já no plural certo.
@@ -456,6 +463,15 @@ def planejar(user, linhas) -> list[Plano]:
             continue
         if _cita_titular(linha, padroes):
             planos.append(Plano(linha, TRANSFERENCIA_SEM_PAR, regra=regra))
+            continue
+        duplicada = reconciliation.linha_parecida_ja_conciliada(linha)
+        if duplicada is not None:
+            motivo = gettext(
+                "Mesma conta, data e valor de “%(descricao)s” (lançamento #%(id)s), já conciliada; "
+                "o texto do banco pode ter mudado entre as exportações. Confira e ignore se for a "
+                "mesma transação; crie se for outra, coincidindo por acaso."
+            ) % {"descricao": duplicada.description, "id": duplicada.matched_entry_id}
+            planos.append(Plano(linha, PROVAVEL_DUPLICATA, motivo=motivo, regra=regra))
             continue
         regra_de_categoria = regra if regra is not None and regra.action == RULE_ACTION_CATEGORY else None
         sugestao = sugerir_para_linha(linha, regra=regra_de_categoria)

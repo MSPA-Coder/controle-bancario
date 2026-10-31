@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 13:28-0300\n"
+"POT-Creation-Date: 2026-10-31 08:49-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -818,6 +818,10 @@ msgstr "More than one candidate entry: choose one"
 msgid "Decida manualmente"
 msgstr "Decide manually"
 
+#: bank_statements/extrato.py
+msgid "Provável duplicata de uma linha já conciliada"
+msgstr "Probable duplicate of a line already reconciled"
+
 #: bank_statements/extrato.py templates/banking/extrato.html
 #, python-format
 msgid "%(n)s conciliada"
@@ -895,6 +899,11 @@ msgstr "The rule “%(regra)s” needs the investment linked to this account, an
 #, python-format
 msgid "A conta “%(conta)s” da regra “%(regra)s” não existe para este titular."
 msgstr "The account “%(conta)s” in the rule “%(regra)s” does not exist for this account holder."
+
+#: bank_statements/extrato.py
+#, python-format
+msgid "Mesma conta, data e valor de “%(descricao)s” (lançamento #%(id)s), já conciliada; o texto do banco pode ter mudado entre as exportações. Confira e ignore se for a mesma transação; crie se for outra, coincidindo por acaso."
+msgstr "Same account, date and amount as “%(descricao)s” (entry #%(id)s), already reconciled; the bank's text may have changed between exports. Check it and ignore if it's the same transaction; create it if it's another one, coinciding by chance."
 
 #: bank_statements/extrato.py
 msgid "Sem categoria: cadastre “Outros” ou escolha uma."
