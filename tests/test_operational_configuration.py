@@ -310,7 +310,10 @@ def test_bootstrap_de_migrations_antecipa_o_web():
 
 def test_nome_do_banco_de_teste_difere_do_operacional():
     """Se um teste precisar de banco, Django deriva um banco de teste próprio."""
-    nome_operacional = connection.settings_dict["NAME"]
+    # Lido da mesma fonte que `settings.py`, e não de `settings_dict["NAME"]`:
+    # depois que o primeiro teste com banco roda, o Django troca esse valor
+    # pelo do banco de teste, e a comparação passaria a depender da ordem.
+    nome_operacional = os.environ.get("POSTGRES_DB", "controle_bancario")
     nome_de_teste = connection.creation._get_test_db_name()
 
     assert nome_de_teste != nome_operacional

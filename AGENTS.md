@@ -58,8 +58,12 @@ docker compose --env-file .env.docker -f compose.yaml run --rm web python manage
 ```
 
 `--build` mantém a validação explícita e reproduzível: o serviço `quality` não
-monta o código do host, e Compose reconstrói sem cache com as tags base atuais
-antes de executar os testes.
+monta o código do host, e Compose reconstrói a imagem com o código atual antes
+de executar os testes. O build usa o cache e as imagens-base já baixadas, como
+o deploy no servidor; bases novas só entram quando pedidas (ver "Imagens-base"
+em `docs/development.md`). A suíte roda em paralelo (`pytest -n`); uma
+execução especializada que passe outro comando ao `quality` roda em série,
+salvo se incluir `-n`.
 
 `web` é o único serviço de aplicação. `migrate` aplica migrations e executa
 `collectstatic` antes de `web`; `quality` executa as verificações. Não há

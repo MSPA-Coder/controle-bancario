@@ -47,6 +47,11 @@ dev = [
   "ruff>=0.12,<1",
   "pytest>=8.3,<10",
   "pytest-django>=4.9,<5",
+  # Distribui a suíte entre processos. Cada worker recebe o próprio banco de
+  # teste (`test_<nome>_gw0`, `_gw1`...), então os testes com banco continuam
+  # isolados uns dos outros. A suíte serial levava ~4 min; a maior parte era
+  # espera, não CPU.
+  "pytest-xdist>=3.8,<4",
   # Auditoria de CVE das dependencias instaladas. Piso na minor atual, teto na
   # proxima major -- politica de faixa do mantenedor.
   "pip-audit>=2.10,<3",

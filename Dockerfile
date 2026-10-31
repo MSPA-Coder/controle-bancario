@@ -148,7 +148,10 @@ RUN DJANGO_SECRET_KEY=build-only-nao-usada-em-execucao \
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "ruff check . && mypy && pytest"]
+# `-n auto` distribui a suíte pelos núcleos; o teto de 8 vem da medição de
+# 30/10/2026 (4 min em série, ~1 min com 8 workers) e evita que cada worker a
+# mais custe outra cadeia de migrações no `postgres-teste`.
+CMD ["sh", "-c", "ruff check . && mypy && pytest -n auto --maxprocesses 8"]
 
 
 # Estagio de producao: somente dependencias e arquivos de runtime. Codigo fica

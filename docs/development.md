@@ -42,9 +42,31 @@ adicionados `Any` ou supressões para deixar o piloto verde. Execução isolada:
 
 **`--build` não é opcional.** O serviço `quality` não monta o código do
 host: o que ele executa é o que foi copiado para a imagem. `docker compose
-run` reconstrói sem cache a partir das tags base atuais antes de executar os
-testes. A CI semanal repete build, testes e auditorias para conferir as
-atualizações automáticas do sistema e das dependências.
+run --build` reconstrói a partir do código atual, com cache: só as camadas
+afetadas pela mudança são refeitas.
+
+A suíte completa roda em paralelo com `pytest-xdist` (o `CMD` do estágio
+`quality` passa `-n`). Cada worker cria o próprio banco de teste
+(`test_controle_bancario_gw0`, `_gw1`...) no `postgres-teste`, então os
+testes com banco continuam isolados. Para iterar num arquivo, passe o comando
+e ele roda em série, sem o custo de criar um banco por worker:
+`.\scripts\quality.ps1 run --build --rm quality pytest tests/test_x.py`.
+
+### Imagens-base
+
+Nem o `quality` nem o deploy buscam imagens-base novas por conta própria: o
+Compose não declara `pull` nem `no_cache`, e as camadas do `apt-get upgrade`
+ficam em cache até alguém pedir bases novas. É a mesma regra do servidor, onde
+um deploy comum monta sem `--pull` e só `deploy.sh <projeto> --refresh` busca
+bases novas. Para testar bases novas na máquina antes do `--refresh`:
+
+```powershell
+docker compose --env-file .env.docker -f compose.yaml --profile quality build --pull --no-cache quality
+.\scripts\quality.ps1
+```
+
+A CI semanal faz o mesmo build sem cache e com `--pull`, só como aviso, para
+conferir as atualizações do sistema e das dependências.
 
 ### Exclusão mútua da suíte quality
 

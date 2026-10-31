@@ -10,8 +10,6 @@ x-app-build: &app-build
   image: controle-bancario:local
   build:
     context: .
-    pull: true
-    no_cache: true
     target: runtime
     args:
       ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
@@ -121,8 +119,6 @@ services:
     build:
       context: .
       dockerfile: docker/sandbox-postgres/Dockerfile
-      pull: true
-      no_cache: true
       args:
         ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
         ARTIFACT_RUN: ${ARTIFACT_RUN:-local}
@@ -159,8 +155,6 @@ services:
     build:
       context: .
       dockerfile: docker/sandbox-postgres/Dockerfile
-      pull: true
-      no_cache: true
       args:
         ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
         ARTIFACT_RUN: ${ARTIFACT_RUN:-local}
@@ -297,8 +291,6 @@ services:
     build:
       context: .
       dockerfile: docker/sandbox-postgres/Dockerfile
-      pull: true
-      no_cache: true
       args:
         ARTIFACT_REVISION: ${ARTIFACT_REVISION:-local}
         ARTIFACT_RUN: ${ARTIFACT_RUN:-local}
@@ -347,7 +339,6 @@ services:
     <<: [*quality-hardening, *quality-secrets]
     build:
       context: .
-      pull: true
       target: quality
       secrets:
         - local_ca
