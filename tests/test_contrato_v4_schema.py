@@ -253,6 +253,10 @@ def _ativo_em_minuscula(s):
     _lancamento_com(s, "instrument")["instrument"] = "wege3"
 
 
+def _ativo_maior_que_a_coluna(s):
+    _lancamento_com(s, "instrument")["instrument"] = "ORCL 3.95 25/03/2051X"
+
+
 def _tipo_de_renda_fora_do_vocabulario(s):
     _lancamento_com(s, "income_kind")["income_kind"] = "bonificacao"
 
@@ -315,7 +319,7 @@ def _saldo_como_zero_de_texto_vazio(s):
     [
         _sem_effective_status, _valor_vira_numero, _status_fora_do_vocabulario, _moeda_em_minuscula,
         _id_sem_prefixo_da_fonte, _campo_renomeado, _sistema_errado, _sem_high_watermark, _data_fora_do_iso,
-        _recurso_desconhecido, _saldo_como_zero_de_texto_vazio, _ativo_em_minuscula,
+        _recurso_desconhecido, _saldo_como_zero_de_texto_vazio, _ativo_em_minuscula, _ativo_maior_que_a_coluna,
         _tipo_de_renda_fora_do_vocabulario, _papel_fora_do_vocabulario, _liquidacao_com_data_fora_do_iso,
         _liquidacao_vazia,
     ],
@@ -334,5 +338,15 @@ def test_o_schema_aceita_um_acrescimo_opcional(snapshot):
     novo = copy.deepcopy(snapshot)
     _primeiro(novo, "account")["payload"]["campo_novo_e_opcional"] = "x"
     novo["extra_na_raiz"] = True
+
+    validar("cb_snapshot", novo)
+
+
+@pytest.mark.parametrize("ativo", ["CGC", "BRK.B", "SGOV", "ORCL 3.95 25/03/51", "PETBRA 6.85 05/06/15"])
+def test_o_schema_aceita_ativo_do_exterior_e_cupom(snapshot, ativo):
+    """Desde 01/11/2026 o extrato da Avenue traz ticker dos EUA e cupom de título."""
+    novo = copy.deepcopy(snapshot)
+    renda = _lancamento_com(novo, "income_kind")
+    renda["instrument"], renda["income_kind"] = ativo, "cupom"
 
     validar("cb_snapshot", novo)
