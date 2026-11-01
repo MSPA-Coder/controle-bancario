@@ -161,6 +161,12 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         'CONN_MAX_AGE': 600,
+        # Com conexão persistente, uma conexão que o PostgreSQL encerrou
+        # (reinício, `pg_terminate_backend`) ficava no worker até falhar uma
+        # requisição: em 01/11/2026 um `run --rm web` no VPS deu vários 500
+        # (AdminShutdown). A checagem testa a conexão no início de cada
+        # requisição e reconecta se ela morreu.
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 10,
         },

@@ -204,6 +204,21 @@ curl -I https://bancario-mspa.duckdns.org/
 ~/deploy.sh --status
 ```
 
+Comando avulso do `manage.py` com a pilha no ar: prefira o contêiner que já
+roda, que não passa pelas dependências do `web` (e conecta com o papel
+restrito dele, só DML):
+
+```bash
+docker compose --env-file .env.vps -f compose.yaml exec -T web python manage.py <comando>
+```
+
+`run --rm web` cria um contêiner novo e, antes dele, passa pelo `postgres`,
+pelo `db-provision` e pelo `migrate`. Em 01/11/2026 isso encerrou as conexões
+abertas do `web` (`AdminShutdown`), que respondeu 500 até cada worker
+descartar a sua. Desde então `CONN_HEALTH_CHECKS` testa a conexão persistente
+no início de cada requisição e reconecta; ainda assim, `run --rm` fica para
+quando o `exec` não serve.
+
 Uma atualização só deve ocorrer depois dos backups necessários. O comando
 operacional é `~/deploy.sh bancario`; ele atualiza o espelho até o `main`,
 monta a imagem no servidor, aguarda os health checks e valida o endereço
