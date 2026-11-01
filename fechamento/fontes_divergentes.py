@@ -8,6 +8,14 @@ um segundo ajuste por cima do primeiro: o Roteiro de fechamento mostra a diferen
 
 A tolerância existe para não transformar arredondamento em pendência: o maior
 entre `TOLERANCIA_FIXA` e `TOLERANCIA_PERCENTUAL` do maior saldo.
+
+Aplicação em moeda estrangeira tem tolerância própria, `TOLERANCIA_PERCENTUAL_EXTERIOR`.
+É onde estão os títulos de renda fixa do exterior, marcados a mercado pelo
+extrato mensal da corretora, enquanto o myProfit os cota por outra fonte de
+preço: em ago e set/2026 o myProfit ficou 0,49% e 0,51% abaixo do extrato, todo
+mês, sem erro de nenhum lado. O extrato continua sendo a fonte; com 1% sobre
+cerca de US$ 9.400, um título inteiro a mais ou a menos (US$ 1.150 a 1.800)
+ainda aparece.
 """
 from __future__ import annotations
 
@@ -18,11 +26,13 @@ from decimal import Decimal
 
 from banking.models import FinancialAccount
 from banking.services import accessible_account_ids
+from core.domain.finance import ACCOUNT_KIND_INVESTMENT, BASE_CURRENCY
 
 from .models import SaldoConferido
 
 TOLERANCIA_FIXA = Decimal("10.00")
 TOLERANCIA_PERCENTUAL = Decimal("0.002")
+TOLERANCIA_PERCENTUAL_EXTERIOR = Decimal("0.01")
 
 
 @dataclass(frozen=True)
@@ -36,9 +46,14 @@ class Divergencia:
         return max(self.valores.values()) - min(self.valores.values())
 
 
-def tolerancia(valores) -> Decimal:
+def _aplicacao_no_exterior(conta: FinancialAccount | None) -> bool:
+    return conta is not None and conta.account_kind == ACCOUNT_KIND_INVESTMENT and conta.currency != BASE_CURRENCY
+
+
+def tolerancia(valores, conta: FinancialAccount | None = None) -> Decimal:
     maior = max((abs(v) for v in valores), default=Decimal("0"))
-    return max(TOLERANCIA_FIXA, (maior * TOLERANCIA_PERCENTUAL).quantize(Decimal("0.01")))
+    percentual = TOLERANCIA_PERCENTUAL_EXTERIOR if _aplicacao_no_exterior(conta) else TOLERANCIA_PERCENTUAL
+    return max(TOLERANCIA_FIXA, (maior * percentual).quantize(Decimal("0.01")))
 
 
 def divergentes(user, inicio: date, fim: date) -> list[Divergencia]:
@@ -59,6 +74,6 @@ def divergentes(user, inicio: date, fim: date) -> list[Divergencia]:
         if len(linhas) < 2:
             continue
         valores = {linha.origem: linha.valor for linha in linhas}
-        if max(valores.values()) - min(valores.values()) > tolerancia(valores.values()):
+        if max(valores.values()) - min(valores.values()) > tolerancia(valores.values(), linhas[0].account):
             achadas.append(Divergencia(conta=linhas[0].account, data=dia, valores=valores))
     return achadas

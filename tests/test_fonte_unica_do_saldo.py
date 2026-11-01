@@ -139,6 +139,29 @@ def test_tolerancia_cresce_com_o_saldo_para_nao_acusar_arredondamento():
     assert fontes_divergentes.tolerancia([Decimal("100000.00")]) == Decimal("200.00")
 
 
+@pytest.mark.parametrize(("myprofit", "diverge"), [
+    ("9383.41", False),   # 30/09/2026: 0,51% abaixo do extrato, preço de outra fonte
+    ("8256.80", True),    # um título inteiro (~US$ 1.175) a menos ainda aparece
+])
+def test_aplicacao_no_exterior_tolera_a_fonte_de_preco_do_myprofit(cenario, myprofit, diverge):
+    user, tesouro, _ = cenario
+    titular, banco = tesouro.owner, tesouro.institution
+    titulos = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Renda fixa EUA", account_kind="aplicacao", currency="USD",
+        initial_balance=Decimal("10160.18"), initial_balance_date=date(2025, 12, 31),
+    )
+    SaldoConferido.objects.create(account=titulos, data=DIA, valor=Decimal("9431.60"), origem=ORIGEM_PRINT)
+    SaldoConferido.objects.create(account=titulos, data=DIA, valor=Decimal(myprofit), origem=ORIGEM_MYPROFIT)
+    # A mesma diferença em reais, numa aplicação brasileira, continua divergência.
+    SaldoConferido.objects.create(account=tesouro, data=DIA, valor=Decimal("9431.60"), origem=ORIGEM_PRINT)
+    SaldoConferido.objects.create(account=tesouro, data=DIA, valor=Decimal("9383.41"), origem=ORIGEM_MYPROFIT)
+
+    achadas = {d.conta.id for d in fontes_divergentes.divergentes(user, date(2026, 9, 1), HOJE)}
+
+    assert (titulos.id in achadas) is diverge
+    assert tesouro.id in achadas
+
+
 def test_um_so_registro_no_dia_nao_e_divergencia(cenario):
     user, tesouro, _ = cenario
     SaldoConferido.objects.create(account=tesouro, data=DIA, valor=Decimal("1100.00"), origem=ORIGEM_MYPROFIT)

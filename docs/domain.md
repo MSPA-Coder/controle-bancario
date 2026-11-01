@@ -583,8 +583,10 @@ Fontes, ou a deduzida) lança diferença: conta do myProfit aceita a origem myPr
 conta de print aceita print ou digitado, e conta de extrato ou fatura não restringe.
 O saldo de outra origem entra como **conferência** (`saldo.conferir`, botão
 "Registrar como conferência"): fica registrado e não lança nada. Duas origens que
-discordam no mesmo dia além da tolerância (o maior entre R$ 10,00 e 0,2% do maior
-saldo, para arredondamento não virar pendência) aparecem no Roteiro de fechamento,
+discordam no mesmo dia além da tolerância (o maior entre 10,00 e 0,2% do maior
+saldo, para arredondamento não virar pendência; 1% em aplicação em moeda
+estrangeira, os títulos do exterior, que o extrato marca a mercado e o myProfit
+cota por outra fonte de preço, sempre cerca de 0,5% abaixo) aparecem no Roteiro de fechamento,
 etapa Conferências, para decidir qual vale; a decisão não é um segundo ajuste.
 Trocar a fonte de uma conta fica na auditoria (`account_source`). Foi assim que o
 Tesouro Direto da XP, que recebia o preço oficial digitado e a posição do myProfit
