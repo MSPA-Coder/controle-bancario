@@ -402,7 +402,34 @@ O da Avenue (`AvenuePdfStatementAdapter`) lê a conta brasileira, em reais: por
 onde o dinheiro entra (Pix), sai para a conta em dólar (remessa de câmbio) e sai
 o IOF. A data de cada linha é a da liquidação, quando o saldo muda; a coluna de
 saldo confere linha a linha a partir do saldo inicial do resumo, e o saldo final
-fecha a cadeia. Formato reconhecido por "www.avenue.us"; conta por "Nº conta".
+fecha a cadeia. Conta por "Nº conta".
+
+O mesmo adaptador lê o extrato mensal da conta em dólar da Avenue (o "Stmt" da
+corretora americana, desde 01/11/2026), reconhecido por "AVENUE ACCOUNT NUMBER".
+Os dois extratos são reconhecidos por "avenue.us", e a importação recusa o extrato
+em dólar numa conta em reais, e o contrário. O texto não diz em que coluna o valor
+está; o sinal sai do tipo do movimento, e a cadeia caixa de abertura + movimentos =
+caixa de fechamento confere tudo, ou a importação falha. Mês sem movimento importa
+só o saldo. Cada movimento vira uma linha com a descrição escrita pelo leitor, que
+o detalhe de investimento lê (ver "Ativo, tipo de renda e liquidação de pregão"):
+
+- compra e venda: "Compra de CGC na Avenue: 1200 a US$ 1,05, pregão 11/02/2026",
+  categoria do banco "Operações em Bolsa". A data da linha é a da liquidação, e o
+  pregão é o dia útil anterior (D+1 nos EUA, sem contar feriados);
+- cupom de título: "Cupom de ORCL 3.95 25/03/51 na Avenue" (o título como o extrato
+  o imprime);
+- juros do aluguel de ações e o IR retido sobre eles: "Juros de aluguel de ações na
+  Avenue (CGC)". O extrato não diz a ação; o leitor põe a única ação inteira entre a
+  carteira do fim do mês e as negociadas no mês, e sem candidata única deixa em
+  branco (o CRV então pede a revisão);
+- remessa de câmbio: "Remessa de câmbio BR-EUA", conciliada com a ponta em dólar da
+  transferência que veio da conta brasileira;
+- crédito diverso (campanha de marketing): o texto do extrato, "na Avenue".
+
+O saldo dos títulos (conta "Renda fixa EUA") vem do mesmo extrato, pelo "Total
+Fixed Income" do fim do mês, informado em Saldo Aplicações como marcação a mercado.
+Essa aplicação tem a conta em dólar como conta de movimento, então o saldo só é
+aceito depois que o extrato do mês dela foi importado e conciliado.
 
 Na fatura, uma compra avulsa só é conciliada automaticamente com lançamento
 existente quando há um único candidato com a mesma descrição, além do valor e
@@ -614,6 +641,14 @@ O parser lê, por palavra inteira e sem acento:
   `estorno`, à parte, com o tipo da linha que ele desfaz;
 - **liquidação de pregão** ("Operações Bolsa D+2 Pr 27/01/2026 Nc. 543216"): a
   data do pregão e o número da nota; nota mascarada (`Nc. *`) fica sem número.
+
+No exterior (extrato em dólar da Avenue) as regras leem as descrições que o leitor
+escreve, sempre terminadas em "na Avenue" para não casar com texto de outro banco:
+compra e venda dão o ativo e a data do pregão; "Cupom de <título> na Avenue" é
+`cupom`, com o título como ativo; "Juros de aluguel de ações na Avenue (<ação>)" é
+`aluguel` `credito`, e "IR retido sobre aluguel de ações na Avenue (<ação>)" é
+`aluguel` `irrf_aluguel`; "Dividendo de <ação> na Avenue" é `dividendo`. O ativo
+tem até 20 caracteres; maior que isso fica em branco.
 
 Não recebem campos: o IRRF de pregão e de day trade ("Irrf S/ Resultado Bolsa",
 "Irrf S/ Operações D+2", "Irrf S/ Day Trade"), que **não** é `irrf_aluguel`; a

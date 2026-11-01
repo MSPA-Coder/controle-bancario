@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-31 08:49-0300\n"
+"POT-Creation-Date: 2026-11-01 11:37-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -629,6 +629,32 @@ msgid "Extrato Avenue excede o limite de %(n)s linha."
 msgid_plural "Extrato Avenue excede o limite de %(n)s linhas."
 msgstr[0] "Avenue statement exceeds the limit of %(n)s line."
 msgstr[1] "Avenue statement exceeds the limit of %(n)s lines."
+
+#: bank_statements/adapters.py
+msgid "Não encontrei o período no extrato em dólar da Avenue."
+msgstr "Could not find the period in the Avenue US dollar statement."
+
+#: bank_statements/adapters.py
+msgid "Não encontrei o caixa de abertura e de fechamento no extrato em dólar da Avenue."
+msgstr "Could not find the opening and closing cash in the Avenue US dollar statement."
+
+#: bank_statements/adapters.py
+#, python-format
+msgid "Movimento que o leitor da Avenue não conhece em %(data)s: “%(texto)s”."
+msgstr "The Avenue reader does not recognize the activity on %(data)s: “%(texto)s”."
+
+#: bank_statements/adapters.py
+#, python-format
+msgid "Inconsistência no extrato em dólar da Avenue: o caixa de abertura (%(abertura)s) mais os movimentos dá %(calculado)s, e o extrato diz %(fechamento)s. O layout pode ter mudado."
+msgstr "Inconsistency in the Avenue US dollar statement: the opening cash (%(abertura)s) plus the activity comes to %(calculado)s, but the statement says %(fechamento)s. The layout may have changed."
+
+#: bank_statements/adapters.py
+msgid "Este é o extrato em dólar da Avenue: importe na conta em dólar."
+msgstr "This is the Avenue US dollar statement: import it into the US dollar account."
+
+#: bank_statements/adapters.py
+msgid "Este é o extrato em reais da Avenue: importe na conta brasileira."
+msgstr "This is the Avenue Brazilian real statement: import it into the Brazilian account."
 
 #: bank_statements/adapters.py
 #, python-format

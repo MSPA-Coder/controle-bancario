@@ -25,6 +25,12 @@ O que se extrai:
   "Operações Bolsa D+2 Pr 27/01/2026 Nc. 543216". Nota mascarada (`Nc. *`) fica
   sem número.
 
+O extrato mensal em dólar da Avenue não tem descrição própria que sirva: o leitor
+dele (`adapters._parse_avenue_usd_lines`) escreve a descrição num formato fixo,
+com o ativo por extenso, e as regras do exterior abaixo a leem. O ativo ali é
+ticker dos EUA (CGC, BRK.B) ou o título como o extrato o imprime (ORCL 3.95
+25/03/51), e o cupom do título é renda do tipo `cupom`.
+
 O IRRF de pregão ("Irrf S/ Resultado Bolsa ...") **não** é `irrf_aluguel`, e a
 corretagem de mini-contrato ("Operações Bm&F") não é liquidação de pregão de
 ações: ficam sem campos.
@@ -39,6 +45,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from core.domain.finance import (
+    INCOME_KIND_COUPON,
     INCOME_KIND_DIVIDEND,
     INCOME_KIND_JCP,
     INCOME_KIND_RENTAL,
@@ -72,6 +79,19 @@ _REGRAS: tuple[tuple[tuple[str, ...], str | None, str], ...] = (
 _REGRAS_DO_ESTORNADO = _REGRAS[1:]
 
 _LIQUIDACAO = re.compile(r"\bOPERACOES\s+BOLSA\b.*?\bPR\s+(\d{2})/(\d{2})/(\d{4})(?:\s+NC\.?\s+(\d+))?")
+
+# Exterior (extrato mensal em dólar da Avenue), sobre o texto normalizado. As
+# descrições são as que o leitor escreve; "NA AVENUE" no fim evita casar com um
+# "Cupom de desconto" de outro banco.
+_LIQUIDACAO_NO_EXTERIOR = re.compile(r"^(?:COMPRA|VENDA) DE (\S+) NA AVENUE:.*\bPREGAO (\d{2})/(\d{2})/(\d{4})$")
+_RENDA_NO_EXTERIOR: tuple[tuple[re.Pattern[str], str, str], ...] = (
+    (re.compile(r"^CUPOM DE (.+) NA AVENUE$"), INCOME_KIND_COUPON, INCOME_ROLE_CREDIT),
+    (re.compile(r"^DIVIDENDO DE (\S+) NA AVENUE$"), INCOME_KIND_DIVIDEND, INCOME_ROLE_CREDIT),
+    (re.compile(r"^JUROS DE ALUGUEL DE ACOES NA AVENUE(?: \((\S+)\))?$"), INCOME_KIND_RENTAL, INCOME_ROLE_CREDIT),
+    (re.compile(r"^IR RETIDO SOBRE ALUGUEL DE ACOES NA AVENUE(?: \((\S+)\))?$"), INCOME_KIND_RENTAL, INCOME_ROLE_RENTAL_IRRF),
+)
+# O tamanho da coluna `instrument_code`; um código maior fica sem ativo.
+_TAMANHO_DO_ATIVO = 20
 
 _TICKER_ESCRITO = re.compile(r"^[A-Z]{4}[0-9]{1,2}$")
 _CODIGO_ISIN = re.compile(r"^br([a-z]{4})([a-z]{3,5})([0-9]{1,3})$", re.IGNORECASE)
@@ -133,6 +153,27 @@ def _liquidacao(normalizada: str) -> tuple[date, str | None] | None:
         return None
 
 
+def _ativo_do_exterior(codigo: str | None) -> str | None:
+    codigo = (codigo or "").strip()
+    return codigo if 0 < len(codigo) <= _TAMANHO_DO_ATIVO else None
+
+
+def _do_exterior(normalizada: str) -> Detalhe | None:
+    achado = _LIQUIDACAO_NO_EXTERIOR.match(normalizada)
+    if achado is not None:
+        ativo, dia, mes, ano = achado.groups()
+        try:
+            pregao = date(int(ano), int(mes), int(dia))
+        except ValueError:
+            return None
+        return Detalhe(instrument_code=_ativo_do_exterior(ativo), settlement_pregao_date=pregao)
+    for padrao, tipo, papel in _RENDA_NO_EXTERIOR:
+        achado = padrao.match(normalizada)
+        if achado is not None:
+            return Detalhe(instrument_code=_ativo_do_exterior(achado.group(1)), income_kind=tipo, income_role=papel)
+    return None
+
+
 def interpretar(descricao: str | None) -> Detalhe | None:
     """O `Detalhe` da descrição, ou `None` quando nenhuma regra casa."""
     normalizada = normalizar(descricao or "")
@@ -144,6 +185,10 @@ def interpretar(descricao: str | None) -> Detalhe | None:
     if liquidacao is not None:
         data, nota = liquidacao
         return Detalhe(settlement_pregao_date=data, settlement_note=nota)
+
+    do_exterior = _do_exterior(normalizada)
+    if do_exterior is not None:
+        return do_exterior
 
     for alvo, tipo, papel in _REGRAS:
         if not _contem(palavras, alvo):

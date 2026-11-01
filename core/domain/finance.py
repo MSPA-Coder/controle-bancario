@@ -204,7 +204,10 @@ CARD_DAY_MAX: Final = 31
 INCOME_KIND_RENTAL: Final = "aluguel"
 INCOME_KIND_JCP: Final = "jcp"
 INCOME_KIND_DIVIDEND: Final = "dividendo"
-VALID_INCOME_KINDS: Final = (INCOME_KIND_RENTAL, INCOME_KIND_JCP, INCOME_KIND_DIVIDEND)
+# Cupom de título de renda fixa (extrato mensal da Avenue, desde 01/11/2026): o
+# título fica no CB, e o CRV mostra o cupom como provento.
+INCOME_KIND_COUPON: Final = "cupom"
+VALID_INCOME_KINDS: Final = (INCOME_KIND_RENTAL, INCOME_KIND_JCP, INCOME_KIND_DIVIDEND, INCOME_KIND_COUPON)
 INCOME_ROLE_CREDIT: Final = "credito"
 INCOME_ROLE_RENTAL_IRRF: Final = "irrf_aluguel"
 INCOME_ROLE_RENTAL_BROKERAGE: Final = "corretagem_aluguel"

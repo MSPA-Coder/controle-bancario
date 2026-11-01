@@ -397,7 +397,8 @@ não expõe os campos novos: o consumidor é o contrato v4.
   outbox do v4, porque gravar o detalhe muda o `cash_entry` publicado.
 
 No contrato v4 o `cash_entry` ganha, **só quando preenchidos**, `instrument`
-(ticker), `income_kind` (`aluguel`, `jcp`, `dividendo`), `income_role`
+(ticker da B3 ou dos EUA, ou o título de renda fixa como o extrato o imprime),
+`income_kind` (`aluguel`, `jcp`, `dividendo`, `cupom`), `income_role`
 (`credito`, `irrf_aluguel`, `corretagem_aluguel`, `taxa_aluguel`, `estorno`) e
 `settlement` (`pregao_date`, `note`). É acréscimo opcional: o schema aceita
 propriedades a mais e a versão continua v4.

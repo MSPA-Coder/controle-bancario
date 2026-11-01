@@ -17,7 +17,7 @@ import io
 import re
 from collections import Counter
 from dataclasses import dataclass, replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Protocol, runtime_checkable
 
@@ -910,16 +910,237 @@ def _parse_avenue_lines(text: str, account_id: int) -> list[ParsedStatementLine]
     return numerar_repeticoes(parsed, account_id)
 
 
+# --- PDF da Avenue (conta em dólar, extrato mensal "Stmt") ---
+#
+# O extrato mensal da corretora americana: resumo com o caixa de abertura e de
+# fechamento do mês, a carteira (ações e renda fixa) e a atividade da conta. Cada
+# movimento é uma linha "<TIPO> <data> C <descrição> [quantidade preço] $ <valor>",
+# e a linha seguinte traz o complemento: o ativo da compra e da venda, o título do
+# cupom ("ORCL 3.95 25/03/51"), "BR-EUA" da remessa. O texto não diz se o valor
+# está na coluna de débito ou de crédito; o sinal sai do tipo do movimento, e a
+# cadeia (caixa de abertura + movimentos = caixa de fechamento) confere tudo.
+#
+# A descrição gravada é escrita aqui, num formato que `investimentos.interpretar`
+# lê: o ativo, o tipo de renda e a data do pregão viram o detalhe de investimento
+# do lançamento. A data da linha é a do extrato, que nas compras e vendas é a
+# liquidação (D+1 nos EUA): o pregão é o dia útil anterior.
+
+_MARCA_AVENUE_EM_DOLAR = "AVENUE ACCOUNT NUMBER"
+_MESES_EN = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+}
+_RE_AVENUE_US_PERIODO = re.compile(r"\b([A-Z][a-z]+) \d{2}, \d{4} - ([A-Z][a-z]+) (\d{2}), (\d{4})")
+_RE_AVENUE_US_CAIXA = re.compile(r"Total Cash & Cash Equivalents \$ ([\d,]+\.\d{2}) \$ ([\d,]+\.\d{2})")
+_RE_AVENUE_US_MOVIMENTO = re.compile(
+    r"^(BOUGHT|SOLD|INTEREST|DIVIDEND|JOURNAL|MISC)\s+(\d{2})/(\d{2})/(\d{4})\s+[A-Z]\s+(.+?)\s+\$\s*([\d,]+\.\d{2})$"
+)
+_RE_AVENUE_US_QUANTIDADE_E_PRECO = re.compile(r"^(.*?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]*\.?\d+)$")
+# Ação na carteira: "<nome> <símbolo> <tipo de conta> <quantidade> <preço> ...".
+_RE_AVENUE_US_ACAO = re.compile(r"\s([A-Z][A-Z0-9.]*)\s+[A-Z]\s+([\d,]+(?:\.\d+)?)\s+[\d,.]+\s")
+# Linhas que nunca são o complemento de um movimento.
+_AVENUE_US_NAO_COMPLEMENTO = (
+    "Total ", "All investment", "Excess cash", "Sweep Program", "BUY / SELL", "DIVIDENDS AND",
+    "FUNDS PAID", "MISCELLANEOUS", "PAGE ", "2601 Bayshore",
+)
+
+
+@dataclass(frozen=True)
+class _MovimentoAvenueUs:
+    tipo: str
+    dia: date
+    texto: str
+    valor: Decimal
+    complemento: str
+
+
+def eh_extrato_avenue_em_dolar(text: str) -> bool:
+    return _MARCA_AVENUE_EM_DOLAR in (text or "")
+
+
+def _dolar(bruto: str) -> Decimal:
+    return _to_decimal(bruto.replace(",", ""))
+
+
+def _numero_pt(valor: Decimal) -> str:
+    texto = format(valor.normalize(), "f")
+    return texto.replace(".", ",")
+
+
+def _dia_util_anterior(dia: date) -> date:
+    anterior = dia - timedelta(days=1)
+    while anterior.weekday() >= 5:
+        anterior -= timedelta(days=1)
+    return anterior
+
+
+def _avenue_us_periodo(text: str) -> date:
+    achado = _RE_AVENUE_US_PERIODO.search(text)
+    mes = _MESES_EN.get(achado.group(2).lower()) if achado else None
+    if achado is None or mes is None:
+        raise ValueError(gettext("Não encontrei o período no extrato em dólar da Avenue."))
+    return date(int(achado.group(4)), mes, int(achado.group(3)))
+
+
+def _avenue_us_caixa(text: str) -> tuple[Decimal, Decimal]:
+    achado = _RE_AVENUE_US_CAIXA.search(text)
+    if achado is None:
+        raise ValueError(gettext("Não encontrei o caixa de abertura e de fechamento no extrato em dólar da Avenue."))
+    return _dolar(achado.group(1)), _dolar(achado.group(2))
+
+
+def _avenue_us_movimentos(text: str) -> list[_MovimentoAvenueUs]:
+    linhas = [linha.strip() for linha in text.splitlines() if linha.strip()]
+    movimentos = []
+    for indice, linha in enumerate(linhas):
+        achado = _RE_AVENUE_US_MOVIMENTO.match(linha)
+        if achado is None:
+            continue
+        tipo, dia, mes, ano, texto, valor = achado.groups()
+        seguinte = linhas[indice + 1] if indice + 1 < len(linhas) else ""
+        complemento = (
+            "" if _RE_AVENUE_US_MOVIMENTO.match(seguinte) or seguinte.startswith(_AVENUE_US_NAO_COMPLEMENTO) else seguinte
+        )
+        movimentos.append(
+            _MovimentoAvenueUs(tipo, date(int(ano), int(mes), int(dia)), texto.strip(), _dolar(valor), complemento)
+        )
+    return movimentos
+
+
+def _avenue_us_acoes_inteiras(text: str) -> set[str]:
+    """Os símbolos das ações com quantidade inteira na carteira do fim do mês."""
+    inicio, fim = text.find("EQUITIES / OPTIONS"), text.find("Total Equities")
+    if inicio < 0 or fim < inicio:
+        return set()
+    inteiras = set()
+    for linha in text[inicio:fim].splitlines():
+        achado = _RE_AVENUE_US_ACAO.search(f" {linha} ")
+        if achado and _dolar(achado.group(2)) == _dolar(achado.group(2)).to_integral_value():
+            inteiras.add(achado.group(1))
+    return inteiras
+
+
+def _avenue_us_ativo_do_aluguel(text: str, movimentos: list[_MovimentoAvenueUs]) -> str | None:
+    """A ação emprestada, que o extrato não diz: só se empresta ação inteira, então é a
+    única ação inteira entre a carteira do fim do mês e as negociadas no mês. Mais
+    de uma, ou nenhuma, fica sem ativo, e o CRV pede a revisão."""
+    candidatas = _avenue_us_acoes_inteiras(text) | {
+        movimento.complemento for movimento in movimentos if movimento.tipo in ("BOUGHT", "SOLD") and movimento.complemento
+    }
+    return next(iter(candidatas)) if len(candidatas) == 1 else None
+
+
+def _avenue_us_linha(movimento: _MovimentoAvenueUs, ativo_do_aluguel: str | None) -> tuple[str, Decimal, str]:
+    """(descrição, valor com sinal, categoria do banco) de um movimento."""
+    texto, complemento = movimento.texto, movimento.complemento
+    erro = gettext("Movimento que o leitor da Avenue não conhece em %(data)s: “%(texto)s”.") % {
+        "data": regional.formatar_data(movimento.dia), "texto": texto,
+    }
+    if movimento.tipo in ("BOUGHT", "SOLD"):
+        partes = _RE_AVENUE_US_QUANTIDADE_E_PRECO.match(texto)
+        if partes is None or not complemento:
+            raise ValueError(erro)
+        quantidade, preco = _dolar(partes.group(2)), _dolar(partes.group(3))
+        verbo = "Compra" if movimento.tipo == "BOUGHT" else "Venda"
+        pregao = _dia_util_anterior(movimento.dia)
+        descricao = (
+            f"{verbo} de {complemento} na Avenue: {_numero_pt(quantidade)} a US$ {_numero_pt(preco)}, "
+            f"pregão {pregao:%d/%m/%Y}"
+        )
+        valor = -movimento.valor if movimento.tipo == "BOUGHT" else movimento.valor
+        return descricao, valor, "Operações em Bolsa"
+    if movimento.tipo == "INTEREST":
+        if texto.startswith("Crédito de Cupom") and complemento:
+            return f"Cupom de {complemento} na Avenue", movimento.valor, "Cupom"
+        sufixo = f" ({ativo_do_aluguel})" if ativo_do_aluguel else ""
+        if texto.startswith("Stock lending"):
+            return f"Juros de aluguel de ações na Avenue{sufixo}", movimento.valor, "Aluguel de ações"
+        if texto.startswith("Retenção impostos") and "aluguel" in complemento.lower():
+            return f"IR retido sobre aluguel de ações na Avenue{sufixo}", -movimento.valor, "IR sobre aluguel de ações"
+        raise ValueError(erro)
+    if movimento.tipo == "DIVIDEND" and complemento:
+        return f"Dividendo de {complemento} na Avenue", movimento.valor, "Dividendo"
+    if movimento.tipo == "JOURNAL" and "Remessa de Câmbio" in texto:
+        if complemento == "BR-EUA":
+            return "Remessa de câmbio BR-EUA", movimento.valor, "Remessa de câmbio"
+        if complemento == "EUA-BR":
+            return "Remessa de câmbio EUA-BR", -movimento.valor, "Remessa de câmbio"
+    if movimento.tipo == "MISC":
+        return f"{texto} na Avenue", movimento.valor, "Crédito diverso"
+    raise ValueError(erro)
+
+
+def _parse_avenue_usd_lines(text: str, account_id: int) -> list[ParsedStatementLine]:
+    """Interpreta o texto extraído (via pdfplumber) do extrato mensal em dólar da Avenue."""
+    abertura, fechamento = _avenue_us_caixa(text)
+    _avenue_us_periodo(text)
+    movimentos = _avenue_us_movimentos(text)
+    ativo_do_aluguel = _avenue_us_ativo_do_aluguel(text, movimentos)
+    parsed: list[ParsedStatementLine] = []
+    caixa = abertura
+    for movimento in movimentos:
+        descricao, valor, categoria_do_banco = _avenue_us_linha(movimento, ativo_do_aluguel)
+        if valor == 0:
+            raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
+        caixa += valor
+        descricao = descricao[:255]
+        parsed.append(
+            ParsedStatementLine(
+                statement_date=movimento.dia, description=descricao, amount=valor,
+                line_hash=line_hash(account_id, movimento.dia, descricao, valor),
+                bank_category=categoria_do_banco,
+            )
+        )
+    if caixa != fechamento:
+        raise ValueError(
+            gettext(
+                "Inconsistência no extrato em dólar da Avenue: o caixa de abertura (%(abertura)s) mais os "
+                "movimentos dá %(calculado)s, e o extrato diz %(fechamento)s. O layout pode ter mudado."
+            )
+            % {"abertura": abertura, "calculado": caixa, "fechamento": fechamento}
+        )
+    max_rows = max_statement_rows()
+    if len(parsed) > max_rows:
+        raise ValueError(
+            ngettext(
+                "Extrato Avenue excede o limite de %(n)s linha.",
+                "Extrato Avenue excede o limite de %(n)s linhas.",
+                max_rows,
+            )
+            % {"n": max_rows}
+        )
+    return numerar_repeticoes(parsed, account_id)
+
+
+def conferir_moeda_do_extrato_avenue(text: str, moeda_da_conta: str) -> None:
+    """O extrato em dólar só entra na conta em dólar, e o em reais só na brasileira.
+
+    Fica fora de `parse` porque o adaptador não conhece a conta: quem importa
+    (`services._adapter_for`) confere antes de ler as linhas."""
+    em_dolar = eh_extrato_avenue_em_dolar(text)
+    if (moeda_da_conta == "USD") == em_dolar:
+        return
+    if em_dolar:
+        raise ValueError(gettext("Este é o extrato em dólar da Avenue: importe na conta em dólar."))
+    raise ValueError(gettext("Este é o extrato em reais da Avenue: importe na conta brasileira."))
+
+
 class AvenuePdfStatementAdapter:
-    """Adapter para o extrato em PDF da conta brasileira (R$) da Avenue."""
+    """Adapter para os dois extratos em PDF da Avenue: o da conta brasileira (R$) e o
+    mensal da conta em dólar. O texto diz qual é."""
 
     def parse(self, file: UploadedFile, account_id: int, *, document: StatementDocument | None = None) -> list[ParsedStatementLine]:
         raw = document.raw if document is not None else read_statement_upload(file, label="PDF")
         text = document.pdf_text if document is not None else extract_pdf_text(raw)
+        if eh_extrato_avenue_em_dolar(text):
+            return _parse_avenue_usd_lines(text, account_id)
         return _parse_avenue_lines(text, account_id)
 
 
 def _saldo_da_avenue(text: str) -> tuple[Decimal, date] | None:
+    if eh_extrato_avenue_em_dolar(text):
+        _, fechamento = _avenue_us_caixa(text)
+        return fechamento, _avenue_us_periodo(text)
     final, periodo = _RE_AVENUE_SALDO_FINAL.search(text), _RE_AVENUE_PERIODO.search(text)
     if final is None or periodo is None:
         return None
@@ -1186,7 +1407,8 @@ _PDF_ADAPTERS = {
 # para o Itaú, e duas instituições no mesmo texto deixam o PDF sem formato.
 _PDF_MARCAS = {
     "itaú": "itau.com.br",
-    "avenue": "www.avenue.us",
+    # "www.avenue.us" no extrato em reais, "customer@avenue.us" no mensal em dólar.
+    "avenue": "avenue.us",
 }
 # Outros nomes sob os quais a mesma instituição pode estar cadastrada. O "SCP XP
 # Investimestos" (sic) é como a conta de investimento da XP foi cadastrada.

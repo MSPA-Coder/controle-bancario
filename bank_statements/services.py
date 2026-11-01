@@ -19,6 +19,9 @@ from banking.models import FinancialAccount
 from banking.services import accessible_account_ids, can_access_account
 
 from .adapters import (
+    AvenuePdfStatementAdapter,
+    conferir_moeda_do_extrato_avenue,
+    extract_pdf_text,
     get_statement_adapter,
     read_statement_upload,
 )
@@ -90,7 +93,12 @@ def _adapter_for(account: FinancialAccount, uploaded_file: UploadedFile, *, docu
             "Este arquivo é uma fatura de cartão de crédito. Importe-o na conta do cartão "
             "(tipo “Cartão de crédito” em Cadastros > Contas)."
         ))
-    return get_statement_adapter(uploaded_file, institution=account.institution)
+    adapter = get_statement_adapter(uploaded_file, institution=account.institution)
+    if isinstance(adapter, AvenuePdfStatementAdapter):
+        # A Avenue tem dois extratos, em reais e em dólar, para a mesma instituição.
+        texto = document.pdf_text if document is not None else extract_pdf_text(read_statement_upload(uploaded_file, label="PDF"))
+        conferir_moeda_do_extrato_avenue(texto, account.currency)
+    return adapter
 
 
 def import_statement_file(
