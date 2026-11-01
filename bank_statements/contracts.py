@@ -28,6 +28,10 @@ class ParsedStatement:
     period_end: date | None = None
     account_hint: str | None = None
     format_key: str = ""
+    # A carteira que o extrato da corretora imprime na data do saldo:
+    # (ativo, quantidade). `None` quando o extrato não traz carteira; vazia
+    # quando traz e não há ativo.
+    holdings: tuple[tuple[str, Decimal], ...] | None = None
 
 
 @dataclass(frozen=True)

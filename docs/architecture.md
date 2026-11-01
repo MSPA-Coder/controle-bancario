@@ -378,7 +378,9 @@ movimento de dinheiro, inclusive o das contas de corretora) precisa desses dados
 sem reinterpretar texto, então o CB os extrai uma vez e os guarda em
 `transactions.EntryInvestmentDetail` (`cash_flow_entry_investment`), tabela 1:1
 com o lançamento: `instrument_code`, `income_kind`, `income_role`,
-`settlement_pregao_date` e `settlement_note`, todos opcionais. Fica à parte de
+`settlement_pregao_date`, `settlement_note` e `settlement_quantity` (a
+quantidade negociada, sem sinal, que só o extrato do exterior imprime por
+negócio; desde 01/11/2026), todos opcionais. Fica à parte de
 `CashFlowEntry` para não inflar o lançamento nem tocar as colunas que o esquema
 `leitura` lê (a migração `transactions/0011` é só aditiva). O esquema `leitura`
 não expõe os campos novos: o consumidor é o contrato v4.
@@ -400,7 +402,7 @@ No contrato v4 o `cash_entry` ganha, **só quando preenchidos**, `instrument`
 (ticker da B3 ou dos EUA, ou o título de renda fixa como o extrato o imprime),
 `income_kind` (`aluguel`, `jcp`, `dividendo`, `cupom`), `income_role`
 (`credito`, `irrf_aluguel`, `corretagem_aluguel`, `taxa_aluguel`, `estorno`) e
-`settlement` (`pregao_date`, `note`). É acréscimo opcional: o schema aceita
+`settlement` (`pregao_date`, `note`, `quantity`). É acréscimo opcional: o schema aceita
 propriedades a mais e a versão continua v4.
 
 ### Snapshot de integração v4
@@ -417,6 +419,17 @@ período declarado (`core.patrimonio.coberturas_de_extrato`). O Controle de Rend
 Variável o usa na conferência por pregão: pregão depois dessa data aparece como
 "aguardando extrato", e não como diferença. Importar extrato não toca a outbox;
 o consumidor relê o snapshot.
+
+Desde 01/11/2026 a conta publica também `statement_holdings`, quando o extrato
+da corretora imprime a carteira (hoje só o mensal em dólar da Avenue): uma
+entrada por data do saldo, com as ações e a quantidade como o extrato as
+imprime (`core.patrimonio.carteiras_de_extrato`; `positions` vazia quando o
+extrato diz que não há ação). O lote guarda a carteira em
+`BankStatementImport.statement_holdings`, e o leitor só a aceita quando a soma
+das linhas dá o total de ações do extrato. O CB não controla quantidade de
+papel nem a usa em saldo: ela existe para o Controle de Renda Variável conferir
+a posição dele no exterior, que nenhuma outra fonte confere a tempo. Os títulos
+de renda fixa ficam de fora: estão no CB pelo valor (conta de aplicação).
 
 Desde 03/10/2026 o lançamento (`cash_entry`) publica também `effective_status`:
 o status que vale em `snapshot_as_of`, derivado da data. `realizado` continua

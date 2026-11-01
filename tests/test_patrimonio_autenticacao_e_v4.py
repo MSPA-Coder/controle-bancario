@@ -339,3 +339,33 @@ def test_v4_publica_ate_quando_o_extrato_da_conta_foi_importado(contas, monkeypa
     }
     assert contas_publicadas["Conta corrente"]["statement_covered_until"] == "2026-10-31"
     assert "statement_covered_until" not in contas_publicadas["Conta em dólar"]
+
+
+@pytest.mark.django_db
+def test_v4_publica_a_carteira_de_cada_extrato_da_corretora(contas):
+    """Uma entrada por data do saldo, em ordem; o extrato importado de novo vale pelo
+    lote mais recente; mês sem ação sai com a carteira vazia (o extrato disse que não
+    havia), e lote sem carteira não inventa uma."""
+    from bank_statements.models import BankStatementImport
+
+    conta = contas["em_dolar"]
+
+    def lote(dia, carteira):
+        BankStatementImport.objects.create(
+            account=conta, source_filename=f"Stmt_{dia:%Y%m%d}.pdf", statement_balance=Decimal("1.00"),
+            statement_balance_date=dia, statement_holdings=carteira,
+        )
+
+    lote(date(2026, 4, 30), [])
+    lote(date(2026, 3, 31), [{"instrument": "CGC", "quantity": "3000"}])
+    lote(date(2026, 3, 31), [{"instrument": "BRK.B", "quantity": "1.56365"}, {"instrument": "CGC", "quantity": "3367"}])
+    lote(date(2026, 5, 31), None)
+
+    assert patrimonio.carteiras_de_extrato([conta.id, contas["em_reais"].id]) == {
+        conta.id: [
+            {"date": "2026-03-31", "positions": [
+                {"instrument": "BRK.B", "quantity": "1.56365"}, {"instrument": "CGC", "quantity": "3367"},
+            ]},
+            {"date": "2026-04-30", "positions": []},
+        ]
+    }

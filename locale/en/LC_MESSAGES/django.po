@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 11:37-0300\n"
+"POT-Creation-Date: 2026-11-01 14:17-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -637,6 +637,15 @@ msgstr "Could not find the period in the Avenue US dollar statement."
 #: bank_statements/adapters.py
 msgid "Não encontrei o caixa de abertura e de fechamento no extrato em dólar da Avenue."
 msgstr "Could not find the opening and closing cash in the Avenue US dollar statement."
+
+#: bank_statements/adapters.py
+msgid "Não encontrei o total de ações da carteira no extrato em dólar da Avenue."
+msgstr "Could not find the total of equities in the holdings of the Avenue US dollar statement."
+
+#: bank_statements/adapters.py
+#, python-format
+msgid "Inconsistência na carteira do extrato em dólar da Avenue: as ações somam %(soma)s, e o extrato diz %(total)s. O layout pode ter mudado."
+msgstr "Inconsistency in the holdings of the Avenue US dollar statement: the equities add up to %(soma)s, but the statement says %(total)s. The layout may have changed."
 
 #: bank_statements/adapters.py
 #, python-format

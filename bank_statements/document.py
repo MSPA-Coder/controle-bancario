@@ -77,7 +77,7 @@ class StatementDocument:
     def complete(self, lines: Iterable[ParsedStatementLine]) -> ParsedStatement:
         from . import adapters
 
-        balance = period_end = hint = None
+        balance = period_end = hint = holdings = None
         format_key = "csv"
         if self.is_pdf:
             format_key = "pdf"
@@ -95,13 +95,14 @@ class StatementDocument:
                     balance = _optional(xp_balance)
                 else:
                     balance = _optional(lambda: adapters._saldo_do_pdf(text))
+                    holdings = _optional(lambda: adapters._carteira_do_pdf(text))
         elif self.is_ofx:
             format_key = "ofx"
             balance = _optional(lambda: adapters._saldo_do_ofx(self.text))
             hint = adapters.extract_ofx_account_hint(self.text)
             end = adapters._RE_OFX_DTEND.search(self.text)
             period_end = _optional(lambda: adapters._parse_ofx_date(end.group(1))) if end else None
-        return ParsedStatement(tuple(lines), balance, period_end, hint, format_key)
+        return ParsedStatement(tuple(lines), balance, period_end, hint, format_key, holdings)
 
 
 def parse_statement(

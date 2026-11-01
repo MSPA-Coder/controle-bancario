@@ -29,7 +29,10 @@ O extrato mensal em dólar da Avenue não tem descrição própria que sirva: o 
 dele (`adapters._parse_avenue_usd_lines`) escreve a descrição num formato fixo,
 com o ativo por extenso, e as regras do exterior abaixo a leem. O ativo ali é
 ticker dos EUA (CGC, BRK.B) ou o título como o extrato o imprime (ORCL 3.95
-25/03/51), e o cupom do título é renda do tipo `cupom`.
+25/03/51), e o cupom do título é renda do tipo `cupom`. A compra e a venda
+trazem também a quantidade negociada (`settlement_quantity`), que só o extrato
+do exterior imprime por negócio: é com ela que o CRV confere o negócio quando
+não tem o preço.
 
 O IRRF de pregão ("Irrf S/ Resultado Bolsa ...") **não** é `irrf_aluguel`, e a
 corretagem de mini-contrato ("Operações Bm&F") não é liquidação de pregão de
@@ -43,6 +46,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 
 from core.domain.finance import (
     INCOME_KIND_COUPON,
@@ -83,7 +87,9 @@ _LIQUIDACAO = re.compile(r"\bOPERACOES\s+BOLSA\b.*?\bPR\s+(\d{2})/(\d{2})/(\d{4}
 # Exterior (extrato mensal em dólar da Avenue), sobre o texto normalizado. As
 # descrições são as que o leitor escreve; "NA AVENUE" no fim evita casar com um
 # "Cupom de desconto" de outro banco.
-_LIQUIDACAO_NO_EXTERIOR = re.compile(r"^(?:COMPRA|VENDA) DE (\S+) NA AVENUE:.*\bPREGAO (\d{2})/(\d{2})/(\d{4})$")
+_LIQUIDACAO_NO_EXTERIOR = re.compile(r"^(?:COMPRA|VENDA) DE (\S+) NA AVENUE:(.*)\bPREGAO (\d{2})/(\d{2})/(\d{4})$")
+# "1200 A US$ 1,05," ou "1,56365 A US$ 499,13,": a quantidade vem antes do preço.
+_QUANTIDADE_NO_EXTERIOR = re.compile(r"^\s*(\d+(?:,\d+)?) A US\$ ")
 _RENDA_NO_EXTERIOR: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (re.compile(r"^CUPOM DE (.+) NA AVENUE$"), INCOME_KIND_COUPON, INCOME_ROLE_CREDIT),
     (re.compile(r"^DIVIDENDO DE (\S+) NA AVENUE$"), INCOME_KIND_DIVIDEND, INCOME_ROLE_CREDIT),
@@ -108,12 +114,13 @@ class Detalhe:
     income_role: str | None = None
     settlement_pregao_date: date | None = None
     settlement_note: str | None = None
+    settlement_quantity: Decimal | None = None
 
     @property
     def vazio(self) -> bool:
         return not any(
             (self.instrument_code, self.income_kind, self.income_role,
-             self.settlement_pregao_date, self.settlement_note)
+             self.settlement_pregao_date, self.settlement_note, self.settlement_quantity)
         )
 
 
@@ -161,12 +168,16 @@ def _ativo_do_exterior(codigo: str | None) -> str | None:
 def _do_exterior(normalizada: str) -> Detalhe | None:
     achado = _LIQUIDACAO_NO_EXTERIOR.match(normalizada)
     if achado is not None:
-        ativo, dia, mes, ano = achado.groups()
+        ativo, negocio, dia, mes, ano = achado.groups()
         try:
             pregao = date(int(ano), int(mes), int(dia))
         except ValueError:
             return None
-        return Detalhe(instrument_code=_ativo_do_exterior(ativo), settlement_pregao_date=pregao)
+        quantidade = _QUANTIDADE_NO_EXTERIOR.match(negocio)
+        return Detalhe(
+            instrument_code=_ativo_do_exterior(ativo), settlement_pregao_date=pregao,
+            settlement_quantity=Decimal(quantidade.group(1).replace(",", ".")) if quantidade else None,
+        )
     for padrao, tipo, papel in _RENDA_NO_EXTERIOR:
         achado = padrao.match(normalizada)
         if achado is not None:

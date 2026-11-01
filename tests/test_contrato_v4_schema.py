@@ -135,6 +135,11 @@ def cenario(com_token):
         entry=lancar(corrente, gerencial, ENTRY_TYPE_EXPENSE, "Operações Bolsa D+2 Pr 27/01/2026 Nc. 543216", "50.00", date(2026, 1, 29), realizado="50.00"),
         settlement_pregao_date=date(2026, 1, 27), settlement_note="543216",
     )
+    EntryInvestmentDetail.objects.create(
+        entry=lancar(dolar, movimentacao, ENTRY_TYPE_EXPENSE, "Compra de CGC na Avenue: 5000 a US$ 0,95, pregão 16/06/2026",
+                     "4750.00", date(2026, 6, 17), realizado="4750.00"),
+        instrument_code="CGC", settlement_pregao_date=date(2026, 6, 16), settlement_quantity=Decimal("5000"),
+    )
 
     operacao = BankOperation.objects.create(
         operation_key="transferencia-contrato-v4", operation_type=OPERATION_INTERNAL_TRANSFER
@@ -157,6 +162,12 @@ def cenario(com_token):
 
     BankStatementImport.objects.create(
         account=corrente, source_filename="extrato.ofx", statement_period_end=date(2026, 9, 30)
+    )
+    # Extrato da corretora com carteira: a conta em dólar ganha o `statement_holdings` opcional.
+    BankStatementImport.objects.create(
+        account=dolar, source_filename="Stmt_20260930.pdf", statement_balance=Decimal("2123.60"),
+        statement_balance_date=date(2026, 9, 30),
+        statement_holdings=[{"instrument": "BRK.B", "quantity": "1.56365"}, {"instrument": "CGC", "quantity": "7500"}],
     )
     return {"corrente": corrente, "cartao": cartao, "futura": futura, "operacao": operacao}
 
@@ -199,6 +210,8 @@ def test_lancamento_de_investimento_publica_so_os_campos_preenchidos(snapshot):
         "pregao_date": "2026-01-27", "note": "543216",
     }
     assert not {"instrument", "income_kind", "income_role", "settlement"} & set(por_descricao["Salário"])
+    compra = por_descricao["Compra de CGC na Avenue: 5000 a US$ 0,95, pregão 16/06/2026"]
+    assert (compra["instrument"], compra["settlement"]) == ("CGC", {"pregao_date": "2026-06-16", "quantity": "5000"})
 
 
 def test_conta_que_ainda_nao_existe_leva_saldo_nulo_e_nao_zero(snapshot):
@@ -314,6 +327,24 @@ def _saldo_como_zero_de_texto_vazio(s):
     _primeiro(s, "account")["payload"]["balance"] = ""
 
 
+def _conta_com(s, campo):
+    return next(i["payload"] for i in s["items"] if i["resource"] == "account" and campo in i["payload"])
+
+
+def _quantidade_da_carteira_vira_numero(s):
+    _conta_com(s, "statement_holdings")["statement_holdings"][0]["positions"][0]["quantity"] = 7500
+
+
+def _quantidade_da_liquidacao_com_sinal(s):
+    next(
+        i["payload"] for i in s["items"] if i["resource"] == "cash_entry" and "quantity" in i["payload"].get("settlement", {})
+    )["settlement"]["quantity"] = "-5000"
+
+
+def _carteira_sem_data(s):
+    del _conta_com(s, "statement_holdings")["statement_holdings"][0]["date"]
+
+
 @pytest.mark.parametrize(
     "mutacao",
     [
@@ -321,7 +352,7 @@ def _saldo_como_zero_de_texto_vazio(s):
         _id_sem_prefixo_da_fonte, _campo_renomeado, _sistema_errado, _sem_high_watermark, _data_fora_do_iso,
         _recurso_desconhecido, _saldo_como_zero_de_texto_vazio, _ativo_em_minuscula, _ativo_maior_que_a_coluna,
         _tipo_de_renda_fora_do_vocabulario, _papel_fora_do_vocabulario, _liquidacao_com_data_fora_do_iso,
-        _liquidacao_vazia,
+        _liquidacao_vazia, _quantidade_da_carteira_vira_numero, _carteira_sem_data, _quantidade_da_liquidacao_com_sinal,
     ],
     ids=lambda f: f.__name__.strip("_"),
 )

@@ -24,7 +24,9 @@ from transactions.models import CashFlowEntry, EntryInvestmentDetail
 from .investimentos import Detalhe, interpretar
 from .models import LINE_STATUS_RECONCILED, BankStatementLine
 
-_CAMPOS = ("instrument_code", "income_kind", "income_role", "settlement_pregao_date", "settlement_note")
+_CAMPOS = (
+    "instrument_code", "income_kind", "income_role", "settlement_pregao_date", "settlement_note", "settlement_quantity",
+)
 
 CRIAR = "criar"
 ATUALIZAR = "atualizar"

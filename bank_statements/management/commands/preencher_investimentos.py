@@ -25,6 +25,7 @@ def _resumo(detalhe) -> str:
         detalhe.instrument_code, detalhe.income_kind, detalhe.income_role,
         detalhe.settlement_pregao_date.isoformat() if detalhe.settlement_pregao_date else None,
         f"nota {detalhe.settlement_note}" if detalhe.settlement_note else None,
+        f"quantidade {detalhe.settlement_quantity}" if detalhe.settlement_quantity else None,
     ]
     return " | ".join(p for p in partes if p) or "-"
 

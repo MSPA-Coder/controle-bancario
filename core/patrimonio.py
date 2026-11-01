@@ -318,12 +318,48 @@ def coberturas_de_extrato(conta_ids: list[int]) -> dict[int, date]:
     return coberturas
 
 
+def carteiras_de_extrato(conta_ids: list[int]) -> dict[int, list[dict]]:
+    """A carteira que cada extrato da corretora imprimiu, por conta e data do saldo.
+
+    O extrato importado de novo vale pelo lote mais recente da mesma data. Conta
+    sem extrato que traga carteira não aparece.
+    """
+    por_conta: dict[int, dict[date, list[dict[str, str]]]] = {}
+    lotes = (
+        BankStatementImport.objects.filter(
+            account_id__in=conta_ids, statement_holdings__isnull=False, statement_balance_date__isnull=False
+        )
+        .order_by("id")
+        .values_list("account_id", "statement_balance_date", "statement_holdings")
+    )
+    for conta_id, dia, carteira in lotes:
+        por_conta.setdefault(conta_id, {})[dia] = carteira
+    return {
+        conta_id: [
+            {
+                "date": dia.isoformat(),
+                "positions": [{"instrument": item["instrument"], "quantity": item["quantity"]} for item in carteira],
+            }
+            for dia, carteira in sorted(datas.items())
+        ]
+        for conta_id, datas in por_conta.items()
+    }
+
+
 def _conta_v4(
-    conta: FinancialAccount, referencia: date, saldos: dict[int, Decimal], coberturas: dict[int, date] | None = None
+    conta: FinancialAccount,
+    referencia: date,
+    saldos: dict[int, Decimal],
+    coberturas: dict[int, date] | None = None,
+    carteiras: dict[int, list[dict]] | None = None,
 ) -> dict:
     existe_na_data = conta.initial_balance_date <= referencia
     cobertura = (coberturas or {}).get(conta.id)
-    opcionais = {"statement_covered_until": cobertura.isoformat()} if cobertura is not None else {}
+    opcionais: dict[str, object] = {"statement_covered_until": cobertura.isoformat()} if cobertura is not None else {}
+    if conta.id in (carteiras or {}):
+        # Acréscimo opcional (01/11/2026): a carteira de cada extrato da
+        # corretora. O CRV confere com ela a quantidade que ele tem.
+        opcionais["statement_holdings"] = carteiras[conta.id]
     return {
         "source_id": _source_id_v4("account", conta.id),
         "name": conta.account_name,
@@ -412,6 +448,9 @@ def _investimento_v4(entry: CashFlowEntry) -> dict:
         liquidacao["pregao_date"] = detalhe.settlement_pregao_date.isoformat()
     if detalhe.settlement_note:
         liquidacao["note"] = detalhe.settlement_note
+    if detalhe.settlement_quantity:
+        # Acréscimo opcional (01/11/2026): sem sinal; compra é despesa, venda é receita.
+        liquidacao["quantity"] = format(detalhe.settlement_quantity.normalize(), "f")
     if liquidacao:
         campos["settlement"] = liquidacao
     return campos
@@ -586,6 +625,7 @@ def snapshot_v4_view(request):
             contas_ativas, referencia + timedelta(days=1), VIEW_REALIZED
         )
         coberturas = coberturas_de_extrato([conta.id for conta in contas])
+        carteiras = carteiras_de_extrato([conta.id for conta in contas])
         categorias = list(CashFlowCategory.objects.select_related("group").order_by("id"))
         lancamentos = list(
             CashFlowEntry.objects.select_related("account", "category", "investment_detail")
@@ -597,7 +637,7 @@ def snapshot_v4_view(request):
             .order_by("id")
         )
         items = [
-            {"resource": "account", "source_id": _source_id_v4("account", conta.id), "payload": _conta_v4(conta, referencia, saldos, coberturas)}
+            {"resource": "account", "source_id": _source_id_v4("account", conta.id), "payload": _conta_v4(conta, referencia, saldos, coberturas, carteiras)}
             for conta in contas
         ]
         items.extend(

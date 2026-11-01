@@ -936,8 +936,9 @@ _RE_AVENUE_US_MOVIMENTO = re.compile(
     r"^(BOUGHT|SOLD|INTEREST|DIVIDEND|JOURNAL|MISC)\s+(\d{2})/(\d{2})/(\d{4})\s+[A-Z]\s+(.+?)\s+\$\s*([\d,]+\.\d{2})$"
 )
 _RE_AVENUE_US_QUANTIDADE_E_PRECO = re.compile(r"^(.*?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]*\.?\d+)$")
-# Ação na carteira: "<nome> <símbolo> <tipo de conta> <quantidade> <preço> ...".
-_RE_AVENUE_US_ACAO = re.compile(r"\s([A-Z][A-Z0-9.]*)\s+[A-Z]\s+([\d,]+(?:\.\d+)?)\s+[\d,.]+\s")
+# Ação na carteira: "<nome> <símbolo> <tipo de conta> <quantidade> <preço> [$] <valor de mercado> ...".
+_RE_AVENUE_US_ACAO = re.compile(r"\s([A-Z][A-Z0-9.]*)\s+[A-Z]\s+([\d,]+(?:\.\d+)?)\s+[\d,.]+\s+\$?\s*([\d,]+\.\d{2})\s")
+_RE_AVENUE_US_TOTAL_ACOES = re.compile(r"Total Equities \$ ([\d,]+\.\d{2})")
 # Linhas que nunca são o complemento de um movimento.
 _AVENUE_US_NAO_COMPLEMENTO = (
     "Total ", "All investment", "Excess cash", "Sweep Program", "BUY / SELL", "DIVIDENDS AND",
@@ -1007,17 +1008,43 @@ def _avenue_us_movimentos(text: str) -> list[_MovimentoAvenueUs]:
     return movimentos
 
 
-def _avenue_us_acoes_inteiras(text: str) -> set[str]:
-    """Os símbolos das ações com quantidade inteira na carteira do fim do mês."""
+def avenue_us_carteira(text: str) -> tuple[tuple[str, Decimal], ...]:
+    """As ações e opções da carteira do fim do mês: (símbolo como o extrato o imprime, quantidade).
+
+    Sem a seção, a carteira não tem ação. Com ela, a soma do valor de mercado de
+    cada linha tem de dar o total que o extrato imprime: é o que garante que
+    nenhuma linha ficou de fora. Os títulos de renda fixa ficam no CB, pelo valor,
+    e não entram aqui."""
     inicio, fim = text.find("EQUITIES / OPTIONS"), text.find("Total Equities")
-    if inicio < 0 or fim < inicio:
-        return set()
-    inteiras = set()
+    if inicio < 0:
+        return ()
+    total = _RE_AVENUE_US_TOTAL_ACOES.search(text)
+    if fim < inicio or total is None:
+        raise ValueError(gettext("Não encontrei o total de ações da carteira no extrato em dólar da Avenue."))
+    carteira, soma = [], Decimal("0")
     for linha in text[inicio:fim].splitlines():
         achado = _RE_AVENUE_US_ACAO.search(f" {linha} ")
-        if achado and _dolar(achado.group(2)) == _dolar(achado.group(2)).to_integral_value():
-            inteiras.add(achado.group(1))
-    return inteiras
+        if achado:
+            carteira.append((achado.group(1), _dolar(achado.group(2))))
+            soma += _dolar(achado.group(3))
+    if soma != _dolar(total.group(1)):
+        raise ValueError(
+            gettext(
+                "Inconsistência na carteira do extrato em dólar da Avenue: as ações somam %(soma)s, e o "
+                "extrato diz %(total)s. O layout pode ter mudado."
+            )
+            % {"soma": soma, "total": _dolar(total.group(1))}
+        )
+    return tuple(carteira)
+
+
+def _avenue_us_acoes_inteiras(text: str) -> set[str]:
+    """Os símbolos das ações com quantidade inteira na carteira do fim do mês."""
+    try:
+        carteira = avenue_us_carteira(text)
+    except ValueError:
+        return set()
+    return {simbolo for simbolo, quantidade in carteira if quantidade == quantidade.to_integral_value()}
 
 
 def _avenue_us_ativo_do_aluguel(text: str, movimentos: list[_MovimentoAvenueUs]) -> str | None:
@@ -1517,6 +1544,13 @@ def _saldo_do_pdf(text: str) -> tuple[Decimal, date] | None:
         return _saldo_do_itau(text)
     if formato == "avenue":
         return _saldo_da_avenue(text)
+    return None
+
+
+def _carteira_do_pdf(text: str) -> tuple[tuple[str, Decimal], ...] | None:
+    """A carteira do fim do período, quando o extrato a imprime; `None` quando não imprime."""
+    if sniff_pdf_format(text) == "avenue" and eh_extrato_avenue_em_dolar(text):
+        return avenue_us_carteira(text)
     return None
 
 

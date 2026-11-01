@@ -17,6 +17,7 @@ from bank_statements.adapters import (
     AvenuePdfStatementAdapter,
     _parse_avenue_usd_lines,
     _saldo_do_pdf,
+    avenue_us_carteira,
     conferir_moeda_do_extrato_avenue,
     sniff_pdf_format,
 )
@@ -132,6 +133,21 @@ def test_mes_sem_movimento_importa_so_o_saldo():
     assert _saldo_do_pdf(sem_atividade) == (Decimal("1264.26"), date(2026, 4, 30))
 
 
+def test_le_a_carteira_de_acoes_do_fim_do_mes_sem_os_titulos():
+    assert avenue_us_carteira(SAMPLE_TEXT) == (("BRK.B", Decimal("1.56365")), ("CGC", Decimal("1200")))
+
+
+def test_recusa_carteira_cujas_linhas_nao_somam_o_total_do_extrato():
+    """Uma linha de ação que o leitor não reconhecesse sumiria da conferência de posição."""
+    with pytest.raises(ValueError, match="carteira"):
+        avenue_us_carteira(SAMPLE_TEXT.replace("Total Equities $ 2,303.33", "Total Equities $ 2,303.34"))
+
+
+def test_extrato_sem_secao_de_acoes_tem_carteira_vazia():
+    sem_acoes = SAMPLE_TEXT.replace(CARTEIRA, CARTEIRA.split("FIXED INCOME")[1])
+    assert avenue_us_carteira(sem_acoes) == ()
+
+
 def test_reconhece_o_formato_e_o_saldo_de_fechamento():
     assert sniff_pdf_format(SAMPLE_TEXT) == "avenue"
     assert _saldo_do_pdf(SAMPLE_TEXT) == (Decimal("1069.89"), date(2026, 4, 30))
@@ -151,9 +167,21 @@ def test_a_descricao_escrita_pelo_leitor_vira_detalhe_de_investimento(descricao,
     assert (detalhe.instrument_code, detalhe.income_kind, detalhe.income_role) == (ativo, tipo, papel)
 
 
-def test_a_compra_no_exterior_vira_liquidacao_com_ativo():
+def test_a_compra_no_exterior_vira_liquidacao_com_ativo_e_quantidade():
     detalhe = interpretar("Venda de BRK.B na Avenue: 1,56365 a US$ 499,13, pregão 01/10/2026")
-    assert (detalhe.instrument_code, detalhe.settlement_pregao_date) == ("BRK.B", date(2026, 10, 1))
+    assert (detalhe.instrument_code, detalhe.settlement_pregao_date, detalhe.settlement_quantity) == (
+        "BRK.B", date(2026, 10, 1), Decimal("1.56365"),
+    )
+
+
+def test_a_quantidade_escrita_pelo_leitor_volta_inteira():
+    compra = _linhas()[0]
+    assert interpretar(compra.description).settlement_quantity == Decimal("1200")
+
+
+def test_liquidacao_editada_sem_quantidade_fica_so_com_ativo_e_pregao():
+    detalhe = interpretar("Compra de CGC na Avenue: lote, pregão 10/04/2026")
+    assert (detalhe.instrument_code, detalhe.settlement_quantity) == ("CGC", None)
 
 
 @pytest.mark.parametrize(
@@ -215,6 +243,9 @@ def test_a_importacao_confere_a_moeda_antes_de_gravar(monkeypatch):
     assert inseridas == 7
     assert (lote.statement_balance, lote.statement_balance_date) == (Decimal("1069.89"), date(2026, 4, 30))
     assert BankStatementLine.objects.get(import_batch=lote, amount=Decimal("44.64")).bank_category == "Cupom"
+    assert lote.statement_holdings == [
+        {"instrument": "BRK.B", "quantity": "1.56365"}, {"instrument": "CGC", "quantity": "1200"},
+    ]
 
 
 @pytest.mark.django_db

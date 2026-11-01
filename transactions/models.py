@@ -418,6 +418,9 @@ class EntryInvestmentDetail(models.Model):
     income_role = models.CharField(max_length=30, null=True, blank=True)
     settlement_pregao_date = models.DateField(null=True, blank=True)
     settlement_note = models.CharField(max_length=40, null=True, blank=True)
+    # Quantidade negociada, sem sinal (o tipo do lançamento diz se foi compra ou
+    # venda). Só o extrato do exterior a imprime por negócio; a nota da B3 não.
+    settlement_quantity = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -431,6 +434,10 @@ class EntryInvestmentDetail(models.Model):
             models.CheckConstraint(
                 condition=models.Q(income_role__isnull=True) | models.Q(income_role__in=VALID_INCOME_ROLES),
                 name="ck_entry_investment_income_role_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(settlement_quantity__isnull=True) | models.Q(settlement_quantity__gt=0),
+                name="ck_entry_investment_settlement_quantity_positive",
             ),
         ]
 

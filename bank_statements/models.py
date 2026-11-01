@@ -44,6 +44,12 @@ class BankStatementImport(models.Model):
     # Fim do período que o arquivo diz cobrir (DTEND do OFX), mesmo sem linha
     # nos últimos dias. Usado pela trava do Saldo Aplicações (`saldo.py`).
     statement_period_end = models.DateField(null=True, blank=True)
+    # Carteira que o extrato da corretora imprime na data do saldo:
+    # [{"instrument": "CGC", "quantity": "7500"}], quantidade em texto decimal.
+    # Nulo quando o arquivo não traz carteira; lista vazia quando traz e não há
+    # ativo. O CB não controla quantidade de papel: só a publica para o CRV
+    # conferir a posição dele (`core.patrimonio`).
+    statement_holdings = models.JSONField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=[

@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Iterable
+from decimal import Decimal
 
 from django.core.files.uploadedfile import UploadedFile
 from django.db import connection, transaction
@@ -101,6 +102,13 @@ def _adapter_for(account: FinancialAccount, uploaded_file: UploadedFile, *, docu
     return adapter
 
 
+def _carteira(holdings: tuple[tuple[str, Decimal], ...] | None) -> list[dict[str, str]] | None:
+    """A carteira do extrato como o lote a guarda; só vale com a data do saldo, que é a dela."""
+    if holdings is None:
+        return None
+    return [{"instrument": ativo, "quantity": format(quantidade, "f")} for ativo, quantidade in holdings]
+
+
 def import_statement_file(
     user, *, account_id, uploaded_file: UploadedFile | None
 ) -> tuple[BankStatementImport, int, int]:
@@ -152,6 +160,7 @@ def import_statement_file(
             statement_balance=saldo[0] if saldo else None,
             statement_balance_date=saldo[1] if saldo else None,
             statement_period_end=None if account.is_credit_card else result.period_end,
+            statement_holdings=_carteira(result.holdings) if saldo else None,
         )
         existing_hashes = _existing_line_hashes(
             clean_account_id, {line.line_hash for line in parsed}
