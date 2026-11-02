@@ -294,6 +294,26 @@ def test_coleta_marca_o_tesouro_e_espera_a_remessa_que_falta(cenario):
 
 
 @pytest.mark.django_db
+def test_posicao_em_dolar_medida_por_outra_fonte_nao_e_pendencia(cenario):
+    """A renda fixa EUA e o caixa da Avenue valem pelo extrato da corretora: a
+    conta existe no CB, só não vem do myProfit, e a coleta não mexe nela."""
+    c = cenario
+    titulos = c.conta("Renda fixa EUA", instituicao=c.avenue, account_kind=ACCOUNT_KIND_INVESTMENT, currency="USD")
+    fontes.salvar(c.user, titulos, {"fonte": FONTE_PRINT, "frequencia": FREQUENCIA_MENSAL})
+    fontes.salvar(c.user, c.avenue_usd, {"fonte": FONTE_ARQUIVO, "frequencia": "corte"})
+
+    plano = myprofit.planejar(c.user, myprofit.ler(_pacote()))
+
+    assert not [p for p in plano.pendencias if "Avenue" in p]
+    assert not [linha for linha in plano.linhas if linha.conta in (titulos, c.avenue_usd)]
+    # O real continua exigindo a conta do myProfit: um CDB por print não cobre o Tesouro.
+    c.conta("CDB XP", instituicao=c.xp, account_kind=ACCOUNT_KIND_INVESTMENT)
+    c.tesouro.delete()
+    plano = myprofit.planejar(c.user, myprofit.ler(_pacote()))
+    assert any("Tesouro Direto na XP" in p for p in plano.pendencias)
+
+
+@pytest.mark.django_db
 def test_coleta_aplicada_separa_proventos_de_investimentos_e_nao_duplica(cenario):
     c = cenario
     _lancar(c.user, c.avenue_usd, c.categorias["Outros"], date(2026, 10, 7), "583.71", descricao="Avenue - Compra US$")

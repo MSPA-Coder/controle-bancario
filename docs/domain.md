@@ -733,7 +733,10 @@ proventos do período como rendimento e o resto como investimentos. Conta mensal
 só recebe as datas de fim de mês. Fica de fora, como pendência: mês fechado,
 conta de movimento sem extrato, posição sem conta no CB e, no caixa em dólar, a
 data com remessa de câmbio que ainda não está no CB (sem ela, a remessa viraria
-"investimentos"). A remessa confere com uma entrada na conta em dólar até quatro
+"investimentos"). Posição em dólar que uma conta do CB já mede por outra fonte
+(extrato ou print da mesma corretora: aplicação em dólar para a renda fixa EUA,
+conta comum em dólar para o caixa) não é "sem conta": é o caso da Avenue, que
+vale pelo extrato mensal. A remessa confere com uma entrada na conta em dólar até quatro
 dias e US$ 1,00 de distância.
 
 **O CRV no roteiro** (`fechamento/crv.py`). O CRV publica

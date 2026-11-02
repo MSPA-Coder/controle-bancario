@@ -41,12 +41,18 @@ from bank_statements import saldo
 from banking.models import FinancialAccount
 from banking.services import accessible_account_ids
 from core import regional
-from core.domain.finance import CURRENCY_BRL, CURRENCY_USD, ENTRY_TYPE_INCOME, STATUS_REALIZED
+from core.domain.finance import (
+    ACCOUNT_KIND_INVESTMENT,
+    CURRENCY_BRL,
+    CURRENCY_USD,
+    ENTRY_TYPE_INCOME,
+    STATUS_REALIZED,
+)
 from core.templatetags.money_filters import money
 from transactions.models import CashFlowEntry
 from transactions.services import is_month_closed
 
-from .fontes import FONTE_MYPROFIT, fontes_das_contas
+from .fontes import FONTE_MYPROFIT, FONTE_NENHUMA, fontes_das_contas
 from .models import (
     CLASSE_CAIXA_USD,
     CLASSE_RENDA_FIXA_EUA,
@@ -292,6 +298,22 @@ def _remessa_no_cb(remessa: Remessa, entradas: list[CashFlowEntry], usadas: set[
     return None
 
 
+def _medidas_por_outra_fonte(contas: list[FinancialAccount], fontes) -> set[tuple[str, str]]:
+    """(grupo do myProfit, corretora) que uma conta em dólar do CB já representa
+    por outra fonte -- o extrato da corretora ou um print --, e que por isso não é
+    "posição sem conta no CB". A renda fixa EUA da Avenue é uma aplicação em dólar
+    medida pelo extrato mensal; o caixa em dólar, a conta comum em dólar da mesma
+    corretora. No real a regra não vale: lá a aplicação medida por print é CDB, e o
+    Tesouro tem conta própria pelo myProfit."""
+    medidas = set()
+    for conta in contas:
+        if conta.currency != CURRENCY_USD or conta.is_credit_card or fontes[conta.id].fonte in (FONTE_MYPROFIT, FONTE_NENHUMA):
+            continue
+        grupo = "FIXED_INCOME_USA" if conta.account_kind == ACCOUNT_KIND_INVESTMENT else "CASH_USD"
+        medidas.add((grupo, conta.institution.institution_name.casefold()))
+    return medidas
+
+
 def planejar(user, pacote: Pacote) -> Plano:
     plano = Plano(pacote=pacote, ja_aplicada=ColetaMyProfit.objects.filter(sha256=pacote.sha256).first())
     contas = list(
@@ -326,6 +348,7 @@ def planejar(user, pacote: Pacote) -> Plano:
     if pacote.datas:
         ultima = pacote.datas[-1]
         cobertas = {(CLASSES[f.classe_myprofit][0], f.corretora_myprofit.casefold()) for _, f in do_myprofit}
+        cobertas |= _medidas_por_outra_fonte(contas, fontes)
         sem_conta: dict[tuple[str, str], Decimal] = {}
         for p in pacote.posicoes:
             if p.data == ultima and p.classe in NOMES_DAS_CLASSES and (p.classe, p.corretora.casefold()) not in cobertas:
