@@ -20,7 +20,8 @@ Este é um controle bancário em Django, HTMX e PostgreSQL. Docker Compose é a
 interface operacional; não instale no host ferramentas ou dependências do
 projeto para contornar uma falha.
 
-Antes de alterar, leia a fonte pertinente:
+Leia só o que a mudança toca: cada fonte abaixo cobre um assunto, e ler todas
+antes de qualquer alteração gasta contexto sem ajudar.
 
 - `README.md`: entrada e preparação do ambiente;
 - `docs/architecture.md`: componentes e responsabilidades;
@@ -266,3 +267,12 @@ acompanha o `uv.lock` pelo ecossistema `uv`. Reconstrua do zero, execute
 
 Ao concluir uma tarefa, informe comandos executados no host e nos contêineres,
 resultados e validações omitidas com o motivo.
+
+## Arquivos sincronizados com o manutencao
+
+`Dockerfile.browser`, `scripts/provision-db-runtime.sh`,
+`docs/security-audit/gerar_relatorio.py`, `docs/TESTES.md`, `tests/contrato/patrimonio-v4.schema.json` são cópias
+de arquivos canônicos do repositório `manutencao` (ver
+`manutencao/compartilhados/README.md`). Não os edite aqui: mude a canônica e
+rode `python compartilhados/sincronizar.py --aplicar` no `manutencao`, que
+copia para todos os repositórios de uma vez.
