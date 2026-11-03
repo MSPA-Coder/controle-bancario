@@ -1,278 +1,155 @@
-# Controle Bancário — orientações de manutenção
+# Controle Bancário — guia de trabalho
 
-> **A frota é este projeto, o MegaSena e o ControleRendaVariavel.** Os três
-> compartilham o `SharedAuth`, o mesmo formato de Compose e Dockerfile e o mesmo
-> portão `quality`, e servem de referência uns aos outros. Divergir é permitido
-> quando for uma escolha consciente: experimente num deles e, se der certo, leve
-> aos outros. Este é o único dos três em Django — os outros dois são Flask —,
-> então a semelhança que se busca é de **operação e contrato**, não de
-> framework.
->
-> **O ConfortoTermico não está na frota** e segue trilha própria desde
-> 07/09/2026: a arquitetura dele é livre, e diferença em relação a ele **não é
-> débito**. O que ele preserva é o contrato operacional — VPS, `deploy.sh`,
-> vigia, autocura, alerta, backup e `SharedAuth`. Ver o ADR 008 daquele
-> repositório.
+<!-- comum: início. Cópia de _manutencao/compartilhados/AGENTS-comum.md; mude lá e rode sincronizar.py --aplicar. -->
+## Regras comuns aos repositórios
 
-## Escopo e fontes de verdade
+**O que espera o "sim" do mantenedor:** commit e push (quando ele pedir),
+deploy, qualquer ação no VPS, e apagar dados, volumes ou backups
+(`docker compose down -v` inclusive). Na dúvida sobre algo irreversível,
+pergunte; no resto, decida e diga o que decidiu.
 
-Este é um controle bancário em Django, HTMX e PostgreSQL. Docker Compose é a
-interface operacional; não instale no host ferramentas ou dependências do
-projeto para contornar uma falha.
+**Ciclo.** Altere, rode a verificação completa deste repositório (seção
+"Validação"), commite direto no `main` e dê `git push`: sem PR, sem push
+forçado, sem rebase do `main` publicado. A CI roda depois, só como aviso, mas
+vermelho no `main` se investiga. O Dependabot chega por PR, com merge manual. O
+deploy é `~/deploy.sh <app>` no VPS1: monta a imagem a partir do `main`,
+confere `/health` e volta sozinho se falhar. O VPS só espelha o `main`; nada se
+edita lá. Imagem-base nova (correção do Debian ou do Python) só quando ele
+pedir: testa na máquina e depois `~/deploy.sh <app> --refresh`. Ao terminar,
+diga o que rodou, o resultado e o que deixou de validar.
 
-Leia só o que a mudança toca: cada fonte abaixo cobre um assunto, e ler todas
-antes de qualquer alteração gasta contexto sem ajudar.
+**Dados e segredos.** Mudança destrutiva ou conversão de dados reais começa por
+backup conferido no BackupRestore. Segredos ficam fora do Git (`.secrets/` ou
+configuração do usuário) e não aparecem em código, imagem, log, diff,
+documento nem relatório.
 
-- `README.md`: entrada e preparação do ambiente;
-- `docs/architecture.md`: componentes e responsabilidades;
-- `docs/domain.md`: invariantes financeiras;
-- `docs/CONCEITOS_FINANCEIROS.md`: vocabulário comum com o CRV e o Wealthfolio;
-- `docs/development.md`: comandos e critérios de validação;
+**Dependências.** Alargue o teto e preserve o piso já verificado: elevar o piso
+afirma uma incompatibilidade, e isso exige prova. Vulnerabilidade se corrige
+atualizando; exceção só explícita, com motivo e data. Enquanto o Dependabot não
+aceitar Python 3.15, ele não propõe atualização de `uv` e o grafo do GitHub fica
+parado no lock de 13/10/2026: confira alerta pela versão do `uv.lock`, e
+atualize à mão (`uv lock --upgrade-package <pacote>`) quando o `pip-audit` ou o
+Trivy apontarem.
+
+**Testes.** `docs/TESTES.md` diz o que testar e como. Diante de vermelho,
+decida de quem é o defeito; nunca escreva código para um teste passar. Não
+rode duas verificações do mesmo repositório ao mesmo tempo: a segunda recria o
+banco de teste e derruba a primeira.
+
+**Cópias.** Este bloco, `docs/TESTES.md` e os arquivos listados em
+`_manutencao/compartilhados/sincronizar.py` são cópias: mude a canônica lá e
+rode `python compartilhados/sincronizar.py --aplicar` no `_manutencao`.
+
+**Este arquivo.** Guarde aqui só o que o código não diz: limites, decisões com
+o motivo, armadilhas e comandos. História fica no `git log`; decisão com
+alternativas vira ADR; detalhe de implementação fica no código. Para
+acrescentar uma regra, retire ou funda outra: `sincronizar.py` reprova este
+arquivo acima de 900 palavras fora deste bloco.
+<!-- comum: fim -->
+
+## O sistema
+
+Controle bancário em Django 6.1, HTMX e PostgreSQL 17, no ar em
+`https://bancario-mspa.duckdns.org` (deploy `~/deploy.sh bancario`). Docker
+Compose é a interface: não instale ferramentas no host para contornar uma
+falha; o `.venv` local é só de runtime.
+
+Faz parte da frota com o MegaSena e o ControleRendaVariavel, que são Flask: a
+semelhança buscada é de operação e contrato, não de framework. Divergir é
+permitido quando for escolha consciente. O ConfortoTermico segue trilha
+própria, e diferença em relação a ele não é débito.
+
+Leia só o documento do assunto da mudança:
+
+- `docs/domain.md`: invariantes financeiras; leia antes de mexer em saldo,
+  recorrência, transferência, fechamento, importação ou conciliação;
+- `docs/architecture.md`: componentes, esquema `leitura`, idioma e formato;
+- `docs/development.md`: comandos e imagens-base;
 - `docs/operations.md`: configuração, volumes, backup e VPS;
-- `compose.yaml`, `compose.dev.yaml` e `Dockerfile`: execução efetiva;
-- models, migrations e testes: schema e controles automatizados.
+- `docs/CONCEITOS_FINANCEIROS.md`: vocabulário comum com o CRV e o Wealthfolio;
+- `docs/travas.md`: locks de banco e o que cada um protege.
 
-Preserve alterações locais não relacionadas. O fluxo padrão é
-`urls -> views -> services -> models`; consultas vivem nos services e, quando
-triviais, na view. Não crie repositories ou query objects pass-through por
-convenção, mas eles são permitidos quando encapsularem consultas reutilizadas,
-cache, isolamento de persistência ou uma fronteira de teste que simplifique o
-código de verdade — registre o motivo em `docs/architecture.md`.
+O projeto subiu para o Django 6.1 em 08/09/2026: ao depender de comportamento
+do framework, confira as notas da série 6 em vez de assumir a 5.2.
 
-## Comandos válidos
-
-Prepare `.env.docker` e os arquivos ignorados de `.secrets/` conforme o README.
-Nunca imprima seus valores.
-
-```powershell
-# Imagem operacional.
-docker compose --env-file .env.docker -f compose.yaml up --build -d
-
-# Desenvolvimento com bind mount e runserver.
-docker compose --env-file .env.docker -f compose.yaml -f compose.dev.yaml up --build -d
-
-# Verificação Django.
-docker compose --env-file .env.docker -f compose.yaml run --rm web python manage.py check
-
-# Ruff e pytest.
-.\scripts\quality.ps1
-```
-
-`--build` mantém a validação explícita e reproduzível: o serviço `quality` não
-monta o código do host, e Compose reconstrói a imagem com o código atual antes
-de executar os testes. O build usa o cache e as imagens-base já baixadas, como
-o deploy no servidor; bases novas só entram quando pedidas (ver "Imagens-base"
-em `docs/development.md`). A suíte roda em paralelo (`pytest -n`); uma
-execução especializada que passe outro comando ao `quality` roda em série,
-salvo se incluir `-n`.
-
-`web` é o único serviço de aplicação. `migrate` aplica migrations e executa
-`collectstatic` antes de `web`; `quality` executa as verificações. Não há
-serviço `app`.
-
-### Runtime e testes
-
-O `.venv` padronizado em Python 3.15 é runtime-only e usa `uv sync --locked`.
-Ruff, pytest, `collectstatic`, migrações e PostgreSQL rodam no Compose:
+## Validação
 
 ```powershell
 .\scripts\quality.ps1
 ```
 
-A suíte `quality` executa as camadas sem banco e `django_db` contra o serviço
-efêmero `postgres-teste`. Não desmarque `django_db`; foi essa camada que revelou
-que `@transaction.atomic` nunca havia sido exercitado. O Compose executa
-`collectstatic` no build/runtime; não instale dependências de desenvolvimento
-no host.
+Ruff e pytest, em paralelo, contra o `postgres-teste` efêmero, que recebe a
+cadeia inteira de migrações num banco vazio. Use sempre o script, também para
+rodar parte da suíte (passe os argumentos a ele): ele serializa por mutex
+antes de o Compose recriar o banco. Com outro comando, a suíte roda em série,
+salvo se incluir `-n`. Durante o trabalho, teste focado à vontade; antes de
+todo commit de código, o script completo.
 
-`sharedauth` é instalado direto do GitHub, na tag que `pyproject.toml` fixa e
-no commit que o `uv.lock` registra. O repositório é **público**: o build precisa
-só de `git` no PATH, nenhuma credencial.
+- Mudança visível (template, HTMX, JS): suba a pilha e percorra a tela.
+- Texto de interface: nasce marcado, com o português como `msgid` (como marcar
+  está em `docs/architecture.md`, "Idioma e formato regional"; termos e tom em
+  `docs/GLOSSARIO_I18N.md`). Rode `.\scripts\mensagens.ps1`, traduza e confira
+  com `-Conferir`. Mudar a redação em português muda o `msgid`. Dado gravado,
+  nome digitado e texto de máquina não se traduzem.
+- Só documentação: `git diff --check` e
+  `python ../_manutencao/compartilhados/sincronizar.py`.
+- Docker ou dependência: suba a pilha e confira `/health`.
+- A camada `django_db` não se desmarca: foi ela que mostrou que
+  `@transaction.atomic` nunca tinha sido exercitado.
 
-Aqui o pacote entra **sem** o extra `[flask]`, de propósito: só o núcleo, que é
-Python puro. O extra traria Flask, Flask-WTF e Flask-Limiter para dentro de uma
-imagem Django, e o `uv.lock` registra essa escolha.
+## Invariantes do domínio
 
-O `quality`, com `uv sync --locked`, é a fonte oficial das versões de teste,
-lint e auditoria usadas pela CI.
-
-Nunca rode o serviço `quality` diretamente pelo Compose no host. Use
-`scripts\quality.ps1`, inclusive em execuções especializadas: ele serializa as
-suítes por um mutex do Windows antes que o Compose recrie `postgres-teste`.
-Isso impede que uma segunda execução interrompa o banco efêmero da primeira e
-mascare o resultado com erros em cascata. `scripts\mensagens.ps1` já passa pela
-mesma trava.
-
-## Dados e ações destrutivas
-
-PostgreSQL é a fonte de verdade relacional. Bancos novos nascem por
-`manage.py migrate`, e toda alteração de schema exige migration Django revisada.
-Colunas lidas pelo esquema `leitura` (ver `docs/architecture.md`) não podem ser
-removidas nem ter o tipo trocado sem recriar a view na mesma migração: o
-PostgreSQL recusa, de propósito.
-
-Antes de mudança destrutiva, conversão de dados ou manutenção de dados reais,
-faça backup validado pelo BackupRestore:
-
-```powershell
-# Execute from the controle-bancario checkout root; BackupRestore is a sibling.
-Push-Location ..\BackupRestore
-try {
-  & .\.venv\Scripts\python.exe .\cli.py backup --projeto controle_bancario --tipos banco
-} finally {
-  Pop-Location
-}
-```
-
-Esse backup não cobre `media_volume`. Se a operação puder afetar comprovantes,
-preserve também a mídia por um procedimento separado e ensaiado; a lacuna está
-descrita em `docs/operations.md`.
-
-Restauração é administrativa, com a aplicação parada e destino conferido. Não
-execute `docker compose down -v`, não mova volumes ou anexos reais e não apague
-backups sem autorização inequívoca.
-
-## Invariantes essenciais
-
-- valores financeiros usam `Decimal`;
-- a moeda pertence à conta, e conta com lançamento não muda de moeda; o que não
-  tem conta está na moeda base (`BRL`). Converter moeda não é assunto deste
-  sistema, e somar contas de moedas diferentes levanta `MixedCurrencyError` em
-  vez de produzir um total. As telas não chegam a esse erro: elas mostram um
-  bloco de totais por moeda (`banking.services.currency_blocks`), e com uma
-  moeda só ficam idênticas ao que sempre foram;
-- lançamentos armazenam valores positivos, e o tipo define o efeito no saldo;
-- status são `a_vencer`, `vencidos` e `realizado`;
-- transferências internas mantêm contrapartes e saldos consistentes, mas não
-  entram como receita ou despesa gerencial; as duas pontas são espelhadas
-  **apenas** na mesma moeda — entre moedas diferentes cada ponta guarda o seu
-  próprio valor, sem parcelamento nem recorrência, e a taxa efetiva é derivada,
-  nunca gravada;
-- fechamento mensal bloqueia mutações e conciliações do período; reabertura é
-  explícita e auditável;
-- operações compostas são atômicas e services delimitam transações;
-- datas/horas persistidas usam timezone;
-- autorização por titular e permissões são controles de servidor;
-- a projeção recorrente automática é disparada hoje pelo middleware em
-  requisições autenticadas, uma vez no mês a partir do dia configurado; o
-  botão manual permanece disponível e a rotina é idempotente. Um worker,
-  scheduler ou fila pode substituir o gatilho se preservar idempotência,
-  auditoria, retry seguro e execução coordenada entre processos.
-
-Consulte `docs/domain.md` antes de alterar saldos, recorrências, transferências,
-fechamentos, importação ou conciliação.
-
-## Texto da interface
-
-A interface existe em português (língua-fonte) e inglês. Texto novo que o usuário lê
-nasce marcado, com o português como `msgid`; `docs/architecture.md` (seção "Idioma e
-formato regional") diz como marcar em template, Python e JavaScript, e
-`docs/GLOSSARIO_I18N.md` fixa os termos e o tom nos dois idiomas. Depois de marcar,
-rode `.\scripts\mensagens.ps1`, traduza o que entrou e confira com `-Conferir`
-(`docs/development.md`). Mudar a redação de um texto em português muda o `msgid` e
-pede nova tradução. Dado gravado, nome digitado e texto de máquina não se traduzem.
+- Valores financeiros em `Decimal`. Lançamento guarda valor positivo e o tipo
+  define o efeito no saldo. Status: `a_vencer`, `vencidos` e `realizado`.
+- A moeda pertence à conta, e conta com lançamento não muda de moeda; o que não
+  tem conta está em `BRL`. Converter moeda não é assunto deste sistema: somar
+  moedas diferentes levanta `MixedCurrencyError`, e as telas mostram um bloco
+  de totais por moeda (`banking.services.currency_blocks`).
+- Transferência interna mantém as duas pontas consistentes e não é receita nem
+  despesa gerencial. Só se espelha na mesma moeda; entre moedas, cada ponta
+  guarda o seu valor, sem parcelamento nem recorrência, e a taxa efetiva é
+  derivada, nunca gravada.
+- Fechamento mensal bloqueia mutações e conciliações do período; reabrir é
+  explícito e auditável.
+- Operação composta é atômica, com a transação delimitada no service; data e
+  hora persistidas têm fuso.
+- A projeção recorrente roda pelo middleware, em requisição autenticada, uma
+  vez por mês a partir do dia configurado, e é idempotente. Worker ou fila pode
+  substituir esse gatilho se preservar idempotência, auditoria, retry seguro e
+  coordenação entre processos.
+- Fluxo `urls -> views -> services -> models`; consulta vive no service (ou na
+  view, se trivial). Repository ou query object só quando simplificar de
+  verdade (consulta reutilizada, cache, fronteira de teste), com o motivo em
+  `docs/architecture.md`.
+- Colunas lidas pelo esquema `leitura` (FinancasMCP, Wealthfolio) não são
+  removidas nem mudam de tipo sem recriar a view na mesma migração: o
+  PostgreSQL recusa, de propósito.
 
 ## Segurança
 
-Autenticação é obrigatória; autorização permanece no servidor; escritas usam
-CSRF. Preserve CSP sem código inline, validação de uploads, logs sem conteúdo
-sensível, cookies `HttpOnly`/`SameSite=Lax` e `Secure` quando `USE_HTTPS=True`.
-Exposição pública exige proxy TLS, hosts permitidos e origens CSRF configurados.
+- Autorização é de servidor, por titular e permissão; escrita usa CSRF; CSP
+  sem código inline.
+- O piso de senha de oito caracteres está em `accounts/password_validators.py`
+  e em `core/services.py`: mude os dois juntos.
+- Senha criada ou redefinida pelo administrador liga `must_change_password`, e
+  o middleware de `accounts/middleware.py` desvia toda requisição para
+  `/change-password/` até a troca. O tamanho da senha sorteada vem de
+  Configurações > Parâmetros.
+- O SharedAuth entra sem o extra `[flask]`, de propósito: só o núcleo
+  (constantes de segurança, formatação, `gerar_senha_temporaria`), sem
+  middleware nem autenticação. Vem do GitHub, na tag do `pyproject.toml` e no
+  commit do `uv.lock`.
 
-O piso de senha de oito caracteres aparece em
-`accounts/password_validators.py` e `core/services.py`; alterações nessa regra
-precisam manter os dois pontos coerentes.
+## Armadilhas
 
-SharedAuth fornece constantes de segurança, formatação numérica e o sorteio da
-senha temporária (`gerar_senha_temporaria`, política compartilhada com os três
-apps Flask). Ele não aplica middleware, não autentica usuários e não define
-permissões neste projeto — a trava de troca pendente é nativa
-(`accounts/middleware.py`).
-
-Senha redefinida por um administrador vale até o primeiro acesso:
-`must_change_password` é ligada pela criação de conta e pela redefinição, e
-`MustChangePasswordMiddleware` desvia **toda** requisição para
-`/change-password/` enquanto ela estiver ligada — não só o login. O tamanho da
-senha sorteada vem da política em Configurações > Parâmetros, nunca do padrão
-da biblioteca.
-
-## Validação proporcional
-
-Mudança documental exige `git diff --check`, verificação de links/caminhos e
-busca por referências obsoletas. Para template, HTMX ou JavaScript, percorra a
-tela afetada. Para regra, rota ou service, execute testes focados e o fluxo
-completo. Para autenticação, autorização, sessão ou CSRF, execute `quality`.
-Para schema, valide backup e revise a migration; o bootstrap em PostgreSQL
-vazio não é passo manual, porque o `quality` aplica a cadeia inteira de
-migrações a um banco vazio a cada execução. Para dependências, Dockerfile ou
-Compose, reconstrua a imagem, valide o Compose e faça smoke test da pilha.
-
-Em qualquer mudança de código, rode o `quality` completo na máquina antes do
-commit: é essa verificação que vale. A CI depois do push é só aviso.
-
-A CI valida Compose, Ruff, pytest, dependências Python, imagem operacional e
-fronteira de escrita do runtime. O Dependabot acompanha o `uv.lock`, a imagem
-base e as GitHub Actions. Não enfraqueça verificações de vulnerabilidade para fazer uma falha
-passar; corrija a dependência/base ou registre uma exceção específica e
-justificada quando não houver correção.
-
-O scanner da imagem roda como contêiner com `docker save` e `--input`. Não
-monte o socket Docker em contêineres e não troque esse desenho por uma action
-incompatível com a política do repositório.
-
-## Produção e versões
-
-O VPS e seus volumes são independentes do ambiente local. O código no servidor
-é espelho do `main`; desenvolvimento, commit e push ocorrem localmente. Não
-edite, faça commit ou merge no VPS. Consulte `docs/operations.md` antes de
-qualquer operação de produção.
-
-Depois da verificação completa na máquina (o `quality`, ver "Validação
-proporcional"), faça commit direto no `main` e `git push`, sem PR e sem esperar
-nada. A regra "Proteção do main" continua impedindo apagar o `main` ou
-reescrever o histórico: nada de push forçado nem de rebase do `main`. A CI do
-GitHub roda depois de cada push só como aviso e não bloqueia nada; se falhar,
-investigue. O Dependabot continua por PR, com os checks obrigatórios; o merge é
-manual (o workflow de auto-merge foi removido).
-
-O deploy (`~/deploy.sh bancario`) só roda quando o usuário mandar. O servidor
-monta a imagem a partir do código do `main`, sem esperar nem baixar nada da
-CI, confere a saúde e volta sozinho para a versão anterior se falhar.
-`~/deploy.sh --status` compara VPS × GitHub. Nada muda em produção sem o
-usuário mandar. As correções de segurança das imagens-base (Debian/Python)
-entram só quando ele pedir: testa localmente com as bases novas e depois roda
-`~/deploy.sh bancario --refresh`.
-
-As versões suportadas são Python 3.15, PostgreSQL 17 e **Django 6.1**; faixas
-completas ficam em `pyproject.toml` e as versões exatas em `uv.lock`.
-
-O conjunto Python instala as versões e hashes declarados em `uv.lock`. A
-imagem base usa a tag móvel Python 3.15; Debian, `uv`, pip e setuptools são
-atualizados a cada build. A CI semanal reconstrói, testa, audita dependências
-Python e verifica CVEs corrigíveis na imagem. O Dependabot propõe atualizações
-de dependências, imagens e Actions, e os checks precisam passar antes do merge.
-PostgreSQL permanece na série 17 para preservar o formato dos volumes; a tag
-`17-alpine` busca a correção mais recente dessa série.
-
-O projeto subiu do Django 5.2 para o 6.1 em 08/09/2026, com a suíte inteira
-passando. Ao mexer em algo que dependa de comportamento do framework, confira
-as notas de versão do Django 6 em vez de assumir a semântica da 5.2.
-
-Ao atualizar dependências, alargue o teto e preserve o piso compatível já
-verificado; só eleve o piso quando uma incompatibilidade for comprovada. Depois
-rode `uv lock` e commite o resultado — o build usa `uv sync --locked`, que
-**reprova** se o lock não corresponder ao `pyproject.toml`. O Dependabot
-acompanha o `uv.lock` pelo ecossistema `uv`. Reconstrua do zero, execute
-`quality` e valide o fluxo afetado.
-
-Ao concluir uma tarefa, informe comandos executados no host e nos contêineres,
-resultados e validações omitidas com o motivo.
-
-## Arquivos sincronizados com o manutencao
-
-`Dockerfile.browser`, `scripts/provision-db-runtime.sh`,
-`docs/security-audit/gerar_relatorio.py`, `docs/TESTES.md`, `tests/contrato/patrimonio-v4.schema.json` são cópias
-de arquivos canônicos do repositório `manutencao` (ver
-`manutencao/compartilhados/README.md`). Não os edite aqui: mude a canônica e
-rode `python compartilhados/sincronizar.py --aplicar` no `manutencao`, que
-copia para todos os repositórios de uma vez.
+- Backup local antes de mudança destrutiva, na pasta do BackupRestore:
+  `.\.venv\Scripts\python.exe .\cli.py backup --projeto controle_bancario --tipos banco`.
+  Ele não cobre `media_volume` (comprovantes): se a operação puder afetá-los,
+  preserve a mídia à parte (`docs/operations.md`). Restauração é
+  administrativa, com a aplicação parada e o destino conferido.
+- `web` é o único serviço de aplicação (não há `app`); `migrate` aplica as
+  migrações e o `collectstatic` antes dele.
+- O PostgreSQL fica na série 17 para preservar o formato dos volumes.
+- A varredura da imagem roda como contêiner, com `docker save` e `--input`:
+  não monte o socket Docker nem troque por action de terceiro, que a política
+  do repositório barra.

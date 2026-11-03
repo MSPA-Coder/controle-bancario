@@ -282,9 +282,7 @@ printf 'Authorization: Bearer %s\n' "$(sudo cat .secrets/patrimonio_integration_
   | curl -s -H @- "https://bancario-mspa.duckdns.org/patrimonio/v4/changes?limit=100"
 ```
 
-Os contratos `v1/resumo`, `v2/resumo` e `v3/activities`, `categories` e `metadata`
-foram retirados em 03/10/2026 (serviam ao NetWorth, aposentado). Só a projeção
-(`/patrimonio/v3/projection`) e o v4 respondem. No servidor, pelo endereço
+Só a projeção (`/patrimonio/v3/projection`) e o v4 respondem. No servidor, pelo endereço
 público: no loopback (`127.0.0.1:5201`) o `SECURE_SSL_REDIRECT` responde **301** a
 qualquer rota. O token vai pela entrada padrão (`-H @-`), e não na linha de
 comando, onde qualquer usuário da máquina o leria em `ps`.

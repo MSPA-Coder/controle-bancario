@@ -3,8 +3,9 @@
 ## Ambiente local
 
 Use Docker Compose como interface do projeto. No host, o único Python do
-projeto é o venv opcional do laço rápido (ver `AGENTS.md`); nada vai para o
-Python global, e PostgreSQL roda só em contêiner.
+projeto é o `.venv` de runtime (`uv sync --locked`); ferramentas de
+desenvolvimento, testes e PostgreSQL rodam só em contêiner, e nada vai para o
+Python global.
 
 Prepare `.env.docker` e provisione os secrets de Django e PostgreSQL conforme o
 [README](../README.md). O script preserva os secrets de runtime existentes e cria

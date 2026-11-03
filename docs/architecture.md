@@ -336,10 +336,6 @@ Wealthfolio) por duas rotas somente leitura, sem sessão e sem escopo por titula
 | `/patrimonio/v4/metadata`, `/snapshot`, `/changes` | `PATRIMONIO_INTEGRATION_TOKEN` | o contrato do consolidador (abaixo) |
 | `/patrimonio/v3/projection` | `PATRIMONIO_INTEGRATION_TOKEN` | a projeção de caixa, reservada para a fase de projeção consolidada |
 
-Os contratos `v1/resumo`, `v2/resumo`, `v3/activities`, `v3/categories` e
-`v3/metadata` serviam ao NetWorth, aposentado em 29/09/2026, e foram retirados em
-03/10/2026: o nginx não registra acesso a eles desde 28/09, o Wealthfolio só lê o
-v4 (o patch dele recusa qualquer outro caminho), e o histórico está no Git.
 Todas as rotas respondem só a `GET`, e o nginx fecha `/patrimonio/` para fora.
 
 ### Esquema `leitura`: o contrato para quem lê o banco de fora
