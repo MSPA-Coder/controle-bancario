@@ -29,7 +29,8 @@ O extrato mensal em dólar da Avenue não tem descrição própria que sirva: o 
 dele (`adapters._parse_avenue_usd_lines`) escreve a descrição num formato fixo,
 com o ativo por extenso, e as regras do exterior abaixo a leem. O ativo ali é
 ticker dos EUA (CGC, BRK.B) ou o título como o extrato o imprime (ORCL 3.95
-25/03/51), e o cupom do título é renda do tipo `cupom`. A compra e a venda
+25/03/51), e o cupom do título é renda do tipo `cupom`, assim como os juros corridos
+que o comprador paga na venda dele. A compra e a venda
 trazem também a quantidade negociada (`settlement_quantity`), que só o extrato
 do exterior imprime por negócio: é com ela que o CRV confere o negócio quando
 não tem o preço.
@@ -92,6 +93,7 @@ _LIQUIDACAO_NO_EXTERIOR = re.compile(r"^(?:COMPRA|VENDA) DE (\S+) NA AVENUE:(.*)
 _QUANTIDADE_NO_EXTERIOR = re.compile(r"^\s*(\d+(?:,\d+)?) A US\$ ")
 _RENDA_NO_EXTERIOR: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (re.compile(r"^CUPOM DE (.+) NA AVENUE$"), INCOME_KIND_COUPON, INCOME_ROLE_CREDIT),
+    (re.compile(r"^JUROS CORRIDOS NA VENDA DE (.+) NA AVENUE$"), INCOME_KIND_COUPON, INCOME_ROLE_CREDIT),
     (re.compile(r"^DIVIDENDO DE (\S+) NA AVENUE$"), INCOME_KIND_DIVIDEND, INCOME_ROLE_CREDIT),
     (re.compile(r"^JUROS DE ALUGUEL DE ACOES NA AVENUE(?: \((\S+)\))?$"), INCOME_KIND_RENTAL, INCOME_ROLE_CREDIT),
     (re.compile(r"^IR RETIDO SOBRE ALUGUEL DE ACOES NA AVENUE(?: \((\S+)\))?$"), INCOME_KIND_RENTAL, INCOME_ROLE_RENTAL_IRRF),

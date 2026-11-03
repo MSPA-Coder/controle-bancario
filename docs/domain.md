@@ -418,6 +418,14 @@ o detalhe de investimento lê (ver "Ativo, tipo de renda e liquidação de preg�
   pregão é o dia útil anterior (D+1 nos EUA, sem contar feriados);
 - cupom de título: "Cupom de ORCL 3.95 25/03/51 na Avenue" (o título como o extrato
   o imprime);
+- juros corridos na venda de título: "Juros corridos na venda de 5CYRWW7 na Avenue",
+  categoria do banco "Cupom" (o extrato imprime "Crédito de Juros Acruados na Venda"
+  e, na linha de baixo, o código do título, porque a venda não traz o nome dele). O
+  principal da venda é a linha de venda comum;
+- corretagem da compra e da venda: "Corretagem de CGC na Avenue: 498 a US$ 0,83",
+  categoria do banco "Corretagem". O extrato a imprime como `FEE`, sem sinal, na seção
+  de movimentos diversos; sai como débito. Outra taxa que não seja corretagem não tem
+  formato conhecido e a importação a recusa;
 - juros do aluguel de ações e o IR retido sobre eles: "Juros de aluguel de ações na
   Avenue (CGC)". O extrato não diz a ação; o leitor põe a única ação inteira entre a
   carteira do fim do mês e as negociadas no mês, e sem candidata única deixa em
@@ -647,7 +655,8 @@ O parser lê, por palavra inteira e sem acento:
 No exterior (extrato em dólar da Avenue) as regras leem as descrições que o leitor
 escreve, sempre terminadas em "na Avenue" para não casar com texto de outro banco:
 compra e venda dão o ativo e a data do pregão; "Cupom de <título> na Avenue" é
-`cupom`, com o título como ativo; "Juros de aluguel de ações na Avenue (<ação>)" é
+`cupom`, com o título como ativo, e "Juros corridos na venda de <título> na Avenue"
+também; "Juros de aluguel de ações na Avenue (<ação>)" é
 `aluguel` `credito`, e "IR retido sobre aluguel de ações na Avenue (<ação>)" é
 `aluguel` `irrf_aluguel`; "Dividendo de <ação> na Avenue" é `dividendo`. O ativo
 tem até 20 caracteres; maior que isso fica em branco.

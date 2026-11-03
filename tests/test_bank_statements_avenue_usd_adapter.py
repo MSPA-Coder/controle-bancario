@@ -82,6 +82,37 @@ All investment positions held in an Apex Clearing Corporation or Velocity Cleari
 
 SAMPLE_TEXT = CABECALHO + RESUMO + CARTEIRA + ATIVIDADE
 
+# Venda de título no mês (outubro de 2026 foi o primeiro): o extrato separa o principal
+# (BOUGHT/SOLD) dos juros corridos (INTEREST) e imprime a corretagem como FEE, sempre com o
+# ativo na linha de baixo. O título vendido sai pelo código, não pelo nome.
+RESUMO_COM_VENDA_DE_TITULO = """CASH & CASH EQUIVALENTS PORTFOLIO EQUITY ALLOCATION
+OPENING BALANCE CLOSING BALANCE Fixed Income - 56.716%
+Total Cash & Cash Equivalents $ 1,000.00 $ 1,684.11 Cash - 39.031%
+Net Account Balance 1,000.00 1,684.11 Equities - 4.253%
+"""
+
+ATIVIDADE_COM_VENDA_DE_TITULO = """ACCOUNT ACTIVITY - AVENUE ACCOUNT NUMBER: 000000000
+ACCOUNT
+TRANSACTION DATE TYPE DESCRIPTION QUANTITY PRICE DEBIT CREDIT
+BUY / SELL TRANSACTIONS
+BOUGHT 13/04/2026 C Débito compra de ativo 498 0.83 $ 413.34
+CGC
+SOLD 16/04/2026 C Crédito venda de ativo 2 548.92 $ 1,097.84
+5CYRWW7
+Total Buy / Sell Transactions $ 413.34 $ 1,097.84
+DIVIDENDS AND INTEREST
+INTEREST 16/04/2026 C Crédito de Juros Acruados na Venda 2 548.92 $ 4.61
+5CYRWW7
+Total Dividends And Interest $ 0.00 $ 4.61
+MISCELLANEOUS TRANSACTIONS
+FEE 13/04/2026 C Corretagem 498 0.83 $ 5.00
+CGC
+Total Miscellaneous Transactions $ 5.00
+All investment positions held in an Apex Clearing Corporation or Velocity Clearing LLC cash account unless indicated otherwise.
+"""
+
+TEXTO_COM_VENDA_DE_TITULO = CABECALHO + RESUMO_COM_VENDA_DE_TITULO + ATIVIDADE_COM_VENDA_DE_TITULO
+
 
 def _linhas(texto=SAMPLE_TEXT):
     return _parse_avenue_usd_lines(texto, account_id=1)
@@ -100,6 +131,47 @@ def test_le_cada_movimento_com_sinal_descricao_e_categoria_do_banco():
         (date(2026, 4, 13), Decimal("1021.77"), "Remessa de câmbio BR-EUA", "Remessa de câmbio"),
         (date(2026, 4, 22), Decimal("11.77"), "Campanha de Marketing na Avenue", "Crédito diverso"),
     ]
+
+
+def test_le_os_juros_corridos_da_venda_de_titulo_e_a_corretagem_e_a_conta_fecha():
+    """O extrato não marca débito nem crédito: a corretagem sai negativa e os juros entram como cupom."""
+    assert [
+        (linha.statement_date, linha.amount, linha.description, linha.bank_category)
+        for linha in _linhas(TEXTO_COM_VENDA_DE_TITULO)
+    ] == [
+        (date(2026, 4, 13), Decimal("-413.34"), "Compra de CGC na Avenue: 498 a US$ 0,83, pregão 10/04/2026",
+         "Operações em Bolsa"),
+        (date(2026, 4, 16), Decimal("1097.84"), "Venda de 5CYRWW7 na Avenue: 2 a US$ 548,92, pregão 15/04/2026",
+         "Operações em Bolsa"),
+        (date(2026, 4, 16), Decimal("4.61"), "Juros corridos na venda de 5CYRWW7 na Avenue", "Cupom"),
+        (date(2026, 4, 13), Decimal("-5.00"), "Corretagem de CGC na Avenue: 498 a US$ 0,83", "Corretagem"),
+    ]
+
+
+def test_juros_corridos_com_outra_grafia_da_palavra_do_meio_tambem_sao_lidos():
+    """O extrato imprime "Acruados"; se a Avenue corrigir a grafia, a importação não deve voltar a falhar."""
+    corrigido = TEXTO_COM_VENDA_DE_TITULO.replace("Juros Acruados", "Juros Acumulados")
+    juros = next(linha for linha in _linhas(corrigido) if linha.bank_category == "Cupom")
+    assert (juros.amount, juros.description) == (Decimal("4.61"), "Juros corridos na venda de 5CYRWW7 na Avenue")
+
+
+def test_juros_corridos_sem_o_titulo_na_linha_de_baixo_sao_recusados():
+    sem_titulo = TEXTO_COM_VENDA_DE_TITULO.replace("548.92 $ 4.61\n5CYRWW7\n", "548.92 $ 4.61\n")
+    with pytest.raises(ValueError, match="não conhece"):
+        _linhas(sem_titulo)
+
+
+def test_corretagem_sem_ativo_na_linha_de_baixo_e_recusada():
+    sem_ativo = TEXTO_COM_VENDA_DE_TITULO.replace("$ 5.00\nCGC\n", "$ 5.00\n")
+    with pytest.raises(ValueError, match="não conhece"):
+        _linhas(sem_ativo)
+
+
+def test_taxa_que_nao_e_corretagem_continua_recusada():
+    """Só a corretagem tem formato conhecido: outra taxa pede um leitor novo, não um palpite."""
+    outra_taxa = TEXTO_COM_VENDA_DE_TITULO.replace("Corretagem 498 0.83", "Taxa de custódia")
+    with pytest.raises(ValueError, match="não conhece"):
+        _linhas(outra_taxa)
 
 
 def test_o_pregao_e_o_dia_util_anterior_a_liquidacao():
@@ -157,6 +229,11 @@ def test_reconhece_o_formato_e_o_saldo_de_fechamento():
     ("descricao", "ativo", "tipo", "papel"),
     [
         ("Cupom de ORCL 3.95 25/03/51 na Avenue", "ORCL 3.95 25/03/51", INCOME_KIND_COUPON, INCOME_ROLE_CREDIT),
+        ("Juros corridos na venda de 5CYRWW7 na Avenue", "5CYRWW7", INCOME_KIND_COUPON, INCOME_ROLE_CREDIT),
+        (
+            "Juros corridos na venda de ORCL 3.95 25/03/51 na Avenue", "ORCL 3.95 25/03/51",
+            INCOME_KIND_COUPON, INCOME_ROLE_CREDIT,
+        ),
         ("Juros de aluguel de ações na Avenue (CGC)", "CGC", INCOME_KIND_RENTAL, INCOME_ROLE_CREDIT),
         ("Juros de aluguel de ações na Avenue", None, INCOME_KIND_RENTAL, INCOME_ROLE_CREDIT),
         ("IR retido sobre aluguel de ações na Avenue (CGC)", "CGC", INCOME_KIND_RENTAL, INCOME_ROLE_RENTAL_IRRF),
@@ -184,9 +261,19 @@ def test_liquidacao_editada_sem_quantidade_fica_so_com_ativo_e_pregao():
     assert (detalhe.instrument_code, detalhe.settlement_quantity) == ("CGC", None)
 
 
+def test_a_corretagem_do_exterior_nao_recebe_campos_de_investimento():
+    """Custo da compra e da venda: fica no caixa e na categoria, sem virar renda nem liquidação de pregão."""
+    assert interpretar("Corretagem de CGC na Avenue: 498 a US$ 0,83") is None
+
+
 @pytest.mark.parametrize(
     "descricao",
-    ["Cupom de desconto Loja X", "Cupom de ORCL 3.95 25/03/51", "Compra de CGC na Corretora: 1 a US$ 1, pregão 10/04/2026"],
+    [
+        "Cupom de desconto Loja X",
+        "Cupom de ORCL 3.95 25/03/51",
+        "Juros corridos na venda de 5CYRWW7",
+        "Compra de CGC na Corretora: 1 a US$ 1, pregão 10/04/2026",
+    ],
 )
 def test_texto_parecido_de_outro_lugar_nao_vira_detalhe(descricao):
     assert interpretar(descricao) is None

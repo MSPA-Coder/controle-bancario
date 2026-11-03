@@ -933,9 +933,12 @@ _MESES_EN = {
 _RE_AVENUE_US_PERIODO = re.compile(r"\b([A-Z][a-z]+) \d{2}, \d{4} - ([A-Z][a-z]+) (\d{2}), (\d{4})")
 _RE_AVENUE_US_CAIXA = re.compile(r"Total Cash & Cash Equivalents \$ ([\d,]+\.\d{2}) \$ ([\d,]+\.\d{2})")
 _RE_AVENUE_US_MOVIMENTO = re.compile(
-    r"^(BOUGHT|SOLD|INTEREST|DIVIDEND|JOURNAL|MISC)\s+(\d{2})/(\d{2})/(\d{4})\s+[A-Z]\s+(.+?)\s+\$\s*([\d,]+\.\d{2})$"
+    r"^(BOUGHT|SOLD|INTEREST|DIVIDEND|JOURNAL|MISC|FEE)\s+(\d{2})/(\d{2})/(\d{4})\s+[A-Z]\s+(.+?)\s+\$\s*([\d,]+\.\d{2})$"
 )
 _RE_AVENUE_US_QUANTIDADE_E_PRECO = re.compile(r"^(.*?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]*\.?\d+)$")
+# "Crédito de Juros Acruados na Venda 2 548.92": os juros que o comprador paga ao vendedor do
+# título pelo tempo desde o último cupom. A palavra do meio é a que o extrato imprime (e erra).
+_RE_AVENUE_US_JUROS_NA_VENDA = re.compile(r"^Crédito de Juros \S+ na Venda\b")
 # Ação na carteira: "<nome> <símbolo> <tipo de conta> <quantidade> <preço> [$] <valor de mercado> ...".
 _RE_AVENUE_US_ACAO = re.compile(r"\s([A-Z][A-Z0-9.]*)\s+[A-Z]\s+([\d,]+(?:\.\d+)?)\s+[\d,.]+\s+\$?\s*([\d,]+\.\d{2})\s")
 _RE_AVENUE_US_TOTAL_ACOES = re.compile(r"Total Equities \$ ([\d,]+\.\d{2})")
@@ -1079,6 +1082,8 @@ def _avenue_us_linha(movimento: _MovimentoAvenueUs, ativo_do_aluguel: str | None
     if movimento.tipo == "INTEREST":
         if texto.startswith("Crédito de Cupom") and complemento:
             return f"Cupom de {complemento} na Avenue", movimento.valor, "Cupom"
+        if _RE_AVENUE_US_JUROS_NA_VENDA.match(texto) and complemento:
+            return f"Juros corridos na venda de {complemento} na Avenue", movimento.valor, "Cupom"
         sufixo = f" ({ativo_do_aluguel})" if ativo_do_aluguel else ""
         if texto.startswith("Stock lending"):
             return f"Juros de aluguel de ações na Avenue{sufixo}", movimento.valor, "Aluguel de ações"
@@ -1092,6 +1097,13 @@ def _avenue_us_linha(movimento: _MovimentoAvenueUs, ativo_do_aluguel: str | None
             return "Remessa de câmbio BR-EUA", movimento.valor, "Remessa de câmbio"
         if complemento == "EUA-BR":
             return "Remessa de câmbio EUA-BR", -movimento.valor, "Remessa de câmbio"
+    if movimento.tipo == "FEE" and texto.startswith("Corretagem"):
+        partes = _RE_AVENUE_US_QUANTIDADE_E_PRECO.match(texto)
+        if partes is None or not complemento:
+            raise ValueError(erro)
+        quantidade, preco = _dolar(partes.group(2)), _dolar(partes.group(3))
+        descricao = f"Corretagem de {complemento} na Avenue: {_numero_pt(quantidade)} a US$ {_numero_pt(preco)}"
+        return descricao, -movimento.valor, "Corretagem"
     if movimento.tipo == "MISC":
         return f"{texto} na Avenue", movimento.valor, "Crédito diverso"
     raise ValueError(erro)
