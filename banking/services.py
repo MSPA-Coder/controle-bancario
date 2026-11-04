@@ -251,9 +251,8 @@ def _parse_currency(raw_value: str | None) -> str:
 def _parse_initial_balance_date(raw_value: str | None) -> date:
     """Vazio vale como hoje; conta nova sem data informada é conta de hoje.
 
-    O histórico já foi datado em 31/12/2025 pela migração
-    `0004_conta_moeda_e_data_do_saldo_inicial`, e não é o formulário que
-    reescreve isso.
+    O histórico já foi datado em 31/12/2025 por migração, e não é o
+    formulário que reescreve isso.
     """
     raw_text = (raw_value or "").strip()
     if not raw_text:

@@ -342,8 +342,8 @@ Todas as rotas respondem só a `GET`, e o nginx fecha `/patrimonio/` para fora.
 
 Quem lê o PostgreSQL direto (hoje, o FinancasMCP, por um usuário `mcp_leitura`
 só de leitura) não deve ler as tabelas: acopla o próprio SQL ao schema e
-reescreve as regras do domínio. O esquema `leitura`, criado pela migração
-`core/0004_esquema_leitura`, publica essas regras em views, e o usuário de
+reescreve as regras do domínio. O esquema `leitura` (hoje em
+`core/migrations/0001_initial.sql`) publica essas regras em views, e o usuário de
 leitura recebe `SELECT` só nelas.
 
 | View | O que carrega |
@@ -359,8 +359,8 @@ leitura recebe `SELECT` só nelas.
 fora, de propósito, usuários, senhas, sessões, permissões, auditoria e anexos.
 
 O PostgreSQL recusa `DROP COLUMN` e `ALTER ... TYPE` de coluna que uma view lê.
-Quem precisar mudar uma coluna lida aqui escreve a migração dependendo de
-`core/0004_esquema_leitura`, recria a view e atualiza `tests/test_esquema_leitura.py`.
+Quem precisar mudar uma coluna lida aqui escreve uma migração que depende de
+`core/0001_initial`, recria a view e atualiza `tests/test_esquema_leitura.py`.
 A quebra deixa de aparecer em produção, no leitor, e passa a reprovar a
 migração na suíte, que aplica todas as migrações num banco vazio. Uma view nova
 só chega ao usuário de leitura depois de rodar de novo

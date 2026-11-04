@@ -873,8 +873,8 @@ Quando o valor de uma aplicação muda sem que dinheiro entre ou saia (marcaçã
 mercado de Tesouro, renda fixa, caixa em dólar), o saldo da conta muda, mas isso
 **não é receita nem despesa**: é variação não realizada do patrimônio (a
 definição está em `docs/CONCEITOS_FINANCEIROS.md`). A categoria "Variação de
-mercado" é do tipo `valorizacao` (criada pela migração
-`transactions/0012_categoria_valorizacao`, no grupo "Investimentos") e é o destino
+mercado" é do tipo `valorizacao` (criada por migração,
+no grupo "Investimentos") e é o destino
 da *Marcação a mercado* da Atualização de saldo. "Rendimentos" fica só para juro
 que de fato foi creditado.
 

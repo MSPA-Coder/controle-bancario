@@ -29,8 +29,8 @@ from .password_validators import current_min_length
 TENTATIVAS_DE_SORTEIO: Final = 5
 
 # Catálogo de permissões funcionais em uso pela aplicação. Cada chave aqui
-# precisa existir como linha em AppPermission (ver migration
-# 0003_seed_permission_catalog) para que `user.has_perm(chave)` funcione via
+# precisa existir como linha em AppPermission (catálogo inicial em
+# core/migrations/0001_initial.sql) para que `user.has_perm(chave)` funcione via
 # AppPermissionBackend. Mantido enxuto: somente chaves que algum
 # @permission_required ou item de menu realmente referencia hoje. Novas
 # chaves entram junto com o módulo que passa a usá-las.

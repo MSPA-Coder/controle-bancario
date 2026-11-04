@@ -21,14 +21,11 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from importlib import import_module
 from types import SimpleNamespace
 
 import pytest
-from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
-from django.db import connection
 
 from accounts.models import AccountOwner
 from accounts.services import save_transfer_destination_accesses
@@ -392,62 +389,3 @@ def test_tela_nao_edita_para_realizado_sem_data(client, cenario):
     assert entry.status == STATUS_PENDING
     assert entry.realized_date is None
     assert any(RECUSA in m for m in _mensagens(resposta))
-
-
-# --- A trava da migration 0005 -------------------------------------------------
-
-
-def test_migration_para_e_lista_os_realizados_incompletos(cenario, monkeypatch):
-    """A migration não corrige dados: ela para e diz quais são.
-
-    A constraint já existe no banco de teste, então ela sai durante o teste
-    para reproduzir o banco de produção antes da correção. O PostgreSQL desfaz
-    a remoção junto com o resto da transação do teste.
-
-    A remoção vem antes de qualquer lançamento: depois de um INSERT, as FKs
-    adiadas deixam gatilhos pendentes na tabela, e o PostgreSQL recusa o
-    ALTER TABLE na mesma transação.
-    """
-    migracao = import_module("transactions.migrations.0005_realizado_exige_data")
-    constraint = next(
-        c for c in CashFlowEntry._meta.constraints
-        if c.name == "ck_cash_flow_entry_realized_has_date_and_amount"
-    )
-    with connection.schema_editor() as editor:
-        editor.remove_constraint(CashFlowEntry, constraint)
-
-    # Com tudo completo, a conferência deixa passar.
-    [completo] = _criar(cenario, _requisicao(cenario, realized_date=DIA))
-    migracao.conferir_realizados(apps, None)
-
-    base = {
-        "account": cenario.conta,
-        "category": cenario.despesa,
-        "entry_type": ENTRY_TYPE_EXPENSE,
-        "entry_amount": Decimal("100.35"),
-        "due_date": DIA,
-        "status": STATUS_REALIZED,
-    }
-    sem_nada = CashFlowEntry.objects.create(**base)
-    sem_valor = CashFlowEntry.objects.create(**base, realized_date=DIA)
-    sem_data = CashFlowEntry.objects.create(**base, realized_amount=Decimal("100.35"))
-
-    with pytest.raises(RuntimeError) as erro:
-        migracao.conferir_realizados(apps, None)
-
-    mensagem = str(erro.value)
-    assert mensagem.startswith("3 lançamento(s) realizado(s)")
-    assert f"#{sem_nada.id}: sem data e sem valor\n" in mensagem
-    assert f"#{sem_valor.id}: sem valor\n" in mensagem
-    assert f"#{sem_data.id}: sem data\n" in mensagem
-    assert f"#{completo.id}:" not in mensagem
-
-    # Lista longa é cortada, mas a contagem continua inteira.
-    monkeypatch.setattr(migracao, "LIMITE_DA_LISTA", 2)
-    with pytest.raises(RuntimeError) as erro:
-        migracao.conferir_realizados(apps, None)
-
-    mensagem = str(erro.value)
-    assert mensagem.startswith("3 lançamento(s) realizado(s)")
-    assert f"#{sem_data.id}:" not in mensagem
-    assert "  ... e mais 1\n" in mensagem

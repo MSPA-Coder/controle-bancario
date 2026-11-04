@@ -103,6 +103,12 @@ Revise toda migration gerada. Uma mudança de schema só está pronta depois de
 validar `manage.py migrate` em PostgreSQL vazio e no caminho de atualização
 aplicável.
 
+As migrações começam na base de 03/11/2026: a `0001_initial` de cada app
+(ver a docstring de `core/migrations/0001_initial.py`). O banco de produção
+ainda registra em `django_migrations` os nomes das migrações antigas, que
+estão no git até 9f7f4cb. Migração nova não pode repetir um desses nomes:
+o Django a daria por aplicada sem rodá-la.
+
 ## Piloto de navegador (dados descartáveis)
 
 Além do `quality`, `compose.browser.yaml` executa Chromium com PostgreSQL
@@ -227,5 +233,5 @@ docker compose --env-file .env.docker -f compose.yaml run --rm web \
 O relatório lista, lançamento a lançamento, o que seria criado ou atualizado,
 com os totais por papel, e não grava nada. Só então repita com `--aplicar`.
 É idempotente, não apaga linha já gravada e não muda valor, data, categoria nem
-saldo. Em produção, rode depois do deploy da migração `transactions/0011` e com
-backup validado, como em qualquer alteração de dados reais.
+saldo. Em produção, rode com backup validado, como em qualquer alteração de
+dados reais.
