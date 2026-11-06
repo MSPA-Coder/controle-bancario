@@ -265,10 +265,15 @@ def _zeradas_sem_movimento(ids: list[int], meses: list[date]) -> set[tuple[int, 
             realized_date__gte=meses[0], realized_date__lt=primeiro_dia_do_mes_seguinte(meses[-1]),
         ).annotate(mes=TruncMonth("realized_date")).values("account_id", "mes").distinct()
     }
+    anchors = dict(FinancialAccount.objects.filter(id__in=ids).values_list("id", "initial_balance_date"))
     zeradas = set()
     for mes in meses:
-        saldos = decimal_balances_before_by_account(ids, primeiro_dia_do_mes_seguinte(mes), VIEW_REALIZED)
-        for conta_id in ids:
+        fim = primeiro_dia_do_mes_seguinte(mes)
+        ids_com_base = [conta_id for conta_id in ids if anchors.get(conta_id) is not None and anchors[conta_id] < fim]
+        if not ids_com_base:
+            continue
+        saldos = decimal_balances_before_by_account(ids_com_base, fim, VIEW_REALIZED)
+        for conta_id in ids_com_base:
             if not saldos.get(conta_id) and (conta_id, mes) not in com_movimento:
                 zeradas.add((conta_id, mes))
     return zeradas

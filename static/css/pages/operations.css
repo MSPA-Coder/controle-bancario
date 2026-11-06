@@ -7,6 +7,7 @@
     .badge-recurring { background:var(--primary); color:#fff; }
     .badge-internal { background:var(--success); color:#fff; }
     .details-row { display:none; background:rgba(0,0,0,0.02); }
+    .details-row[data-ui="table-row"] { display:table-row; }
     .details-box { padding:0.52rem 0.7rem; }
     .details-title { color:var(--muted); font-size:0.85rem; margin-bottom:0.5rem; font-weight:600; }
     .nested-table { font-size:0.8rem; min-width:850px; }

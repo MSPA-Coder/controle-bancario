@@ -39,8 +39,12 @@ def cenario():
         user=user, owner=titular, can_view=True, can_create=True, can_update=True, can_delete=True
     )
     banco = FinancialInstitution.objects.create(institution_name="Banco Velho", institution_type="Banco")
-    origem = FinancialAccount.objects.create(owner=titular, institution=banco, account_name="Conta 01")
-    destino = FinancialAccount.objects.create(owner=titular, institution=banco, account_name="Conta 02")
+    origem = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Conta 01", initial_balance_date=date(2026, 1, 1)
+    )
+    destino = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Conta 02", initial_balance_date=date(2026, 1, 1)
+    )
     save_transfer_destination_accesses(user, {origem.id, destino.id})
     transferencia = CashFlowCategory.objects.create(category_name="Transferência", kind=CATEGORY_KIND_TRANSFER)
     saida, entrada = create_transaction_batch(

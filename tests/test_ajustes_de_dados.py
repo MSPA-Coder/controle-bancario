@@ -55,13 +55,13 @@ def mundo():
         for nome in ("C6", "XP", "SCP XP Investimentos")
     }
     contas = {
-        "c6": FinancialAccount.objects.create(owner=titular, institution=instituicoes["C6"], account_name="Conta"),
-        "xp": FinancialAccount.objects.create(owner=titular, institution=instituicoes["XP"], account_name="Conta"),
+        "c6": FinancialAccount.objects.create(owner=titular, institution=instituicoes["C6"], account_name="Conta", initial_balance_date=date(2026, 1, 1)),
+        "xp": FinancialAccount.objects.create(owner=titular, institution=instituicoes["XP"], account_name="Conta", initial_balance_date=date(2026, 1, 1)),
         "scp": FinancialAccount.objects.create(
-            owner=titular, institution=instituicoes["SCP XP Investimentos"], account_name="Conta"
+            owner=titular, institution=instituicoes["SCP XP Investimentos"], account_name="Conta", initial_balance_date=date(2026, 1, 1)
         ),
         "dolar": FinancialAccount.objects.create(
-            owner=titular, institution=instituicoes["XP"], account_name="Dólar", currency="USD"
+            owner=titular, institution=instituicoes["XP"], account_name="Dólar", currency="USD", initial_balance_date=date(2026, 1, 1)
         ),
     }
     save_transfer_destination_accesses(admin, {conta.id for conta in contas.values()})

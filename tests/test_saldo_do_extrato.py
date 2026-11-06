@@ -100,7 +100,9 @@ def test_importacao_guarda_o_saldo_e_a_conferencia_compara_com_o_cb():
         user=user, owner=titular, can_view=True, can_create=True, can_update=True, can_delete=True
     )
     banco = FinancialInstitution.objects.create(institution_name="Banco do Brasil", institution_type="Banco")
-    conta = FinancialAccount.objects.create(owner=titular, institution=banco, account_name="Conta 06")
+    conta = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Conta 06", initial_balance_date=date(2026, 1, 1)
+    )
     categoria = CashFlowCategory.objects.create(category_name="Outros")
 
     arquivo = SimpleUploadedFile("set.ofx", OFX_SGML.encode(), content_type="application/x-ofx")
@@ -169,7 +171,9 @@ def _conta_para_importar(nome):
         user=user, owner=titular, can_view=True, can_create=True, can_update=True, can_delete=True
     )
     banco = FinancialInstitution.objects.create(institution_name="Banco do Brasil", institution_type="Banco")
-    return user, FinancialAccount.objects.create(owner=titular, institution=banco, account_name="Conta 06")
+    return user, FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Conta 06", initial_balance_date=date(2026, 1, 1)
+    )
 
 
 @pytest.mark.django_db

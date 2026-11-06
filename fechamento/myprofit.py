@@ -136,14 +136,16 @@ class Linha:
     conta: FinancialAccount
     data: date
     valor: Decimal
-    saldo_no_cb: Decimal
+    saldo_no_cb: Decimal | None
     acao: str  # "lancar", "conferir", "pular"
     destino: str = ""
     motivo: str = ""
     rendimento: Decimal = Decimal("0")
 
     @property
-    def diferenca(self) -> Decimal:
+    def diferenca(self) -> Decimal | None:
+        if self.saldo_no_cb is None:
+            return None
         return (self.valor - self.saldo_no_cb).quantize(_CENTAVO)
 
     @property
@@ -372,6 +374,14 @@ def planejar(user, pacote: Pacote) -> Plano:
         anterior = conta.initial_balance_date
         ajuste = Decimal("0")
         for dia in pacote.datas:
+            if dia < conta.initial_balance_date:
+                valor = _valor(pacote, dia, fonte.classe_myprofit, fonte.corretora_myprofit)
+                if valor is not None:
+                    plano.linhas.append(Linha(
+                        conta=conta, data=dia, valor=valor, saldo_no_cb=None, acao="pular",
+                        motivo=gettext("saldo indisponível antes da data do saldo inicial"),
+                    ))
+                continue
             if dia <= conta.initial_balance_date:
                 continue
             if fonte.frequencia == FREQUENCIA_MENSAL and dia != ultimo_dia(dia):
@@ -384,7 +394,7 @@ def planejar(user, pacote: Pacote) -> Plano:
             anterior = max([anterior, *(d for d in conferidos if d < dia)])
             linha = _linha(user, conta, fonte.classe_myprofit, dia, valor, anterior, pacote, remessas_faltando, ajuste)
             plano.linhas.append(linha)
-            if linha.acao == "lancar":
+            if linha.acao == "lancar" and linha.diferenca is not None:
                 ajuste += linha.diferenca
             anterior = dia
     return plano
@@ -397,6 +407,11 @@ def _linha(
     mesma conta vão lançar: o saldo do CB naquela data já o terá quando a vez
     dela chegar, e a prévia mostra a diferença que de fato será lançada."""
     previa = saldo.previa(user, account_id=conta.id, data=dia, saldo_informado=str(valor))
+    if previa.saldo_no_cb is None:
+        return Linha(
+            conta=conta, data=dia, valor=valor, saldo_no_cb=None, acao="pular",
+            motivo=gettext("saldo indisponível antes da data do saldo inicial"),
+        )
     linha = Linha(conta=conta, data=dia, valor=valor, saldo_no_cb=previa.saldo_no_cb + ajuste, acao="lancar")
     linha.destino = saldo.DESTINO_INVESTIMENTOS if classe == CLASSE_CAIXA_USD else saldo.DESTINO_MARCACAO
     if is_month_closed(conta, dia.year, dia.month):
@@ -435,9 +450,12 @@ def aplicar(user, plano: Plano, *, audit_context=None) -> ColetaMyProfit:
         if linha.acao == "pular":
             continue
         # O saldo do CB de agora: as linhas anteriores da mesma conta já entraram.
-        linha.saldo_no_cb = saldo.previa(
+        previa = saldo.previa(
             user, account_id=linha.conta.id, data=linha.data, saldo_informado=str(linha.valor)
-        ).saldo_no_cb
+        )
+        if previa.saldo_no_cb is None:
+            raise ValueError(gettext("O saldo no CB está indisponível antes da data do saldo inicial."))
+        linha.saldo_no_cb = previa.saldo_no_cb
         if linha.diferenca == 0:
             saldo.confirmar(user, account_id=linha.conta.id, data=linha.data, saldo_informado=str(linha.valor), origem=ORIGEM_MYPROFIT)
         else:
@@ -457,6 +475,8 @@ def aplicar(user, plano: Plano, *, audit_context=None) -> ColetaMyProfit:
 
 
 def _lancar(user, linha: Linha, audit_context) -> None:
+    if linha.saldo_no_cb is None or linha.diferenca is None:
+        raise ValueError(gettext("O saldo no CB está indisponível antes da data do saldo inicial."))
     comum = {"account_id": linha.conta.id, "data": linha.data, "audit_context": audit_context, "origem": ORIGEM_MYPROFIT}
     if linha.rendimento > 0:
         # Primeiro os proventos do período, como rendimento; o resto da diferença

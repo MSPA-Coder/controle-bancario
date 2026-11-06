@@ -117,7 +117,7 @@ class Previa:
     conta: FinancialAccount
     data: date
     saldo_informado: Decimal
-    saldo_no_cb: Decimal
+    saldo_no_cb: Decimal | None
     pendencia: str = ""
     ja_conferido: SaldoConferido | None = None
     origem: str = ORIGEM_MANUAL
@@ -129,12 +129,17 @@ class Previa:
         return _origem_vale(self.fonte, self.origem)
 
     @property
-    def diferenca(self) -> Decimal:
+    def diferenca(self) -> Decimal | None:
+        if self.saldo_no_cb is None:
+            return None
         return (self.saldo_informado - self.saldo_no_cb).quantize(_QUANTO)
 
     @property
     def tipo(self) -> str | None:
-        if self.diferenca > 0:
+        diferenca = self.diferenca
+        if diferenca is None:
+            return None
+        if diferenca > 0:
             return ENTRY_TYPE_INCOME
         if self.diferenca < 0:
             return ENTRY_TYPE_EXPENSE
@@ -143,6 +148,8 @@ class Previa:
     @property
     def destinos(self) -> list[tuple[str, str]]:
         """Os destinos que servem ao sentido da diferença, como `(chave, rótulo)`."""
+        if self.saldo_no_cb is None:
+            return []
         return [
             (chave, str(rotulo))
             for chave, (rotulo, _, tipo, _) in DESTINOS.items()
@@ -225,9 +232,12 @@ def pendencia_da_movimentacao(conta: FinancialAccount, data: date) -> str:
 def previa(user, *, account_id, data: date, saldo_informado, origem: str = ORIGEM_MANUAL) -> Previa:
     conta = _conta(user, account_id, "view")
     informado = _decimal(saldo_informado, gettext("Saldo")).quantize(_QUANTO)
-    saldos = decimal_balances_before_by_account([conta.id], data + timedelta(days=1), VIEW_REALIZED)
+    saldo_no_cb = None
+    if data >= conta.initial_balance_date:
+        saldos = decimal_balances_before_by_account([conta.id], data + timedelta(days=1), VIEW_REALIZED)
+        saldo_no_cb = saldos.get(conta.id)
     return Previa(
-        conta=conta, data=data, saldo_informado=informado, saldo_no_cb=saldos.get(conta.id, Decimal("0.00")),
+        conta=conta, data=data, saldo_informado=informado, saldo_no_cb=saldo_no_cb,
         pendencia=pendencia_da_movimentacao(conta, data),
         ja_conferido=SaldoConferido.objects.filter(account=conta, data=data).order_by("-updated_at").first(),
         origem=_origem_do_saldo(origem), fonte=fontes_das_contas([conta])[conta.id].fonte,
@@ -263,6 +273,8 @@ def confirmar(user, *, account_id, data: date, saldo_informado, origem: str = OR
     """Registra um saldo que já bate com o do CB: a conferência fica, sem lançamento."""
     atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado)
     conta = _conta(user, account_id, "create")
+    if atual.saldo_no_cb is None:
+        raise ValueError(gettext("Não é possível confirmar: o saldo no CB está indisponível antes da data do saldo inicial."))
     if atual.pendencia:
         raise ValueError(atual.pendencia)
     if atual.tipo is not None:
@@ -294,13 +306,18 @@ def aplicar(
 
     atual = previa(user, account_id=account_id, data=data, saldo_informado=saldo_informado, origem=origem)
     conta = _conta(user, account_id, "create")
+    if atual.saldo_no_cb is None:
+        raise ValueError(gettext("Não é possível lançar diferença: o saldo no CB está indisponível antes da data do saldo inicial."))
     if not atual.origem_vale:
         raise ValueError(gettext(
             "A fonte desta conta é outra: só ela lança diferença. Registre este saldo como conferência."
         ))
     if atual.pendencia:
         raise ValueError(atual.pendencia)
-    if atual.diferenca != _decimal(diferenca_esperada, gettext("Diferença")).quantize(_QUANTO):
+    diferenca_atual = atual.diferenca
+    if diferenca_atual is None:
+        raise ValueError(gettext("Não é possível lançar diferença: o saldo no CB está indisponível antes da data do saldo inicial."))
+    if diferenca_atual != _decimal(diferenca_esperada, gettext("Diferença")).quantize(_QUANTO):
         raise ValueError(gettext("O saldo do CB mudou desde a prévia. Confira a nova diferença."))
     if atual.tipo is None:
         raise ValueError(gettext("O saldo informado já bate com o do CB: não há o que lançar."))
@@ -310,7 +327,7 @@ def aplicar(
     descricao = f"{PREFIXO_DA_DESCRICAO}: {_ROTULO_NA_DESCRICAO[destino]}"
     if motivo:
         descricao = f"{descricao} ({motivo})"
-    valor = abs(atual.diferenca)
+    valor = abs(diferenca_atual)
     with transaction.atomic():
         lancamento = create_transaction_batch(
             TransactionRequest(

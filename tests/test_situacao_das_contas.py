@@ -34,6 +34,7 @@ from core.domain.finance import (
     STATUS_REALIZED,
 )
 from core.domain.identity import USER_TYPE_ADMINISTRATOR, USER_TYPE_USER
+from transactions import services as transaction_services
 from transactions.models import CashFlowCategory, CashFlowEntry
 
 # --- Classificação e meses (sem banco) ------------------------------------------------
@@ -352,3 +353,16 @@ def test_matriz_nao_mostra_mes_anterior_a_data_inicial_do_sistema(cenario):
 
     assert matriz.meses == [date(2026, 8, 1), date(2026, 9, 1), date(2026, 10, 1)]
     assert all(celula.mes >= date(2026, 8, 1) for linha in matriz.linhas for celula in linha.celulas)
+
+
+@pytest.mark.django_db
+def test_aplicacao_sem_base_nao_e_classificada_como_zerada_e_nao_fecha_mes(cenario):
+    from transactions.models import AccountMonthClose
+
+    assert cenario.nova.initial_balance_date == date(2026, 9, 15)
+    assert (cenario.nova.id, date(2026, 8, 1)) not in situacao._zeradas_sem_movimento(
+        [cenario.nova.id], [date(2026, 8, 1)]
+    )
+    with pytest.raises(ValueError, match="indisponível"):
+        transaction_services.close_month(cenario.nova, 2026, 8, None, cenario.usuario)
+    assert not AccountMonthClose.objects.filter(account=cenario.nova, year=2026, month=8).exists()

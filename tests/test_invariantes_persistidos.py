@@ -88,6 +88,7 @@ def conta():
         institution=instituicao,
         account_name="Conta corrente de teste",
         initial_balance=Decimal("1000.00"),
+        initial_balance_date=date(2026, 1, 1),
     )
 
 

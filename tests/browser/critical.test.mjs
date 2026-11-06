@@ -176,3 +176,33 @@ test('no celular o menu começa recolhido e o botão Menu o abre', { timeout: 60
     throw error;
   } finally { await browser.close(); }
 });
+
+test('preferência de idioma persiste e traduz navegação e confirmação', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ locale: 'pt-BR' });
+  page.setDefaultTimeout(15000);
+  try {
+    await entrar(page);
+    await page.goto(`${base}/settings/profile/`);
+    const form = page.locator('#locale-form');
+    await form.locator('label:has(input[name="language"][value="en"])').click();
+    await form.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Salvar', exact: true }).click();
+    await page.getByRole('heading', { name: 'Language and region', exact: true }).waitFor();
+    assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+    await page.reload();
+    assert.equal(await form.locator('[name="language"][value="en"]').isChecked(), true);
+    await page.goto(`${base}/transactions/`);
+    assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.locator('#newTransactionCard').getByRole('button', { name: 'Save', exact: true }).waitFor();
+    await page.goto(`${base}/settings/profile/`);
+    await form.locator('label:has(input[name="language"][value="pt-br"])').click();
+    await form.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByRole('heading', { name: 'Idioma e região', exact: true }).waitFor();
+  } catch (error) {
+    await page.screenshot({ path: '/results/cb-idioma.png', fullPage: true });
+    throw error;
+  } finally { await browser.close(); }
+});

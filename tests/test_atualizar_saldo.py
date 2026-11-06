@@ -39,7 +39,7 @@ def cenario():
     banco = FinancialInstitution.objects.create(institution_name="C6", institution_type="Banco")
     conta = FinancialAccount.objects.create(
         owner=titular, institution=banco, account_name="CDB", account_kind="aplicacao",
-        initial_balance=Decimal("100.00"),
+        initial_balance=Decimal("100.00"), initial_balance_date=date(2026, 1, 1),
     )
     categorias = {
         nome: CashFlowCategory.objects.create(category_name=nome)

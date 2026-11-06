@@ -558,7 +558,7 @@ def _saldos_de_arquivo_divergentes(contas) -> list[str]:
     textos = []
     for lote in lotes:
         conferencia = conferencias.get(lote.id)
-        if conferencia is not None and not conferencia.bate:
+        if conferencia is not None and conferencia.bate is False:
             textos.append(gettext("%(conta)s em %(dia)s: diferença de %(valor)s") % {
                 "conta": _titulo(lote.account), "dia": _dia(conferencia.data),
                 "valor": money_signed(conferencia.diferenca, lote.account.currency),

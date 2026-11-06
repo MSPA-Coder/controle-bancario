@@ -80,6 +80,8 @@
     </form>
     {% elif previa.pendencia %}
     <p class="fatura-aviso">{{ previa.pendencia }}</p>
+    {% elif previa.saldo_no_cb is None %}
+    <p class="fatura-aviso">{% trans "O saldo no CB está indisponível antes da data do saldo inicial; não é possível comparar, confirmar ou lançar diferença nesta data." %}</p>
     {% elif previa.tipo %}
     <form method="post" action="{% url 'bank_statements:atualizar_saldo' %}" class="top-filter-row">
         {% csrf_token %}

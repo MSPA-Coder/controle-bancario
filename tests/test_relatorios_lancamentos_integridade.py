@@ -57,6 +57,11 @@ def test_falha_na_contraparte_desfaz_transferencia_e_operacao(cenario):
 
 
 def test_relatorio_de_caixa_usa_valor_realizado_e_data_correta_por_conta(cenario):
+    # Este cenário valida a aritmética de setembro; declara saldo-base anterior
+    # ao período em vez de depender do default (a data de hoje).
+    for account in (cenario.conta, cenario.dolar):
+        account.initial_balance_date = date(2026, 8, 1)
+        account.save(update_fields=["initial_balance_date"])
     receita = entrada(cenario, valor="100", dia=date(2026, 8, 31), tipo=ENTRY_TYPE_INCOME)
     t.realize_transaction(receita, realized_date=date(2026, 9, 1), realized_amount=Decimal("90"), user=cenario.admin)
     despesa = entrada(cenario, valor="30", dia=date(2026, 9, 10))
@@ -82,6 +87,8 @@ def test_relatorio_de_movimentos_nao_soma_moedas_diferentes(cenario):
 
 
 def test_relatorio_mostra_deficit_intermediario_mesmo_terminando_positivo(cenario):
+    cenario.conta.initial_balance_date = date(2026, 8, 31)
+    cenario.conta.save(update_fields=["initial_balance_date"])
     for dia, valor, tipo in [(10, "50", ENTRY_TYPE_EXPENSE), (20, "80", ENTRY_TYPE_INCOME)]:
         e = entrada(cenario, valor=valor, dia=date(2026, 9, dia), tipo=tipo)
         t.realize_transaction(e, realized_date=date(2026, 9, dia), user=cenario.admin)

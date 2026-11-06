@@ -23,8 +23,12 @@ def cenario():
     restrito = AppUser.objects.create(username="gestao-restrito", user_type=USER_TYPE_USER)
     dono = AccountOwner.objects.create(name="Titular gestão")
     banco = FinancialInstitution.objects.create(institution_name="Instituição gestão")
-    conta = FinancialAccount.objects.create(owner=dono, institution=banco, account_name="Real", currency="BRL")
-    dolar = FinancialAccount.objects.create(owner=dono, institution=banco, account_name="Dólar", currency="USD")
+    conta = FinancialAccount.objects.create(
+        owner=dono, institution=banco, account_name="Real", currency="BRL", initial_balance_date=date(2026, 1, 1)
+    )
+    dolar = FinancialAccount.objects.create(
+        owner=dono, institution=banco, account_name="Dólar", currency="USD", initial_balance_date=date(2026, 1, 1)
+    )
     categoria = CashFlowCategory.objects.create(category_name="Pesquisa gestão")
     return SimpleNamespace(admin=admin, restrito=restrito, dono=dono, conta=conta, dolar=dolar, categoria=categoria)
 

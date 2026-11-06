@@ -591,6 +591,14 @@ def processar(user, batch_id, escolhas: dict, audit_context=None, *, autorizar_m
         planos = planejar(conta, linhas)
         fechamentos = meses_fechados(conta, planos)
         if fechamentos:
+            from reports.services import month_bounds
+
+            for fechamento in fechamentos:
+                _, fim_exclusivo = month_bounds(fechamento.year, fechamento.month)
+                if fim_exclusivo - timedelta(days=1) < conta.initial_balance_date:
+                    raise ValueError(gettext(
+                        "Não é possível reabrir este mês: o saldo do cartão está indisponível antes da data do saldo inicial."
+                    ))
             if not autorizar_meses:
                 raise ValueError(gettext(
                     "A fatura tem lançamentos em mês fechado do cartão (%(meses)s): autorize a reabertura "

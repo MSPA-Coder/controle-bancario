@@ -388,11 +388,17 @@ def close_month(
     # serializa dois fechamentos concorrentes do mesmo período e permite
     # reativar o registro existente em vez de tentar um novo INSERT.
     account = _lock_accounts([account.pk])[account.pk]
+    from reports.services import month_bounds
+
+    _inicio, fim_exclusivo = month_bounds(year, month)
+    if fim_exclusivo - timedelta(days=1) < account.initial_balance_date:
+        raise ValueError(gettext(
+            "Não é possível fechar este mês: o saldo da conta está indisponível antes da data do saldo inicial."
+        ))
     if closing_balance is None:
         from core.domain.finance import VIEW_REALIZED
-        from reports.services import decimal_balance_before, month_bounds
+        from reports.services import decimal_balance_before
 
-        _inicio, fim_exclusivo = month_bounds(year, month)
         closing_balance = decimal_balance_before([account.id], fim_exclusivo, VIEW_REALIZED)
     try:
         month_close = AccountMonthClose.objects.select_for_update().get(
@@ -2197,6 +2203,7 @@ class StatementScope:
     exclude_internal: bool = False
     # Vem do Dashboard por grupo; não tem seletor próprio na tela.
     filter_group: str = ""
+    account_initial_dates: tuple[tuple[int, date], ...] = ()
 
     @property
     def filters_active(self) -> bool:
@@ -2298,6 +2305,7 @@ def resolve_statement_request(user, get_params, session, *, request=None) -> Sta
         operation_key=operation_key,
         entry_id=entry_id,
         exclude_internal=get_params.get("dashboard_drilldown") == "1",
+        account_initial_dates=tuple((account.id, account.initial_balance_date) for account in options.accounts),
     )
     return StatementRequest(
         today=today, view_mode=view_mode, scope=scope, ctx=ctx, options=options,
@@ -2339,10 +2347,21 @@ def compute_statement(scope: StatementScope, view_mode: str) -> tuple[list[CashF
     # para o outro -- uma linha em dólar não entra no saldo em real.
     blocos: list[dict] = []
     running_by_entry_id: dict[int, Decimal] = {}
+    account_anchor_dates = dict(scope.account_initial_dates)
+    for tx in current_txs:
+        account_anchor_dates.setdefault(tx.account_id, tx.account.initial_balance_date)
+    missing_account_ids = set(account_ids) - account_anchor_dates.keys()
+    if missing_account_ids:
+        account_anchor_dates.update(
+            FinancialAccount.objects.filter(id__in=missing_account_ids).values_list("id", "initial_balance_date")
+        )
     for currency, ids in currency_groups:
         saldo_inicial_do_bloco = report_services.decimal_period_start_balance(
             ids, start_selected, end_exclusive, view_mode
         )
+        anchors = [account_anchor_dates[account_id] for account_id in ids if account_id in account_anchor_dates]
+        start_available = all(anchor <= start_selected - timedelta(days=1) for anchor in anchors)
+        end_available = all(anchor <= scope.end_selected for anchor in anchors)
         running_for_balance = saldo_inicial_do_bloco
         for tx in report_services.entries_for_period(ids, start_selected, end_exclusive, view_mode):
             if view_mode in {STATUS_PROJECTED, STATUS_PENDING} and tx.status == STATUS_REALIZED:
@@ -2355,16 +2374,20 @@ def compute_statement(scope: StatementScope, view_mode: str) -> tuple[list[CashF
                 running_for_balance += val
             else:
                 running_for_balance -= val
-            running_by_entry_id[tx.id] = running_for_balance.quantize(MONEY_QUANT)
+            movement_date = _entry_date_for_view_mode(tx, view_mode)
+            running_by_entry_id[tx.id] = (
+                running_for_balance.quantize(MONEY_QUANT)
+                if all(anchor <= movement_date for anchor in anchors) else None
+            )
         blocos.append({
             "currency": currency,
             "account_ids": set(ids),
-            "saldo_inicial": saldo_inicial_do_bloco.quantize(MONEY_QUANT),
-            "saldo_final": running_for_balance.quantize(MONEY_QUANT),
+            "saldo_inicial": saldo_inicial_do_bloco.quantize(MONEY_QUANT) if start_available else None,
+            "saldo_final": running_for_balance.quantize(MONEY_QUANT) if end_available else None,
             "total_receitas": Decimal("0.00"),
             "total_despesas": Decimal("0.00"),
             "total_movimentacoes_internas": Decimal("0.00"),
-            "visible_running": saldo_inicial_do_bloco.quantize(MONEY_QUANT),
+            "visible_running": saldo_inicial_do_bloco.quantize(MONEY_QUANT) if start_available else None,
         })
 
     bloco_por_conta = {

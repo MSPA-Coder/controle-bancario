@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 14:17-0300\n"
+"POT-Creation-Date: 2026-11-06 18:51-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1053,6 +1053,10 @@ msgid "Esta fatura não tem linhas pendentes."
 msgstr "This card statement has no pending lines."
 
 #: bank_statements/fatura.py
+msgid "Não é possível reabrir este mês: o saldo do cartão está indisponível antes da data do saldo inicial."
+msgstr "Cannot reopen this month: the card balance is unavailable before the initial balance date."
+
+#: bank_statements/fatura.py
 #, python-format
 msgid "A fatura tem lançamentos em mês fechado do cartão (%(meses)s): autorize a reabertura e o novo fechamento para processá-la."
 msgstr "The card statement has entries in a closed month of the card (%(meses)s): authorize reopening and a new monthly close to process it."
@@ -1371,6 +1375,10 @@ msgid "Saldo"
 msgstr "Balance"
 
 #: bank_statements/saldo.py
+msgid "Não é possível confirmar: o saldo no CB está indisponível antes da data do saldo inicial."
+msgstr "Cannot confirm: the CB balance is unavailable before the initial balance date."
+
+#: bank_statements/saldo.py
 msgid "O saldo informado não bate com o do CB: lance a diferença com um destino."
 msgstr "The balance entered does not match the CB balance: post the difference with a destination."
 
@@ -1387,6 +1395,10 @@ msgstr "Choose where the difference goes."
 #, python-format
 msgid "“%(rotulo)s” exige um motivo."
 msgstr "“%(rotulo)s” requires a reason."
+
+#: bank_statements/saldo.py
+msgid "Não é possível lançar diferença: o saldo no CB está indisponível antes da data do saldo inicial."
+msgstr "Cannot post the difference: the CB balance is unavailable before the initial balance date."
 
 #: bank_statements/saldo.py
 msgid "A fonte desta conta é outra: só ela lança diferença. Registre este saldo como conferência."
@@ -2352,6 +2364,11 @@ msgstr[1] "VACUUM ANALYZE ran on %(n)s tables."
 msgid "Nenhuma otimização registrada"
 msgstr "No optimization recorded"
 
+#: core/templatetags/money_filters.py reports/services.py
+#: templates/banking/extratos.html templates/banking/faturas.html
+msgid "Indisponível"
+msgstr "Unavailable"
+
 #: core/textos_js.py templates/banking/pending_imports_confirm.html
 #: templates/fechamento/fontes.html
 #: templates/management/partials/management_content.html
@@ -2910,6 +2927,10 @@ msgid "%(conta)s está em %(moeda)s, mas o myProfit a mede em %(esperada)s"
 msgstr "%(conta)s is in %(moeda)s, but myProfit measures it in %(esperada)s"
 
 #: fechamento/myprofit.py
+msgid "saldo indisponível antes da data do saldo inicial"
+msgstr "balance unavailable before the initial balance date"
+
+#: fechamento/myprofit.py
 msgid "mês fechado"
 msgstr "month closed"
 
@@ -2917,6 +2938,10 @@ msgstr "month closed"
 #, python-format
 msgid "remessa de %(dia)s ainda não está no CB"
 msgstr "remittance of %(dia)s is not in the CB yet"
+
+#: fechamento/myprofit.py
+msgid "O saldo no CB está indisponível antes da data do saldo inicial."
+msgstr "The CB balance is unavailable before the initial balance date."
 
 #: fechamento/myprofit.py
 #, python-format
@@ -3691,6 +3716,10 @@ msgstr "Projected balances cover the entries for the period."
 msgid "contas"
 msgstr "accounts"
 
+#: reports/services.py
+msgid "O saldo não tem data-base disponível para todo o período."
+msgstr "The balance does not have an available base date for the entire period."
+
 #: templates/accounts/change_password.html
 msgid "Segurança • Alterar senha"
 msgstr "Security • Change password"
@@ -4418,6 +4447,10 @@ msgstr "This account's source is a different one, and only it posts differences.
 #: templates/banking/atualizar_saldo.html
 msgid "Registrar como conferência"
 msgstr "Record as a check"
+
+#: templates/banking/atualizar_saldo.html
+msgid "O saldo no CB está indisponível antes da data do saldo inicial; não é possível comparar, confirmar ou lançar diferença nesta data."
+msgstr "The CB balance is unavailable before the initial balance date; comparison, confirmation, and posting a difference are unavailable for this date."
 
 #: templates/banking/atualizar_saldo.html
 msgid "Destino da diferença"
@@ -7469,6 +7502,10 @@ msgstr "The settled amount must be positive."
 #: transactions/services.py
 msgid "Lançamento não está realizado."
 msgstr "Entry is not settled."
+
+#: transactions/services.py
+msgid "Não é possível fechar este mês: o saldo da conta está indisponível antes da data do saldo inicial."
+msgstr "Cannot close this month: the account balance is unavailable before the initial balance date."
 
 #: transactions/services.py
 #, python-format

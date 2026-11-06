@@ -2,8 +2,8 @@
 
 from collections.abc import Iterable
 from datetime import date, timedelta
-from decimal import Decimal
 
+from banking.models import FinancialAccount
 from banking.services import accessible_account_ids
 
 from .contracts import ConferenciaDeSaldo
@@ -20,7 +20,14 @@ def conferencia_de_saldo(lote: BankStatementImport) -> ConferenciaDeSaldo | None
     if lote.statement_balance is None or lote.statement_balance_date is None:
         return None
     from core.domain.finance import VIEW_REALIZED
-    from reports.services import decimal_balances_before_by_account
+    from reports.services import balance_available_by_account, decimal_balances_before_by_account
+
+    if not balance_available_by_account([lote.account_id], lote.statement_balance_date).get(lote.account_id, False):
+        return ConferenciaDeSaldo(
+            saldo_do_extrato=lote.statement_balance,
+            data=lote.statement_balance_date,
+            saldo_no_cb=None,
+        )
 
     saldos = decimal_balances_before_by_account(
         [lote.account_id], lote.statement_balance_date + timedelta(days=1), VIEW_REALIZED
@@ -28,7 +35,7 @@ def conferencia_de_saldo(lote: BankStatementImport) -> ConferenciaDeSaldo | None
     return ConferenciaDeSaldo(
         saldo_do_extrato=lote.statement_balance,
         data=lote.statement_balance_date,
-        saldo_no_cb=saldos.get(lote.account_id, Decimal("0.00")),
+        saldo_no_cb=saldos.get(lote.account_id),
     )
 
 
@@ -61,16 +68,25 @@ def conferir_saldos(lotes: Iterable[BankStatementImport]) -> None:
     for lote in lotes:
         if lote.statement_balance is not None and lote.statement_balance_date is not None:
             contas_por_data.setdefault(lote.statement_balance_date, set()).add(lote.account_id)
-    saldos_por_data = {
-        dia: decimal_balances_before_by_account(sorted(contas), dia + timedelta(days=1), VIEW_REALIZED)
-        for dia, contas in contas_por_data.items()
-    }
+    anchors = dict(
+        FinancialAccount.objects.filter(id__in={account_id for ids in contas_por_data.values() for account_id in ids})
+        .values_list("id", "initial_balance_date")
+    )
+    saldos_por_data = {}
+    for dia, contas in contas_por_data.items():
+        valid_ids = sorted(
+            account_id for account_id in contas
+            if anchors.get(account_id) is not None and anchors[account_id] <= dia
+        )
+        saldos_por_data[dia] = decimal_balances_before_by_account(
+            valid_ids, dia + timedelta(days=1), VIEW_REALIZED
+        ) if valid_ids else {}
     for lote in lotes:
         lote.conferencia = (
             ConferenciaDeSaldo(
                 saldo_do_extrato=lote.statement_balance,
                 data=lote.statement_balance_date,
-                saldo_no_cb=saldos_por_data[lote.statement_balance_date].get(lote.account_id, Decimal("0.00")),
+                saldo_no_cb=saldos_por_data[lote.statement_balance_date].get(lote.account_id),
             )
             if lote.statement_balance is not None and lote.statement_balance_date is not None
             else None

@@ -76,11 +76,11 @@ def mundo():
     c6 = FinancialInstitution.objects.create(institution_name="C6", institution_type="Banco")
     bb = FinancialInstitution.objects.create(institution_name="Banco do Brasil", institution_type="Banco")
     contas = {
-        "genial": FinancialAccount.objects.create(owner=titular, institution=genial, account_name="Conta 03"),
-        "c6": FinancialAccount.objects.create(owner=titular, institution=c6, account_name="Conta 02"),
-        "bb": FinancialAccount.objects.create(owner=titular, institution=bb, account_name="Conta 06"),
+        "genial": FinancialAccount.objects.create(owner=titular, institution=genial, account_name="Conta 03", initial_balance_date=date(2026, 1, 1)),
+        "c6": FinancialAccount.objects.create(owner=titular, institution=c6, account_name="Conta 02", initial_balance_date=date(2026, 1, 1)),
+        "bb": FinancialAccount.objects.create(owner=titular, institution=bb, account_name="Conta 06", initial_balance_date=date(2026, 1, 1)),
         "rende": FinancialAccount.objects.create(
-            owner=titular, institution=bb, account_name="Rende Fácil", account_kind="aplicacao"
+            owner=titular, institution=bb, account_name="Rende Fácil", account_kind="aplicacao", initial_balance_date=date(2026, 1, 1)
         ),
     }
     save_transfer_destination_accesses(user, {conta.id for conta in contas.values()})

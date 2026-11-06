@@ -50,8 +50,8 @@ def mundo():
     genial = FinancialInstitution.objects.create(institution_name="Genial", institution_type="Corretora")
     c6 = FinancialInstitution.objects.create(institution_name="C6", institution_type="Banco")
     contas = {
-        "genial": FinancialAccount.objects.create(owner=titular, institution=genial, account_name="Conta 03"),
-        "c6": FinancialAccount.objects.create(owner=titular, institution=c6, account_name="Conta 02"),
+        "genial": FinancialAccount.objects.create(owner=titular, institution=genial, account_name="Conta 03", initial_balance_date=date(2026, 1, 1)),
+        "c6": FinancialAccount.objects.create(owner=titular, institution=c6, account_name="Conta 02", initial_balance_date=date(2026, 1, 1)),
     }
     save_transfer_destination_accesses(admin, {conta.id for conta in contas.values()})
     categorias = {

@@ -28,6 +28,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils.translation import gettext, gettext_noop
 
+from banking.models import FinancialAccount
 from banking.services import account_ids_by_currency
 from core import regional
 from core.account_group_filter import ACCOUNT_GROUP_OPTIONS, GROUPS_PARAM, is_filtering
@@ -104,7 +105,7 @@ def _moeda_do_painel(pedida: str, moedas: tuple[str, ...]) -> tuple[str, bool]:
 	return (BASE_CURRENCY if BASE_CURRENCY in moedas else moedas[0]), True
 
 
-def _saldo_diario(account_ids, month_start: date, next_month: date, view_mode: str, month_entries) -> list[tuple[date, Decimal]]:
+def _saldo_diario(account_ids, month_start: date, next_month: date, view_mode: str, month_entries) -> list[tuple[date, Decimal | None]]:
 	"""Saldo ao fim de cada dia com movimento, pelo mesmo cálculo do extrato.
 
 	Abertura do período mais cada lançamento, na ordem da listagem -- é o
@@ -119,7 +120,12 @@ def _saldo_diario(account_ids, month_start: date, next_month: date, view_mode: s
 		valor = entry_amount_for_view_mode(entry, view_mode)
 		saldo += valor if entry.entry_type == ENTRY_TYPE_INCOME else -valor
 		por_dia[entry_date_for_view_mode(entry, view_mode)] = saldo.quantize(MONEY_QUANT)
-	return list(por_dia.items())
+	result = []
+	anchors = dict(FinancialAccount.objects.filter(id__in=account_ids).values_list("id", "initial_balance_date"))
+	for day, value in por_dia.items():
+		available = all(anchor <= day for anchor in anchors.values())
+		result.append((day, value if available else None))
+	return result
 
 
 SEM_GRUPO = gettext_noop("Sem grupo")
@@ -281,7 +287,7 @@ def dashboard_view(request):
 	chart_income = [_to_float(v) for v in saude["income"]]
 	chart_expense = [_to_float(v) for v in saude["expense"]]
 	chart_generation = saude["summary"]["generation"]
-	chart_saldo = [_to_float(m["saldo"]) for m in months]
+	chart_saldo = [float(m["saldo"]) if m["saldo"] is not None else None for m in months]
 	# Resumo do mês selecionado para o cabeçalho executivo do painel. Os quatro
 	# valores já foram calculados por `projection_months_between`; expô-los à
 	# camada de apresentação não cria uma segunda regra de saldo ou de geração.
@@ -303,7 +309,7 @@ def dashboard_view(request):
 		"catLabels": [nome for nome, _total in categorias],
 		"catValues": [_to_float(total) for _nome, total in categorias],
 		"dailyDates": [regional.formatar_dia_mes(dia) for dia, _saldo in saldo_diario],
-		"dailyBal": [_to_float(saldo) for _dia, saldo in saldo_diario],
+		"dailyBal": [float(saldo) if saldo is not None else None for _dia, saldo in saldo_diario],
 		"chartPeriods": chart_periods,
 		"chartLabels": chart_labels,
 		"chartIncome": chart_income,

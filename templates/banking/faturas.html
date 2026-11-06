@@ -24,7 +24,7 @@
     <p class="help-text">{{ conta.owner.name }} / {{ conta.institution.institution_name }} · {% blocktrans trimmed with dia=conta.card_closing_day %}fecha dia {{ dia }}{% endblocktrans %} · {% blocktrans trimmed with dia=conta.card_due_day %}vence dia {{ dia }}{% endblocktrans %}
         · {% if conta.card_payment_account %}{% blocktrans trimmed with conta_pagamento=conta.card_payment_account.account_name %}paga por {{ conta_pagamento }}{% endblocktrans %}{% else %}{% trans "sem conta de pagamento padrão" %}{% endif %}
         {% if conta.card_estimated_spend is not None %}· {% blocktrans trimmed with valor=conta.card_estimated_spend|money:conta.currency %}gasto fixado em {{ valor }}/mês{% endblocktrans %}{% endif %}</p>
-    <p>{% trans "Saldo realizado hoje:" %} <strong class="{{ painel.saldo|amount_class }}">{% if painel.saldo %}{{ painel.saldo|money_signed:conta.currency }}{% else %}{% trans "zerado" %}{% endif %}</strong></p>
+    <p>{% trans "Saldo realizado hoje:" %} <strong class="{{ painel.saldo|amount_class }}">{% if painel.saldo is None %}{% trans "Indisponível" %}{% elif painel.saldo %}{{ painel.saldo|money_signed:conta.currency }}{% else %}{% trans "zerado" %}{% endif %}</strong></p>
 
     <h3>{% trans "Faturas importadas" %}</h3>
     {% if painel.importadas %}

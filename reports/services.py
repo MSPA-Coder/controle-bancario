@@ -925,9 +925,10 @@ def annual_planning_presentation(
                 if owner_index is not None:
                     description_bucket["owner_values"][owner_index] += signed_amount
 
-    def _month_values(values: list[Decimal]) -> list[dict]:
+    def _month_values(values: list[Decimal | None]) -> list[dict]:
         return [
-            {"value": value.quantize(MONEY_QUANT), "is_current": month == reference_month}
+            {"value": value.quantize(MONEY_QUANT) if value is not None else None,
+             "is_current": month == reference_month}
             for month, value in zip(months, values, strict=True)
         ]
 
@@ -1030,16 +1031,17 @@ def annual_planning_presentation(
     start_by_account = decimal_balances_before_by_account(
         selected_account_ids, reference_month, selected_view_mode
     )
+    start_available = balance_available_by_account(selected_account_ids, reference_month - timedelta(days=1))
     start_owner = [
-        sum(
-            (start_by_account.get(account_id, Decimal("0.00"))
-             for account_id in account_ids_by_owner.get(owner.id, [])),
-            Decimal("0.00"),
-        ).quantize(MONEY_QUANT)
+        available_total(
+            start_by_account.get(account_id, Decimal("0.00"))
+            if start_available.get(account_id, False) else None
+            for account_id in account_ids_by_owner.get(owner.id, [])
+        )
         for owner in selected_owners
     ]
     end_owner = [
-        (start + generation + transfer + market).quantize(MONEY_QUANT)
+        (start + generation + transfer + market).quantize(MONEY_QUANT) if start is not None else None
         for start, generation, transfer, market in zip(
             start_owner, generation_owner, transfer_owner_values, market_owner_values, strict=True
         )
@@ -1047,11 +1049,13 @@ def annual_planning_presentation(
     balance_rows = projection_months_between(selected_account_ids, first_month, months[-1], selected_view_mode)
     balance_by_month = {date.fromisoformat(row["month"] + "-01"): row for row in balance_rows}
     start_months = [
-        to_decimal(balance_by_month.get(month, {}).get("saldo_inicial", Decimal("0.00"))).quantize(MONEY_QUANT)
+        (to_decimal(balance_by_month.get(month, {}).get("saldo_inicial", Decimal("0.00"))).quantize(MONEY_QUANT)
+         if balance_by_month.get(month, {}).get("saldo_inicial") is not None else None)
         for month in months
     ]
     end_months = [
-        to_decimal(balance_by_month.get(month, {}).get("saldo", Decimal("0.00"))).quantize(MONEY_QUANT)
+        (to_decimal(balance_by_month.get(month, {}).get("saldo", Decimal("0.00"))).quantize(MONEY_QUANT)
+         if balance_by_month.get(month, {}).get("saldo") is not None else None)
         for month in months
     ]
     summary_rows = [
@@ -1192,6 +1196,23 @@ def decimal_base_balance(account_ids: Iterable[int]) -> Decimal:
     currency_of_accounts(ids)
     total = FinancialAccount.objects.filter(id__in=ids).aggregate(total=Sum("initial_balance"))["total"]
     return to_decimal(total).quantize(MONEY_QUANT)
+
+
+def balance_available_by_account(account_ids: Iterable[int], as_of_date: date) -> dict[int, bool]:
+    """Diz se cada saldo tem data-base válida na data inclusiva consultada."""
+    ids = list(dict.fromkeys(int(account_id) for account_id in account_ids if account_id))
+    if not ids:
+        return {}
+    anchors = FinancialAccount.objects.filter(id__in=ids).values_list("id", "initial_balance_date")
+    return {int(account_id): anchor_date <= as_of_date for account_id, anchor_date in anchors}
+
+
+def available_total(values: Iterable[Decimal | None]) -> Decimal | None:
+    """Soma saldos somente quando todos os componentes estiverem disponíveis."""
+    materialized = list(values)
+    if any(value is None for value in materialized):
+        return None
+    return sum(materialized, Decimal("0.00")).quantize(MONEY_QUANT)
 
 
 def decimal_balances_before_by_account(
@@ -1370,7 +1391,7 @@ def _entry_month_key(entry: CashFlowEntry, view_mode: str) -> date | None:
     return _month_key(entry.due_date)
 
 
-def _empty_month(month_start: date, saldo_inicial: Decimal) -> dict:
+def _empty_month(month_start: date, saldo_inicial: Decimal | None) -> dict:
     return {
         "month": month_start.strftime("%Y-%m"),
         "saldo_inicial": saldo_inicial,
@@ -1472,6 +1493,13 @@ def projection_months_between(
         if mk is not None:
             balance_entries_by_month[mk].append(entry)
     running_balance = decimal_balance_before(account_ids, first_month, VIEW_ALL)
+    account_ids = list(account_ids)
+    anchor_dates = dict(
+        FinancialAccount.objects.filter(id__in=account_ids).values_list("id", "initial_balance_date")
+    )
+
+    def total_available(as_of_date: date) -> bool:
+        return all(anchor_date <= as_of_date for anchor_date in anchor_dates.values())
 
     months: list[dict] = []
     month_start = first_month
@@ -1479,6 +1507,8 @@ def projection_months_between(
         saldo_atual = running_balance
 
         month = _empty_month(month_start, saldo_atual)
+        if not total_available(month_start - timedelta(days=1)):
+            month["saldo_inicial"] = None
         month_entries = entries_by_month.get(month_start, [])
         month["total_lancamentos"] = len(month_entries)
 
@@ -1499,9 +1529,16 @@ def projection_months_between(
         month["geracao_projetada"] = month["receita_projetada"] - month["despesa_projetada"]
         month["geracao_int"] = month["rec_int"] - month["desp_int"]
         month["geracao"] = month["receita"] - month["despesa"]
-        month["saldo"] = saldo_atual.quantize(MONEY_QUANT)
+        month["saldo"] = (
+            saldo_atual.quantize(MONEY_QUANT)
+            if total_available(add_months(month_start, 1) - timedelta(days=1))
+            else None
+        )
 
-        running_balance = month["saldo"]
+        # A aritmética continua no valor numérico original para que um mês cujo
+        # fim já passou por todas as datas-base retome o saldo vigente sem
+        # alterar valores a partir dessas datas.
+        running_balance = saldo_atual.quantize(MONEY_QUANT)
 
         months.append(month)
         month_start = add_months(month_start, 1)
@@ -1537,10 +1574,10 @@ class AccountCashReportRow:
     # tabela é outra conversa -- somar contas de moedas diferentes é assunto da
     # etapa de agregação, não desta.
     currency: str
-    start_balance: Decimal
+    start_balance: Decimal | None
     cash_generation: Decimal
     internal_transfers: Decimal
-    end_balance: Decimal
+    end_balance: Decimal | None
     # Variação de preço do que está aplicado: muda o saldo, mas não é geração de
     # caixa nem transferência (não há outra ponta).
     market_change: Decimal = Decimal("0.00")
@@ -1569,6 +1606,15 @@ def account_cash_report_rows(account_ids: list[int], start_month: date, end_mont
 
     start_by_account = decimal_period_start_balances_by_account(ordered_ids, first_month, first_month_end, view_mode)
     end_by_account = dict(decimal_period_start_balances_by_account(ordered_ids, last_month, final_end, view_mode))
+    anchor_by_account = {account.id: account.initial_balance_date for account in accounts}
+    start_available = {
+        account_id: anchor_by_account[account_id] <= first_month - timedelta(days=1)
+        for account_id in ordered_ids
+    }
+    end_available = {
+        account_id: anchor_by_account[account_id] <= final_end - timedelta(days=1)
+        for account_id in ordered_ids
+    }
     generation_by_account = {account_id: Decimal("0.00") for account_id in ordered_ids}
     transfers_by_account = {account_id: Decimal("0.00") for account_id in ordered_ids}
     market_by_account = {account_id: Decimal("0.00") for account_id in ordered_ids}
@@ -1597,10 +1643,12 @@ def account_cash_report_rows(account_ids: list[int], start_month: date, end_mont
             institution_name=account.institution.institution_name if account.institution else "-",
             account_name=account.account_name,
             currency=account.currency,
-            start_balance=start_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
+            start_balance=(start_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT)
+                           if start_available.get(account.id, False) else None),
             cash_generation=generation_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
             internal_transfers=transfers_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
-            end_balance=end_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
+            end_balance=(end_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT)
+                         if end_available.get(account.id, False) else None),
             market_change=market_by_account.get(account.id, Decimal("0.00")).quantize(MONEY_QUANT),
         )
         for account in accounts
@@ -1633,7 +1681,7 @@ class UpcomingMovementLine:
     is_internal: bool
     amount: Decimal
     signed_amount: Decimal
-    balance_after: Decimal
+    balance_after: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -1642,15 +1690,15 @@ class UpcomingMovementAccountRow:
     owner_name: str
     institution_name: str
     account_name: str
-    start_balance: Decimal
+    start_balance: Decimal | None
     income: Decimal
     expense: Decimal
     internal_income: Decimal
     internal_expense: Decimal
     net_movement: Decimal
-    end_balance: Decimal
-    minimum_balance: Decimal
-    minimum_balance_date: date
+    end_balance: Decimal | None
+    minimum_balance: Decimal | None
+    minimum_balance_date: date | None
     action_level: str
     action_label: str
     action_message: str
@@ -1663,15 +1711,15 @@ class UpcomingMovementAccountRow:
 
 @dataclass(frozen=True)
 class UpcomingMovementsSummary:
-    start_balance: Decimal
+    start_balance: Decimal | None
     income: Decimal
     expense: Decimal
     internal_income: Decimal
     internal_expense: Decimal
     net_movement: Decimal
-    end_balance: Decimal
-    minimum_balance: Decimal
-    minimum_balance_date: date
+    end_balance: Decimal | None
+    minimum_balance: Decimal | None
+    minimum_balance_date: date | None
     action_level: str
     action_label: str
     action_message: str
@@ -1780,15 +1828,21 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
     entries = _list_upcoming_movement_entries(candidate_ids, start_date, end_exclusive, mode)
 
     movement_account_ids = {entry.account_id for entry in entries}
-    accounts = [account for account in candidate_accounts if account.id in movement_account_ids]
-    start_by_account = decimal_period_start_balances_by_account([a.id for a in accounts], start_date, end_exclusive, mode)
+    # As linhas da tabela continuam restritas a contas com movimentos, mas os
+    # cartões de saldo resumem o escopo inteiro selecionado. Uma conta sem
+    # lançamentos também pode tornar o total indisponível pela data-base.
+    accounts_with_movements = [account for account in candidate_accounts if account.id in movement_account_ids]
+    start_by_account = decimal_period_start_balances_by_account(
+        [account.id for account in candidate_accounts], start_date, end_exclusive, mode
+    )
+    anchor_by_account = {account.id: account.initial_balance_date for account in candidate_accounts}
     running_by_account = dict(start_by_account)
     minimum_by_account = dict(start_by_account)
-    minimum_date_by_account = {account.id: start_date for account in accounts}
+    minimum_date_by_account = {account.id: start_date for account in candidate_accounts}
 
     totals_by_account = {
         account.id: {"income": Decimal("0.00"), "expense": Decimal("0.00"), "internal_income": Decimal("0.00"), "internal_expense": Decimal("0.00")}
-        for account in accounts
+        for account in accounts_with_movements
     }
     daily_delta: dict[date, Decimal] = defaultdict(lambda: Decimal("0.00"))
     lines: list[UpcomingMovementLine] = []
@@ -1832,36 +1886,47 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
                 is_internal=is_internal,
                 amount=amount,
                 signed_amount=signed_amount,
-                balance_after=running_by_account[entry.account_id],
+                balance_after=(
+                    running_by_account[entry.account_id]
+                    if movement_date >= anchor_by_account[entry.account_id] else None
+                ),
             )
         )
 
     account_rows = []
-    for account in accounts:
+    for account in accounts_with_movements:
         totals = totals_by_account[account.id]
         income = totals["income"].quantize(MONEY_QUANT)
         expense = totals["expense"].quantize(MONEY_QUANT)
         internal_income = totals["internal_income"].quantize(MONEY_QUANT)
         internal_expense = totals["internal_expense"].quantize(MONEY_QUANT)
         net_movement = (income - expense + internal_income - internal_expense).quantize(MONEY_QUANT)
-        action_level, action_label, action_message, action_amount = _account_action(
-            minimum_by_account[account.id], minimum_date_by_account[account.id], has_movements=True
-        )
+        balance_valid_for_period = anchor_by_account[account.id] <= start_date - timedelta(days=1)
+        if balance_valid_for_period:
+            action_level, action_label, action_message, action_amount = _account_action(
+                minimum_by_account[account.id], minimum_date_by_account[account.id], has_movements=True
+            )
+        else:
+            action_level, action_label = "neutral", gettext("Indisponível")
+            action_message, action_amount = gettext("O saldo não tem data-base disponível para todo o período."), Decimal("0.00")
         account_rows.append(
             UpcomingMovementAccountRow(
                 account_id=account.id,
                 owner_name=account.owner.name if account.owner else "-",
                 institution_name=account.institution.institution_name if account.institution else "-",
                 account_name=account.account_name,
-                start_balance=start_by_account[account.id].quantize(MONEY_QUANT),
+                start_balance=(start_by_account[account.id].quantize(MONEY_QUANT)
+                               if balance_valid_for_period else None),
                 income=income,
                 expense=expense,
                 internal_income=internal_income,
                 internal_expense=internal_expense,
                 net_movement=net_movement,
-                end_balance=running_by_account[account.id].quantize(MONEY_QUANT),
-                minimum_balance=minimum_by_account[account.id].quantize(MONEY_QUANT),
-                minimum_balance_date=minimum_date_by_account[account.id],
+                end_balance=(running_by_account[account.id].quantize(MONEY_QUANT)
+                             if anchor_by_account[account.id] <= end_date else None),
+                minimum_balance=(minimum_by_account[account.id].quantize(MONEY_QUANT)
+                                 if balance_valid_for_period else None),
+                minimum_balance_date=minimum_date_by_account[account.id] if balance_valid_for_period else None,
                 action_level=action_level,
                 action_label=action_label,
                 action_message=action_message,
@@ -1869,16 +1934,23 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
             )
         )
 
-    start_balance = sum((row.start_balance for row in account_rows), Decimal("0.00")).quantize(MONEY_QUANT)
+    start_balance = available_total(
+        start_by_account[account.id]
+        if anchor_by_account[account.id] <= start_date - timedelta(days=1) else None
+        for account in candidate_accounts
+    )
     income = sum((row.income for row in account_rows), Decimal("0.00")).quantize(MONEY_QUANT)
     expense = sum((row.expense for row in account_rows), Decimal("0.00")).quantize(MONEY_QUANT)
     internal_income = sum((row.internal_income for row in account_rows), Decimal("0.00")).quantize(MONEY_QUANT)
     internal_expense = sum((row.internal_expense for row in account_rows), Decimal("0.00")).quantize(MONEY_QUANT)
     net_movement = (income - expense + internal_income - internal_expense).quantize(MONEY_QUANT)
-    end_balance = sum((row.end_balance for row in account_rows), Decimal("0.00")).quantize(MONEY_QUANT)
+    end_balance = available_total(
+        running_by_account[account.id] if anchor_by_account[account.id] <= end_date else None
+        for account in candidate_accounts
+    )
 
-    running_total = start_balance
-    minimum_balance = start_balance
+    running_total = sum((start_by_account[account.id] for account in candidate_accounts), Decimal("0.00")).quantize(MONEY_QUANT)
+    minimum_balance = running_total
     minimum_balance_date = start_date
     for movement_date in sorted(daily_delta):
         running_total = (running_total + daily_delta[movement_date]).quantize(MONEY_QUANT)
@@ -1886,9 +1958,21 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
             minimum_balance = running_total
             minimum_balance_date = movement_date
 
-    action_level, action_label, action_message, action_amount = _summary_action(
-        account_rows, minimum_balance, minimum_balance_date, has_movements=bool(lines), has_candidate_accounts=bool(candidate_accounts)
+    minimum_available = all(
+        anchor_by_account[account.id] <= start_date - timedelta(days=1)
+        for account in candidate_accounts
     )
+    if minimum_available:
+        action_level, action_label, action_message, action_amount = _summary_action(
+            account_rows, minimum_balance, minimum_balance_date,
+            has_movements=bool(lines), has_candidate_accounts=bool(candidate_accounts)
+        )
+        minimum_balance = minimum_balance.quantize(MONEY_QUANT)
+    else:
+        minimum_balance = None
+        minimum_balance_date = None
+        action_level, action_label = "neutral", gettext("Indisponível")
+        action_message, action_amount = gettext("O saldo não tem data-base disponível para todo o período."), Decimal("0.00")
     summary = UpcomingMovementsSummary(
         start_balance=start_balance,
         income=income,
@@ -1897,7 +1981,7 @@ def upcoming_movements_report(account_ids: list[int], start_date: date, end_date
         internal_expense=internal_expense,
         net_movement=net_movement,
         end_balance=end_balance,
-        minimum_balance=minimum_balance.quantize(MONEY_QUANT),
+        minimum_balance=minimum_balance.quantize(MONEY_QUANT) if minimum_balance is not None else None,
         minimum_balance_date=minimum_balance_date,
         action_level=action_level,
         action_label=action_label,

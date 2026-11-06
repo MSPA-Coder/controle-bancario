@@ -39,8 +39,12 @@ def cenario(client):
     )
     banco = FinancialInstitution.objects.create(institution_name="Mercado Pago", institution_type="Banco")
     outro_banco = FinancialInstitution.objects.create(institution_name="C6", institution_type="Banco")
-    mp = FinancialAccount.objects.create(owner=titular, institution=banco, account_name="Conta 01")
-    c6 = FinancialAccount.objects.create(owner=titular, institution=outro_banco, account_name="Conta 02")
+    mp = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Conta 01", initial_balance_date=date(2026, 1, 1)
+    )
+    c6 = FinancialAccount.objects.create(
+        owner=titular, institution=outro_banco, account_name="Conta 02", initial_balance_date=date(2026, 1, 1)
+    )
     save_transfer_destination_accesses(user, {mp.id, c6.id})
     saude = CashFlowCategoryGroup.objects.create(group_name="Saúde", position=80)
     categorias = {

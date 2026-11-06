@@ -16,7 +16,7 @@ fechamento é o realizado no fim do mês, como no botão da tela.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -74,6 +74,10 @@ class Command(BaseCommand):
         divergencias: dict[tuple[int, int, int], object] = {}
         for lote in BankStatementImport.objects.exclude(statement_balance_date=None):
             conferencia = conferencia_de_saldo(lote)
+            if conferencia is None or conferencia.saldo_no_cb is None:
+                # Sem saldo calculável na data-base, a conferência não pode
+                # autorizar fechamento automático.
+                continue
             if conferencia.saldo_do_extrato != conferencia.saldo_no_cb:
                 divergencias[(lote.account_id, conferencia.data.year, conferencia.data.month)] = conferencia
 
@@ -84,6 +88,12 @@ class Command(BaseCommand):
                 chave = (conta.id, mes.year, mes.month)
                 celula = celulas[(conta.id, mes)]
                 if celula.estado != situacao.CONCILIADO or chave in fechados:
+                    continue
+                fim_do_mes = situacao.primeiro_dia_do_mes_seguinte(mes) - timedelta(days=1)
+                if fim_do_mes < conta.initial_balance_date:
+                    self.stdout.write(
+                        f"PULADO {mes:%m/%Y} {rotulo}: saldo indisponível antes da data do saldo inicial"
+                    )
                     continue
                 divergente = divergencias.get(chave)
                 if divergente is not None:

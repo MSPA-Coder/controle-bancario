@@ -38,7 +38,9 @@ def cenario():
     )
     owner = AccountOwner.objects.create(name="Titular")
     banco = FinancialInstitution.objects.create(institution_name="Banco dos testes", institution_type="Banco")
-    conta = FinancialAccount.objects.create(owner=owner, institution=banco, account_name="Corrente")
+    conta = FinancialAccount.objects.create(
+        owner=owner, institution=banco, account_name="Corrente", initial_balance_date=date(2026, 1, 1)
+    )
     UserOwnerAccess.objects.create(
         user=user, owner=owner, can_view=True, can_create=True, can_update=True, can_delete=True
     )

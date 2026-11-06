@@ -295,7 +295,9 @@ def test_projection_balance_is_canonical_regardless_of_status_filter():
     with (
         patch("reports.services.entries_for_period", side_effect=entries),
         patch("reports.services.decimal_balance_before", return_value=Decimal("0.00")),
+        patch("reports.services.FinancialAccount.objects.filter") as account_query,
     ):
+        account_query.return_value.values_list.return_value = [(1, date(2025, 12, 31))]
         projected = report_services.projection_months_between(
             [1], date(2026, 8, 1), date(2026, 9, 1), VIEW_PROJECTED
         )

@@ -66,7 +66,9 @@ def mundo(db):
         user=user, owner=titular, can_view=True, can_create=True, can_update=True, can_delete=True
     )
     banco = FinancialInstitution.objects.create(institution_name="C6", institution_type="Banco")
-    conta = FinancialAccount.objects.create(owner=titular, institution=banco, account_name="Cartão base")
+    conta = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Cartão base", initial_balance_date=date(2026, 1, 1)
+    )
     categorias = {
         nome: CashFlowCategory.objects.create(category_name=nome)
         for nome in ("Saúde", "Outros", "Lazer", "Impostos e Tributos", "Supermercado", "DBR")

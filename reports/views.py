@@ -186,11 +186,11 @@ def account_position_view(request):
         blocos.append({
             "currency": currency,
             "rows": do_bloco,
-            "total_start": sum((row.start_balance for row in do_bloco), Decimal("0.00")),
+            "total_start": services.available_total(row.start_balance for row in do_bloco),
             "total_generation": sum((row.cash_generation for row in do_bloco), Decimal("0.00")),
             "total_transfers": sum((row.internal_transfers for row in do_bloco), Decimal("0.00")),
             "total_market": sum((row.market_change for row in do_bloco), Decimal("0.00")),
-            "total_end": sum((row.end_balance for row in do_bloco), Decimal("0.00")),
+            "total_end": services.available_total(row.end_balance for row in do_bloco),
         })
 
     context = {

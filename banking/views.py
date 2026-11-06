@@ -115,6 +115,11 @@ def account_detail_view(request, account_id):
 
     bloco_realizado = blocos_realizados[0]
     bloco_previsto = blocos_previstos[0]
+    variacao = (
+        (bloco_previsto["saldo_final"] - bloco_realizado["saldo_final"]).quantize(Decimal("0.01"))
+        if bloco_previsto["saldo_final"] is not None and bloco_realizado["saldo_final"] is not None
+        else None
+    )
     ultimo_fechamento = (
         AccountMonthClose.objects.select_related("closed_by_user")
         .filter(account=account, active=True)
@@ -124,12 +129,10 @@ def account_detail_view(request, account_id):
     context = {
         "account": account,
         "reference_date": referencia,
-        "saldo_atual": saldo_da_conta(account, referencia),
+        "saldo_atual": saldo_da_conta(account, referencia) if referencia >= account.initial_balance_date else None,
         "realizado": bloco_realizado,
         "previsto": bloco_previsto,
-        "variacao_previsto_realizado": (
-            bloco_previsto["saldo_final"] - bloco_realizado["saldo_final"]
-        ).quantize(Decimal("0.01")),
+        "variacao_previsto_realizado": variacao,
         "ultimo_fechamento": ultimo_fechamento,
         "txs": txs,
         "selected_period": month_input_value(recorte.start_selected),

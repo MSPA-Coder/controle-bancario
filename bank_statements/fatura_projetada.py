@@ -415,7 +415,7 @@ class PainelDoCartao:
     """O que Faturas e projeção mostra de um cartão."""
 
     conta: FinancialAccount
-    saldo: Decimal
+    saldo: Decimal | None
     importadas: list  # [(BankStatementImport, Resumo)], da mais recente
     projetadas: list[FaturaProjetada]
 
@@ -444,7 +444,10 @@ def paineis(user, *, hoje: date | None = None, importadas: int = 6) -> list[Pain
         )
         resultado.append(PainelDoCartao(
             conta=conta,
-            saldo=decimal_balance_before([conta.id], hoje + timedelta(days=1), VIEW_REALIZED),
+            saldo=(
+                decimal_balance_before([conta.id], hoje + timedelta(days=1), VIEW_REALIZED)
+                if hoje >= conta.initial_balance_date else None
+            ),
             importadas=[(lote, resumir(lote.lines.all())) for lote in lotes],
             projetadas=planejar(conta, hoje=hoje),
         ))

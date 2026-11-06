@@ -17,9 +17,10 @@ cadastro. Quem recusa moeda inválida é o banco, pela
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django import template
+from django.utils.translation import gettext
 from sharedauth.formatting import moeda, moeda_com_sinal
 
 from core.domain.finance import BASE_CURRENCY, CURRENCY_OPTIONS, CURRENCY_SYMBOLS
@@ -33,7 +34,12 @@ register = template.Library()
 def _to_decimal(value) -> Decimal:
     if value is None:
         return Decimal("0.00")
-    return value if isinstance(value, Decimal) else Decimal(str(value))
+    try:
+        return value if isinstance(value, Decimal) else Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        # Filtros de CSS também recebem rótulos em contextos de template sem
+        # dados. Texto não representa valor positivo nem negativo.
+        return Decimal("0.00")
 
 
 def _regional(texto: str) -> str:
@@ -52,11 +58,15 @@ def neg(value) -> Decimal:
 
 @register.filter
 def money(value, currency=None) -> str:
+    if value is None:
+        return gettext("Indisponível")
     return _regional(moeda(_to_decimal(value), ocultar_zero=True, simbolo=_symbol(currency)))
 
 
 @register.filter
 def money_signed(value, currency=None) -> str:
+    if value is None:
+        return gettext("Indisponível")
     return _regional(moeda_com_sinal(_to_decimal(value), simbolo=_symbol(currency)))
 
 
@@ -65,6 +75,8 @@ def balance_signed(value, currency=None) -> str:
     """Saldo com sinal, mostrando o zero: saldo zero é informação, movimento zero não.
 
     O zero sai sem sinal (`moeda_com_sinal` o escreveria "- R$ 0,00")."""
+    if value is None:
+        return gettext("Indisponível")
     valor = _to_decimal(value)
     if not valor:
         return _regional(moeda(valor, simbolo=_symbol(currency)))

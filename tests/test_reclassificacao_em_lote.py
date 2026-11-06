@@ -74,7 +74,9 @@ def cenario():
         user=usuario, owner=titular, can_view=True, can_create=True, can_update=True, can_delete=True
     )
     banco = FinancialInstitution.objects.create(institution_name="Banco reclass", institution_type="Banco")
-    corrente = FinancialAccount.objects.create(owner=titular, institution=banco, account_name="Corrente")
+    corrente = FinancialAccount.objects.create(
+        owner=titular, institution=banco, account_name="Corrente", initial_balance_date=date(2026, 1, 1)
+    )
     cartao = FinancialAccount.objects.create(
         owner=titular, institution=banco, account_name="Cartão", account_kind=ACCOUNT_KIND_CREDIT_CARD,
         card_closing_day=19, card_due_day=25, initial_balance_date=date(2026, 1, 1),

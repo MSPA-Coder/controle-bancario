@@ -23,7 +23,7 @@
     <h2>{{ conta.account_name }}</h2>
     <p class="help-text">{{ conta.owner.name }} / {{ conta.institution.institution_name }}
         {% if conta.statement_identifier %}· {% blocktrans trimmed with identificador=conta.statement_identifier %}identificador do extrato {{ identificador }}{% endblocktrans %}{% endif %}</p>
-    <p>{% trans "Saldo realizado hoje:" %} <strong class="{{ painel.saldo|amount_class }}">{% if painel.saldo %}{{ painel.saldo|money_signed:conta.currency }}{% else %}{% trans "zerado" %}{% endif %}</strong></p>
+    <p>{% trans "Saldo realizado hoje:" %} <strong class="{{ painel.saldo|amount_class }}">{% if painel.saldo is None %}{% trans "Indisponível" %}{% elif painel.saldo %}{{ painel.saldo|money_signed:conta.currency }}{% else %}{% trans "zerado" %}{% endif %}</strong></p>
 
     <h3>{% trans "Extratos importados" %}</h3>
     {% if painel.extratos %}

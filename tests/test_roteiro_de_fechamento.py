@@ -294,6 +294,24 @@ def test_coleta_marca_o_tesouro_e_espera_a_remessa_que_falta(cenario):
 
 
 @pytest.mark.django_db
+def test_myprofit_pula_data_anterior_a_base_sem_gravar(cenario):
+    c = cenario
+    c.tesouro.initial_balance_date = date(2026, 10, 1)
+    c.tesouro.save(update_fields=["initial_balance_date"])
+    entradas_antes = CashFlowEntry.objects.count()
+    conferencias_antes = SaldoConferido.objects.count()
+
+    plano = myprofit.planejar(c.user, myprofit.ler(_pacote()))
+    por_data = {linha.data: linha for linha in plano.linhas if linha.conta.id == c.tesouro.id}
+
+    assert por_data[date(2026, 9, 30)].acao == "pular"
+    assert por_data[date(2026, 9, 30)].saldo_no_cb is None
+    assert "indisponível antes da data" in por_data[date(2026, 9, 30)].motivo
+    assert CashFlowEntry.objects.count() == entradas_antes
+    assert SaldoConferido.objects.count() == conferencias_antes
+
+
+@pytest.mark.django_db
 def test_posicao_em_dolar_medida_por_outra_fonte_nao_e_pendencia(cenario):
     """A renda fixa EUA e o caixa da Avenue valem pelo extrato da corretora: a
     conta existe no CB, só não vem do myProfit, e a coleta não mexe nela."""

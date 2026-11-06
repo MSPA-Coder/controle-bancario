@@ -42,13 +42,14 @@ class Command(BaseCommand):
         self.stdout.write(f"Pacote de {plano.pacote.de:%d/%m/%Y} a {plano.pacote.ate:%d/%m/%Y}"
                           + (" (já aplicado)" if plano.ja_aplicada else ""))
         for linha in plano.linhas:
+            saldo_cb = str(linha.saldo_no_cb) if linha.saldo_no_cb is not None else "Indisponível"
             if linha.acao == "lancar":
                 o_que = f"lança {linha.diferenca} ({linha.destino})" + (f", {linha.rendimento} de proventos" if linha.rendimento else "")
             elif linha.acao == "conferir":
                 o_que = "já bate"
             else:
                 o_que = f"pula: {linha.motivo}"
-            self.stdout.write(f"  {linha.titulo:40} {linha.data:%d/%m/%Y}  myProfit {linha.valor:>14}  CB {linha.saldo_no_cb:>14}  {o_que}")
+            self.stdout.write(f"  {linha.titulo:40} {linha.data:%d/%m/%Y}  myProfit {linha.valor:>14}  CB {saldo_cb:>14}  {o_que}")
         self.stdout.write(f"Remessas que conferem: {plano.remessas_conferidas}")
         for pendencia in plano.pendencias:
             self.stdout.write(f"  pendência: {pendencia}")

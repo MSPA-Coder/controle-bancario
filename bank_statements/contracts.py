@@ -40,12 +40,15 @@ class ConferenciaDeSaldo:
 
     saldo_do_extrato: Decimal
     data: date
-    saldo_no_cb: Decimal
+    saldo_no_cb: Decimal | None
 
     @property
-    def diferenca(self) -> Decimal:
+    def diferenca(self) -> Decimal | None:
+        if self.saldo_no_cb is None:
+            return None
         return (self.saldo_no_cb - self.saldo_do_extrato).quantize(Decimal("0.01"))
 
     @property
-    def bate(self) -> bool:
-        return self.diferenca == 0
+    def bate(self) -> bool | None:
+        diferenca = self.diferenca
+        return diferenca == 0 if diferenca is not None else None

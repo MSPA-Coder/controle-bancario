@@ -16,7 +16,7 @@ def main():
     from accounts.models import AccountOwner, AppUser
     from bank_statements.models import BankStatementImport, BankStatementLine
     from banking.models import FinancialAccount, FinancialInstitution
-    from transactions.models import CashFlowCategory, CashFlowEntry
+    from transactions.models import BankOperation, CashFlowCategory, CashFlowEntry
 
     call_command("migrate", interactive=False, verbosity=0)
     if AppUser.objects.exists():
@@ -35,7 +35,7 @@ def main():
     # Filtros em cascata: o titular browser tem conta em dois bancos, e um
     # segundo titular divide um deles. Saldo zero para não mexer nos totais.
     segundo_banco = FinancialInstitution.objects.create(institution_name="Banco dois", institution_type="Banco")
-    FinancialAccount.objects.create(owner=owner, institution=segundo_banco, account_name="Conta dois")
+    operations_account = FinancialAccount.objects.create(owner=owner, institution=segundo_banco, account_name="Conta dois")
     FinancialAccount.objects.create(
         owner=AccountOwner.objects.create(name="Titular dois"), institution=segundo_banco, account_name="Conta três",
     )
@@ -52,6 +52,33 @@ def main():
             import_batch=batch, account=card, statement_date=date.today().replace(day=1), description=description,
             amount=Decimal(amount), line_hash=f"browser-card-{index}",
         )
+    # Duas operações sintéticas permitem conferir expansão isolada sem afetar
+    # os períodos atuais usados pelos outros testes do navegador.
+    for operation_key, description, amount, count, year in (
+        ("browser-operation-expansion", "Compra de teste parcelada", "10.00", 3, 2030),
+        ("browser-operation-other", "Outra compra de teste", "7.00", 2, 2031),
+    ):
+        operation = BankOperation.objects.create(
+            operation_key=operation_key,
+            operation_type="installment",
+            description=description,
+            status="a_vencer",
+            installment_total=count,
+        )
+        for index in range(1, count + 1):
+            CashFlowEntry.objects.create(
+                account=operations_account,
+                category=category,
+                entry_type="despesa",
+                description=f"{description} parcela {index}",
+                entry_amount=Decimal(amount),
+                installments=count,
+                current_installment=index,
+                due_date=date(year, 1, index),
+                status="a_vencer",
+                operation_type="installment",
+                bank_operation=operation,
+            )
     call_command("runserver", "0.0.0.0:8000", use_reloader=False)
 
 

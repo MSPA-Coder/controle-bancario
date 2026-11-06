@@ -66,15 +66,15 @@ def cenario():
     )
     conta = FinancialAccount.objects.create(
         owner=owner, institution=banco, account_name="Conta corrente",
-        initial_balance=Decimal("1000.00"), currency="BRL",
+        initial_balance=Decimal("1000.00"), currency="BRL", initial_balance_date=date(2026, 1, 1),
     )
     veiculo = FinancialAccount.objects.create(
         owner=owner, institution=banco, account_name="CDB",
-        initial_balance=Decimal("0.00"), currency="BRL",
+        initial_balance=Decimal("0.00"), currency="BRL", initial_balance_date=date(2026, 1, 1),
     )
     em_dolar = FinancialAccount.objects.create(
         owner=owner, institution=corretora, account_name="Conta em dólar",
-        initial_balance=Decimal("0.00"), currency="USD",
+        initial_balance=Decimal("0.00"), currency="USD", initial_balance_date=date(2026, 1, 1),
     )
     save_transfer_destination_accesses(user, {veiculo.id, em_dolar.id})
 

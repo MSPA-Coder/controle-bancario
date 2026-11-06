@@ -61,7 +61,7 @@ class PainelDaConta:
     """O que Extratos importados mostra de uma conta."""
 
     conta: FinancialAccount
-    saldo: Decimal
+    saldo: Decimal | None
     extratos: list[ExtratoImportado]
 
 
@@ -86,15 +86,18 @@ def _conferencias(lotes: list[BankStatementImport]) -> dict[int, ConferenciaDeSa
         if lote.statement_balance is not None and lote.statement_balance_date is not None:
             por_data[lote.statement_balance_date].append(lote)
     conferencias = {}
+    account_ids = {lote.account_id for lotes_do_dia in por_data.values() for lote in lotes_do_dia}
+    anchors = dict(FinancialAccount.objects.filter(id__in=account_ids).values_list("id", "initial_balance_date"))
     for data, do_dia in por_data.items():
+        valid_ids = [lote.account_id for lote in do_dia if anchors.get(lote.account_id) is not None and anchors[lote.account_id] <= data]
         saldos = decimal_balances_before_by_account(
-            list({lote.account_id for lote in do_dia}), data + timedelta(days=1), VIEW_REALIZED
-        )
+            valid_ids, data + timedelta(days=1), VIEW_REALIZED
+        ) if valid_ids else {}
         for lote in do_dia:
             conferencias[lote.id] = ConferenciaDeSaldo(
                 saldo_do_extrato=lote.statement_balance,
                 data=data,
-                saldo_no_cb=saldos.get(lote.account_id, Decimal("0.00")),
+                saldo_no_cb=saldos.get(lote.account_id),
             )
     return conferencias
 
@@ -137,7 +140,7 @@ def paineis(user, *, hoje: date | None = None, extratos: int = 6) -> list[Painel
     return [
         PainelDaConta(
             conta=conta,
-            saldo=saldos.get(conta.id, Decimal("0.00")),
+            saldo=(saldos.get(conta.id, Decimal("0.00")) if hoje >= conta.initial_balance_date else None),
             extratos=[importados[lote.id] for lote in por_conta[conta.id]],
         )
         for conta in contas

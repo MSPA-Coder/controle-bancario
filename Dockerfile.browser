@@ -6,4 +6,4 @@ RUN --mount=type=secret,id=local_ca,required=false \
 COPY tests/browser/ ./
 USER pwuser
 ENV HOME=/tmp
-CMD ["node", "--test", "--test-concurrency=1", "critical.test.mjs"]
+CMD ["node", "--test", "--test-concurrency=1", "critical.test.mjs", "operations.test.mjs"]
