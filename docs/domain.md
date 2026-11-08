@@ -81,6 +81,12 @@ telas mostram. O número único convertido pertence a quem consolida.
 - Os status de lançamentos e operações são `a_vencer`, `vencidos` e
   `realizado`.
 - O saldo inicial cadastrado na conta integra a base dos cálculos.
+- Saldo é o real da conta na data: considera todos os seus movimentos na visão
+  escolhida. Filtro de categoria, tipo, data ou operação esconde linhas e não
+  muda o saldo, inclusive em linha fora do período selecionado (decidido em
+  08/11/2026). Em Projeções, o filtro de status também só esconde movimentos.
+- Período e status são de cada tela; só titular, instituição e conta acompanham
+  o menu (`core/contexto_global.py`).
 - A visão `realizado` considera movimentos realizados. A visão `vencidos`
   combina realizados e abertos vencidos. A visão `a_vencer` combina realizados
   e movimentos projetados futuros.

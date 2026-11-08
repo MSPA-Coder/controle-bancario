@@ -2313,6 +2313,32 @@ def resolve_statement_request(user, get_params, session, *, request=None) -> Sta
     )
 
 
+def _saldos_correntes(ids, inicio, fim_exclusivo, view_mode, saldo_inicial, anchors) -> tuple[dict, Decimal]:
+    """Saldo real após cada lançamento da janela, e o saldo ao fim dela.
+
+    Corre sobre todos os movimentos das contas: filtro de tela esconde linhas,
+    não muda o saldo da conta. Antes da data-base de alguma conta do bloco, o
+    saldo é desconhecido e sai como None.
+    """
+    from reports import services as report_services
+
+    corrente = saldo_inicial
+    saldos: dict[int, Decimal | None] = {}
+    for tx in report_services.entries_for_period(ids, inicio, fim_exclusivo, view_mode):
+        if view_mode in {STATUS_PROJECTED, STATUS_PENDING} and tx.status == STATUS_REALIZED:
+            continue
+        realized = tx.status == STATUS_REALIZED
+        val = report_services.to_decimal(
+            tx.realized_amount if realized and tx.realized_amount is not None else tx.entry_amount
+        )
+        corrente = corrente + val if tx.entry_type == ENTRY_TYPE_INCOME else corrente - val
+        movement_date = _entry_date_for_view_mode(tx, view_mode)
+        saldos[tx.id] = (
+            corrente.quantize(MONEY_QUANT) if all(anchor <= movement_date for anchor in anchors) else None
+        )
+    return saldos, corrente
+
+
 def compute_statement(scope: StatementScope, view_mode: str) -> tuple[list[CashFlowEntry], list[dict]]:
     """Linhas do extrato, com saldo corrente, e um bloco de totais por moeda.
 
@@ -2362,23 +2388,27 @@ def compute_statement(scope: StatementScope, view_mode: str) -> tuple[list[CashF
         anchors = [account_anchor_dates[account_id] for account_id in ids if account_id in account_anchor_dates]
         start_available = all(anchor <= start_selected - timedelta(days=1) for anchor in anchors)
         end_available = all(anchor <= scope.end_selected for anchor in anchors)
-        running_for_balance = saldo_inicial_do_bloco
-        for tx in report_services.entries_for_period(ids, start_selected, end_exclusive, view_mode):
-            if view_mode in {STATUS_PROJECTED, STATUS_PENDING} and tx.status == STATUS_REALIZED:
-                continue
-            realized = tx.status == STATUS_REALIZED
-            val = report_services.to_decimal(
-                tx.realized_amount if realized and tx.realized_amount is not None else tx.entry_amount
+        saldos_do_periodo, running_for_balance = _saldos_correntes(
+            ids, start_selected, end_exclusive, view_mode, saldo_inicial_do_bloco, anchors,
+        )
+        running_by_entry_id.update(saldos_do_periodo)
+        # O filtro por operação atravessa meses e traz linhas de fora do período.
+        # O saldo de cada linha é o real da conta naquela data, então essas linhas
+        # são calculadas numa janela que as inclui; os cartões seguem no período.
+        datas_fora = [
+            tx.display_date for tx in current_txs
+            if tx.account_id in ids and tx.display_date
+            and not start_selected <= tx.display_date < end_exclusive
+        ]
+        if datas_fora:
+            inicio_linhas = min(start_selected, *datas_fora)
+            fim_linhas = max(end_exclusive, max(datas_fora) + timedelta(days=1))
+            saldos_das_linhas, _ = _saldos_correntes(
+                ids, inicio_linhas, fim_linhas, view_mode,
+                report_services.decimal_period_start_balance(ids, inicio_linhas, fim_linhas, view_mode),
+                anchors,
             )
-            if tx.entry_type == ENTRY_TYPE_INCOME:
-                running_for_balance += val
-            else:
-                running_for_balance -= val
-            movement_date = _entry_date_for_view_mode(tx, view_mode)
-            running_by_entry_id[tx.id] = (
-                running_for_balance.quantize(MONEY_QUANT)
-                if all(anchor <= movement_date for anchor in anchors) else None
-            )
+            running_by_entry_id.update(saldos_das_linhas)
         blocos.append({
             "currency": currency,
             "account_ids": set(ids),

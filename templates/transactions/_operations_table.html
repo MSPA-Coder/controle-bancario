@@ -43,7 +43,7 @@
                     <td>{{ op.status_summary }}</td>
                     <td class="actions">
                         {% if operation_id == op.operation_id and show_entries %}
-                        <a class="btn btn-sm btn-icon btn-action-view" title="{% trans 'Ocultar detalhes' %}" href="?operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}&amp;page_size={{ page_size }}">{% icon 'eye' %}</a>
+                        <a class="btn btn-sm btn-icon btn-action-view" title="{% trans 'Ocultar detalhes' %}" href="?operation_id={{ operation_id }}&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}&amp;page_size={{ page_size }}">{% icon 'eye' %}</a>
                         {% else %}
                         <a class="btn btn-sm btn-icon btn-action-view" title="{% trans 'Ver operação' %}" href="?operation_id={{ op.operation_id }}&amp;show_entries=1&amp;operation_type={{ operation_type }}&amp;status={{ status }}&amp;start={{ start }}&amp;end={{ end }}&amp;page_size={{ page_size }}">{% icon 'eye' %}</a>
                         {% endif %}

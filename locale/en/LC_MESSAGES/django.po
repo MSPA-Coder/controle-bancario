@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 18:51-0300\n"
+"POT-Creation-Date: 2026-11-08 08:26-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -5112,8 +5112,8 @@ msgid "Recorte:"
 msgstr "Filter:"
 
 #: templates/components/_global_filters_banner.html
-msgid "Ele acompanha a navegação pelo menu."
-msgstr "It follows navigation through the menu."
+msgid "Ele acompanha o menu, exceto em Planejamento anual, Reclassificação e Fechamento, que têm seletor próprio."
+msgstr "It follows the menu, except in Annual planning, Reclassification and Closing, which have their own selector."
 
 #: templates/components/_global_filters_banner.html
 msgid "Limpar recorte"
@@ -5816,8 +5816,8 @@ msgid "Nenhum orçamento cadastrado para o filtro atual."
 msgstr "No budget set up for the current filter."
 
 #: templates/management/partials/management_content.html
-msgid "Lançamentos classificados recentemente"
-msgstr "Recently categorized entries"
+msgid "Lançamentos mais recentes das contas selecionadas (sem o filtro de mês)"
+msgstr "Latest entries of the selected accounts (month filter not applied)"
 
 #: templates/management/partials/management_content.html
 #: templates/settings/audit_log.html
@@ -6300,6 +6300,10 @@ msgstr "Planning by category, account holder, and month"
 #: templates/reports/partials/annual_planning_content.html
 msgid "Nenhum dado encontrado para os filtros selecionados."
 msgstr "No data found for the selected filters."
+
+#: templates/reports/partials/projections_content.html
+msgid "O saldo considera todos os movimentos da conta. O filtro de status só esconde linhas."
+msgstr "The balance includes all account movements. The status filter only hides rows."
 
 #: templates/reports/partials/projections_content.html
 msgid "Créditos internos"

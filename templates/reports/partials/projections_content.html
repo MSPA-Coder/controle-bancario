@@ -5,6 +5,7 @@ o caso de hoje -- há um bloco e nenhum cabeçalho: a tela sai idêntica ao que
 sempre foi. O cabeçalho só aparece quando existe mais de uma moeda, porque aí
 não dizer qual é seria pior do que repetir a tabela.
 {% endcomment %}
+<p class="text-muted">{% trans "O saldo considera todos os movimentos da conta. O filtro de status só esconde linhas." %}</p>
 {% for bloco in blocos %}
 {% if blocos|length > 1 %}<h3 class="currency-block-title">{{ bloco.currency|currency_label }}</h3>{% endif %}
 <div class="table-container">

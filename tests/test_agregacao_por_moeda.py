@@ -360,3 +360,31 @@ def test_orcamento_compara_so_o_realizado_em_moeda_base(titular, instituicao):
     total = actual_amount_for_budget(titular.id, categoria.id, 2026, 6)
 
     assert total == Decimal("100.00")
+
+
+def test_linha_fora_do_periodo_mostra_o_saldo_real_da_conta(usuario, titular, instituicao):
+    """O filtro por operação traz linha de outro mês: o saldo dela é o da conta."""
+    from transactions.models import BankOperation
+    from transactions.services import build_transactions_view_context
+
+    hoje = date.today()
+    proximo_mes = date(hoje.year + (hoje.month == 12), hoje.month % 12 + 1, 1)
+    conta = _conta(titular, instituicao, "Conta real", CURRENCY_BRL, saldo="100.00")
+    operacao = BankOperation.objects.create(
+        operation_key="saldo-fora-do-periodo", operation_type=OPERATION_SINGLE, responsible_user=usuario
+    )
+    for valor, vencimento in (("1.00", hoje), ("2.00", proximo_mes)):
+        lancamento = _lancamento_em(conta, valor, vencimento)
+        lancamento.bank_operation = operacao
+        lancamento.save(update_fields=["bank_operation"])
+
+    contexto = build_transactions_view_context(
+        usuario,
+        {"currency": "ALL", "year": str(hoje.year), "month": str(hoje.month),
+         "operation_id": operacao.operation_key},
+        {},
+    )
+
+    assert sorted(tx.running_balance for tx in contexto["txs"]) == [Decimal("97.00"), Decimal("99.00")]
+    # Os cartões seguem falando do período selecionado.
+    assert contexto["blocos"][0]["saldo_final"] == Decimal("99.00")
