@@ -52,6 +52,9 @@ test('Ver operação abre só as parcelas selecionadas e permite recolher', { ti
     await page.getByRole('link', { name: 'Ocultar detalhes' }).click();
     await page.waitForFunction(() => document.querySelectorAll('.details-row[data-ui="table-row"]').length === 0);
     assert.equal(await page.locator('.details-row:visible').count(), 0);
+    // Recolher fica na operação escolhida, em vez de abrir a lista global.
+    assert.match(page.url(), /operation_id=browser-operation-expansion/);
+    assert.equal(await page.locator('tr.details-row').count(), 1);
     await page.goto(`${base}/operations/`);
     assert.equal(await page.locator('tr.details-row').count(), 2);
     assert.equal(await page.locator('.details-row:visible').count(), 0);
