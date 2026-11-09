@@ -58,6 +58,7 @@ from core.domain.finance import (
     ENTRY_TYPE_INCOME,
     STATUS_REALIZED,
     VIEW_REALIZED,
+    assert_money_in_range,
 )
 from fechamento.fontes import fontes_das_contas
 from fechamento.models import (
@@ -191,9 +192,12 @@ def _decimal(valor, rotulo: str) -> Decimal:
     if "," in texto:
         texto = texto.replace(".", "").replace(",", ".")
     try:
-        return Decimal(texto)
+        valor_decimal = Decimal(texto)
     except InvalidOperation as exc:
         raise ValueError(gettext("%(rotulo)s inválido.") % {"rotulo": rotulo}) from exc
+    # "NaN" e "Infinity" convertem sem erro e iriam para SaldoConferido, que não tem trava no banco.
+    assert_money_in_range(valor_decimal)
+    return valor_decimal
 
 
 def pendencia_da_movimentacao(conta: FinancialAccount, data: date) -> str:

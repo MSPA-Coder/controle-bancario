@@ -26,6 +26,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils.translation import gettext, ngettext
 
 from core import regional
+from core.domain.finance import assert_money_in_range
 
 from .contracts import ParsedStatementLine as ParsedStatementLine
 from .document import StatementDocument
@@ -82,9 +83,11 @@ def read_statement_upload(file: UploadedFile, *, label: str) -> bytes:
 
 def _to_decimal(value: str) -> Decimal:
     try:
-        return Decimal(value)
+        amount = Decimal(value)
     except InvalidOperation as exc:
         raise ValueError(gettext("Valor numérico inválido: %(valor)r.") % {"valor": value}) from exc
+    assert_money_in_range(amount)
+    return amount
 
 
 # --- CSV genérico ---

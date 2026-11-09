@@ -238,3 +238,15 @@ def test_cartao_de_credito_nao_tem_saldo_para_atualizar(cenario):
     )
     with pytest.raises(ValueError, match="fatura"):
         _previa(user, cartao, "0")
+
+
+@pytest.mark.parametrize("informado", ["NaN", "nan", "sNaN", "Infinity", "-inf", "99999999999,00"])
+def test_saldo_nao_finito_ou_fora_do_limite_e_recusado_sem_gravar(cenario, informado):
+    """"NaN" e "Infinity" convertem para Decimal sem erro; sem a trava, a conferência
+    gravava o valor em SaldoConferido, que não tem restrição no banco."""
+    user, conta, _ = cenario
+    with pytest.raises(ValueError):
+        _previa(user, conta, informado)
+    with pytest.raises(ValueError):
+        saldo.conferir(user, account_id=conta.id, data=date(2026, 9, 30), saldo_informado=informado)
+    assert not SaldoConferido.objects.filter(account=conta).exists()

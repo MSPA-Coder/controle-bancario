@@ -1,6 +1,7 @@
 """Testes do parser OFX/OFC/QFX, inclusive formato XML malformado."""
 from __future__ import annotations
 
+import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from bank_statements.adapters import (
@@ -120,3 +121,10 @@ VERSION:102
 def test_extract_ofx_account_hint_is_none_without_bankacctfrom():
     content = "<OFX><BANKTRANLIST><STMTTRN><DTPOSTED>20260911<TRNAMT>-10.00<FITID>abc</STMTTRN></BANKTRANLIST></OFX>"
     assert extract_ofx_account_hint(content) is None
+
+
+def test_ofx_com_valor_nao_finito_e_recusado():
+    """TRNAMT "NaN" convertia sem erro e chegava à importação como valor."""
+    linha = _CDB_A.replace("-1580.00", "NaN")
+    with pytest.raises(ValueError):
+        OfxStatementAdapter().parse(_ofx_file("nan.ofx", linha), account_id=4)
