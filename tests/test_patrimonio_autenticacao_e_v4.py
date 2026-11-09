@@ -369,3 +369,90 @@ def test_v4_publica_a_carteira_de_cada_extrato_da_corretora(contas):
             {"date": "2026-04-30", "positions": []},
         ]
     }
+
+
+# --- O token do vínculo com o CRV -------------------------------------------
+
+TOKEN_DO_VINCULO = "token-do-vinculo-cb-crv-com-mais-de-trinta-e-dois-caracteres"
+
+
+def configurar_token_do_vinculo(monkeypatch, tmp_path, token: str = TOKEN_DO_VINCULO):
+    arquivo = tmp_path / "crv_link_token"
+    arquivo.write_text(token, encoding="utf-8")
+    monkeypatch.delenv(patrimonio.NOME_DO_SEGREDO_DO_VINCULO, raising=False)
+    monkeypatch.setenv(f"{patrimonio.NOME_DO_SEGREDO_DO_VINCULO}_FILE", str(arquivo))
+    return token
+
+
+def _snapshot_com(token: str):
+    return Client().get("/patrimonio/v4/snapshot", HTTP_AUTHORIZATION=f"Bearer {token}")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_token_do_vinculo_recebe_so_as_contas_de_corretora(contas, monkeypatch, tmp_path):
+    """O CRV precisa do caixa das corretoras, e não do gasto da casa."""
+    configurar_token_v4(monkeypatch, tmp_path)
+    vinculo = configurar_token_do_vinculo(monkeypatch, tmp_path)
+    CashFlowEntry.objects.create(
+        account=contas["em_dolar"], category=CashFlowCategory.objects.get(category_name="Salário"),
+        entry_type=ENTRY_TYPE_INCOME, description="Dividendo de CGC na Avenue", entry_amount=Decimal("3.00"),
+        due_date=date(2026, 3, 2), realized_date=date(2026, 3, 2), realized_amount=Decimal("3.00"),
+        status=STATUS_REALIZED,
+    )
+
+    corpo = _snapshot_com(vinculo).json()
+
+    por_recurso = {}
+    for item in corpo["items"]:
+        por_recurso.setdefault(item["resource"], []).append(item["payload"])
+    assert [conta["name"] for conta in por_recurso["account"]] == ["Conta em dólar"]
+    assert [entry["description"] for entry in por_recurso["cash_entry"]] == ["Dividendo de CGC na Avenue"]
+    assert [categoria["name"] for categoria in por_recurso["category"]] == ["Salário"]
+    assert "transfer" not in por_recurso
+    assert corpo["scope"] == {"institution_type": "Corretora", "resources": ["account", "category", "cash_entry"]}
+    assert corpo["coverage"]["account"] == {"state": "partial", "count": 1}
+    assert (corpo["coverage"]["cash_entry"]["state"], corpo["coverage"]["cash_entry"]["count"]) == ("partial", 1)
+    assert corpo["coverage"]["transfer"]["state"] == "partial"
+    assert corpo["capabilities"]["resources"]["transfer"] is False
+
+
+@pytest.mark.django_db(transaction=True)
+def test_token_de_integracao_continua_recebendo_a_foto_inteira(contas, monkeypatch, tmp_path):
+    integracao = configurar_token_v4(monkeypatch, tmp_path)
+    configurar_token_do_vinculo(monkeypatch, tmp_path)
+
+    corpo = _snapshot_com(integracao).json()
+
+    assert "scope" not in corpo
+    assert corpo["coverage"]["account"] == {"state": "complete", "count": 2}
+    assert len([item for item in corpo["items"] if item["resource"] == "cash_entry"]) == 2
+
+
+@pytest.mark.django_db(transaction=True)
+def test_token_do_vinculo_nao_abre_as_outras_rotas(contas, monkeypatch, tmp_path):
+    configurar_token_v4(monkeypatch, tmp_path)
+    vinculo = configurar_token_do_vinculo(monkeypatch, tmp_path)
+
+    assert _snapshot_com(vinculo).status_code == 200
+    for rota in ("/patrimonio/v4/metadata", "/patrimonio/v4/changes", ROTA):
+        assert Client().get(rota, HTTP_AUTHORIZATION=f"Bearer {vinculo}").status_code == 401, rota
+    assert _snapshot_com("outro-token-qualquer-com-mais-de-trinta-e-dois-chars").status_code == 401
+
+
+@pytest.mark.django_db(transaction=True)
+def test_dois_arquivos_com_o_mesmo_valor_valem_a_foto_inteira(contas, monkeypatch, tmp_path):
+    """Recortar a foto do consolidador faria o patrimônio dele encolher sem aviso."""
+    integracao = configurar_token_v4(monkeypatch, tmp_path)
+    configurar_token_do_vinculo(monkeypatch, tmp_path, integracao)
+
+    assert "scope" not in _snapshot_com(integracao).json()
+
+
+def test_o_vinculo_usa_o_token_proprio_e_cai_no_de_integracao_sem_ele(monkeypatch, tmp_path):
+    integracao = configurar_token_v4(monkeypatch, tmp_path)
+    monkeypatch.delenv(patrimonio.NOME_DO_SEGREDO_DO_VINCULO, raising=False)
+    monkeypatch.delenv(f"{patrimonio.NOME_DO_SEGREDO_DO_VINCULO}_FILE", raising=False)
+    assert patrimonio.token_do_vinculo() == integracao
+
+    vinculo = configurar_token_do_vinculo(monkeypatch, tmp_path)
+    assert patrimonio.token_do_vinculo() == vinculo

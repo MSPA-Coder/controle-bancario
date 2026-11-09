@@ -7,8 +7,9 @@ cada um com etapa, estado e texto. O roteiro só os mostra junto dos do CB; quem
 sabe se um negócio foi aplicado é o CRV.
 
 A chamada vai pela rede interna do VPS (`CRV_FECHAMENTO_URL`), com o token do
-vínculo CB <-> CRV: o `PATRIMONIO_INTEGRATION_TOKEN` daqui, que o CRV conhece
-como `cb_patrimonio_token`. Falha ou ausência de configuração não derrubam a
+vínculo CB <-> CRV: o `CRV_LINK_TOKEN` daqui (ou, sem ele, o
+`PATRIMONIO_INTEGRATION_TOKEN`), que o CRV conhece como `cb_patrimonio_token`.
+Falha ou ausência de configuração não derrubam a
 tela: viram um item "CRV indisponível", com o motivo, e o resto do roteiro segue.
 """
 from __future__ import annotations
@@ -24,7 +25,7 @@ from datetime import date
 
 from django.utils.translation import gettext
 
-from core.patrimonio import _token_configurado
+from core.patrimonio import token_do_vinculo
 
 CONTRATO = "crv-fechamento/1"
 TIMEOUT_SEGUNDOS = 4
@@ -70,7 +71,7 @@ def status(ate: date) -> StatusDoCrv:
     url = os.environ.get("CRV_FECHAMENTO_URL", "").strip()
     if not url:
         return StatusDoCrv(erro=gettext("CRV não configurado neste ambiente."))
-    token = _token_configurado()
+    token = token_do_vinculo()
     if not token:
         return StatusDoCrv(erro=gettext("Falta o token do vínculo com o CRV."))
     pedido = urllib.request.Request(

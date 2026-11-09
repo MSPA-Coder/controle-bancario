@@ -236,13 +236,22 @@ services:
     pids_limit: 256
     stop_grace_period: 45s
     logging: *service-logging
+    # Só o `web` recebe o token do vínculo com o CRV; o `migrate` não o usa.
+    secrets:
+      - django_secret_key
+      - postgres_app_password
+      - patrimonio_integration_token
+      - crv_link_token
     environment:
       <<: *app-environment
       PATRIMONIO_INTEGRATION_TOKEN_FILE: /run/secrets/patrimonio_integration_token
+      # Token do vínculo CB <-> CRV, à parte do token do consolidador: com ele o
+      # CRV lê só as contas de corretora, e é ele que o CB apresenta ao CRV. O
+      # CRV o guarda como `cb_patrimonio_token`.
+      CRV_LINK_TOKEN_FILE: /run/secrets/crv_link_token
       # Status do CRV no Roteiro de fechamento. Sem URL, o roteiro diz "CRV não
       # configurado" e o resto funciona. No VPS: http://crv-api:5003/fechamento/status
-      # (rede patrimonio-internal). A autenticação é o token acima: o CRV o
-      # conhece como `cb_patrimonio_token`, o segredo do vínculo CB <-> CRV.
+      # (rede patrimonio-internal), autenticado pelo token do vínculo.
       CRV_FECHAMENTO_URL: ${CRV_FECHAMENTO_URL:-}
       CRV_PUBLIC_URL: ${CRV_PUBLIC_URL:-}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
@@ -370,6 +379,8 @@ secrets:
     file: ${COMPOSE_SECRETS_DIRECTORY:-.secrets}/postgres_app_password
   patrimonio_integration_token:
     file: ${COMPOSE_SECRETS_DIRECTORY:-.secrets}/patrimonio_integration_token
+  crv_link_token:
+    file: ${COMPOSE_SECRETS_DIRECTORY:-.secrets}/crv_link_token
   quality_django_secret_key:
     file: ${COMPOSE_SECRETS_DIRECTORY:-.secrets}/quality_django_secret_key
   quality_postgres_password:

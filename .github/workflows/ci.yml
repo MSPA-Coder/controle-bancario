@@ -85,6 +85,7 @@ jobs:
           printf '%s\n' 'ci-runtime-postgres-password-not-for-production' > .secrets/postgres_password
           printf '%s\n' 'ci-runtime-postgres-app-password-not-for-production' > .secrets/postgres_app_password
           openssl rand -hex 32 > .secrets/patrimonio_integration_token
+          openssl rand -hex 32 > .secrets/crv_link_token
           printf '%s\n' 'ci-quality-django-secret-not-for-production' > .secrets/quality_django_secret_key
           printf '%s\n' 'ci-quality-postgres-password-not-for-production' > .secrets/quality_postgres_password
           openssl rand -hex 32 > .secrets/quality_patrimonio_integration_token

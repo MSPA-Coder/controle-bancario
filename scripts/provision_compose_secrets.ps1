@@ -94,6 +94,18 @@ if (($Force -or -not (Test-Path -LiteralPath $integrationTokenPath)) -and
 }
 $secretSources["patrimonio_integration_token"] = "PATRIMONIO_INTEGRATION_TOKEN"
 
+# O token do vínculo CB <-> CRV segue a mesma regra: gerado quando ausente, ou
+# lido de CRV_LINK_TOKEN se o arquivo de ambiente o fixar. Depois de gerado, é
+# copiado para o `.secrets/cb_patrimonio_token` do CRV.
+$linkTokenPath = Join-Path $secretsPath "crv_link_token"
+if (($Force -or -not (Test-Path -LiteralPath $linkTokenPath)) -and
+    (-not $settings.ContainsKey("CRV_LINK_TOKEN") -or [string]::IsNullOrWhiteSpace($settings["CRV_LINK_TOKEN"]))) {
+    $settings["CRV_LINK_TOKEN"] = New-UrlSafeSecret
+} elseif ($Force -or -not (Test-Path -LiteralPath $linkTokenPath)) {
+    Assert-SecretValue -Name "CRV_LINK_TOKEN" -Value $settings["CRV_LINK_TOKEN"]
+}
+$secretSources["crv_link_token"] = "CRV_LINK_TOKEN"
+
 # A senha do papel restrito da aplicação também não é escolhida por ninguém:
 # o `db-provision` a aplica ao papel a cada subida. Gerada quando ausente, ou
 # lida de POSTGRES_APP_PASSWORD se o arquivo de ambiente a fixar.

@@ -246,6 +246,7 @@ def test_segredos_chegam_por_arquivo_montado_e_nunca_pelo_ambiente():
         "DJANGO_SECRET_KEY",
         "PATRIMONIO_TOKEN",
         "PATRIMONIO_INTEGRATION_TOKEN",
+        "CRV_LINK_TOKEN",
     }
     problemas = []
     for nome, servico in _servicos().items():
@@ -296,6 +297,15 @@ def test_token_v4_tem_segredo_independente_no_web_e_no_quality():
         "/run/secrets/quality_patrimonio_integration_token"
     )
     assert "quality_patrimonio_integration_token" in quality["secrets"]
+
+
+def test_token_do_vinculo_com_o_crv_e_montado_so_no_web():
+    """À parte do token do consolidador, e fora do `migrate`, que não fala com o CRV."""
+    servicos = _servicos()
+
+    assert servicos["web"]["environment"]["CRV_LINK_TOKEN_FILE"] == "/run/secrets/crv_link_token"
+    com_o_segredo = [nome for nome, servico in servicos.items() if "crv_link_token" in (servico.get("secrets") or [])]
+    assert com_o_segredo == ["web"]
 
 
 def test_bootstrap_de_migrations_antecipa_o_web():

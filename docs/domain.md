@@ -758,7 +758,7 @@ dias e US$ 1,00 de distância.
 `GET /fechamento/status?ate=AAAA-MM-DD` (contrato `crv-fechamento/1`): itens já
 avaliados por ele, com etapa, estado e texto. O CB os lê pela rede interna do VPS
 (`CRV_FECHAMENTO_URL`), autenticado pelo token do vínculo CB ↔ CRV
-(`PATRIMONIO_INTEGRATION_TOKEN` daqui, que o CRV conhece como
+(`CRV_LINK_TOKEN` daqui, que o CRV conhece como
 `cb_patrimonio_token`), e monta os links com `CRV_PUBLIC_URL`. Sem configuração,
 ou com o CRV fora, o roteiro mostra um item "espera outro passo" com o motivo e o
 resto segue.

@@ -412,7 +412,7 @@ def test_crv_sem_configuracao_nao_derruba_o_roteiro(monkeypatch):
 def test_crv_responde_itens_validos_e_o_resto_e_descartado(monkeypatch):
     monkeypatch.setenv("CRV_FECHAMENTO_URL", "http://crv-api:5003/fechamento/status")
     monkeypatch.setenv("CRV_PUBLIC_URL", "https://renda.exemplo")
-    monkeypatch.setattr(crv, "_token_configurado", lambda: "x" * 40)
+    monkeypatch.setattr(crv, "token_do_vinculo", lambda: "x" * 40)
     corpo = {"contrato": "crv-fechamento/1", "itens": [
         {"chave": "b3", "etapa": "myprofit", "titulo": "Negócios da B3", "estado": "em_dia", "texto": "Aplicados até 16/10", "url": "/executions/reconciliation"},
         {"chave": "x", "etapa": "outra", "titulo": "?", "estado": "em_dia", "texto": "?"},

@@ -8,11 +8,12 @@ desenvolvimento local AMD64 continua usando seu próprio build Docker.
 ## Configuração e serviços
 
 O Compose exige os arquivos secretos `django_secret_key`, `postgres_password`,
-`postgres_app_password` e `patrimonio_integration_token`. Por padrão ficam em
-`.secrets/`; `COMPOSE_SECRETS_DIRECTORY` altera esse diretório. Todos são
-provisionados por `.\scripts\provision_compose_secrets.ps1`, que **gera** o
-`patrimonio_integration_token` e o `postgres_app_password` quando o arquivo de
-ambiente não os traz — são as credenciais daqui que ninguém precisa escolher.
+`postgres_app_password`, `patrimonio_integration_token` e `crv_link_token`. Por
+padrão ficam em `.secrets/`; `COMPOSE_SECRETS_DIRECTORY` altera esse diretório.
+Todos são provisionados por `.\scripts\provision_compose_secrets.ps1`, que
+**gera** o `patrimonio_integration_token`, o `crv_link_token` e o
+`postgres_app_password` quando o arquivo de ambiente não os traz — são as
+credenciais daqui que ninguém precisa escolher.
 O `patrimonio_token` antigo foi retirado em 03/10/2026; um arquivo
 `.secrets/patrimonio_token` que sobrar no servidor não é lido por nada e pode
 ser apagado.
@@ -232,6 +233,32 @@ Compose sem Swarm monta o segredo com as permissões do arquivo no host, e o
 contêiner lê como o usuário `app`, que não é o `ubuntu`. Um token que só o
 `ubuntu` lê sobe sem erro nenhum e deixa a rota respondendo **503** — a falha
 aparece longe da causa.
+
+### Token do vínculo com o CRV
+
+`crv_link_token` (`CRV_LINK_TOKEN`) é o segredo que o CB e o Controle de Renda
+Variável trocam, à parte do token do consolidador. Com ele o CRV lê só
+`/patrimonio/v4/snapshot`, recortado às contas de instituição do tipo Corretora
+(a resposta traz `scope` e cobertura `partial`; as outras rotas respondem 401), e
+é ele que o CB apresenta ao pedir `GET /fechamento/status` ao CRV. O CRV guarda o
+mesmo valor em `.secrets/cb_patrimonio_token`. Assim o CRV não recebe o gasto da
+casa, e trocar um dos tokens não derruba a outra integração.
+
+**O arquivo precisa existir no servidor antes do deploy que o declara** (o
+Compose recusa subir sem ele). Crie-o, copie o valor para o CRV e reinicie o
+`web` do CRV, na mesma janela: entre um passo e outro o Roteiro de fechamento
+mostra "o CRV recusou a consulta".
+
+```bash
+cd ~/apps/controle-bancario
+python3 -c "import secrets; print(secrets.token_urlsafe(48))" > .secrets/crv_link_token
+sudo chown --reference=.secrets/django_secret_key .secrets/crv_link_token
+sudo chmod --reference=.secrets/django_secret_key .secrets/crv_link_token
+sudo cat .secrets/crv_link_token > ~/apps/controle-renda-variavel/.secrets/cb_patrimonio_token
+```
+
+Um `crv_link_token` vazio ou curto demais vale como ausente: o vínculo volta a
+usar o token de integração, e o CRV, que já tem o valor novo, recebe 401.
 
 ## Resumo publicado para o consolidador
 

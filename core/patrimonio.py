@@ -101,6 +101,14 @@ SISTEMA = "controle-bancario"
 #: atende. Um segredo gerado no arranque valeria até o próximo reinício e daria
 #: a impressão de que a integração está configurada quando não está.
 NOME_DO_SEGREDO_V4 = "PATRIMONIO_INTEGRATION_TOKEN"
+#: O token do vínculo CB <-> CRV, à parte do token do consolidador. Com ele o
+#: CRV lê só o snapshot, e só das contas de corretora (`RECORTE_DO_VINCULO`), e é
+#: ele que o CB apresenta ao pedir o status de fechamento do CRV. Assim o CRV não
+#: recebe o gasto da casa, de que não precisa, e trocar um token não derruba a
+#: outra integração. Opcional: sem ele, o vínculo segue pelo token de integração.
+NOME_DO_SEGREDO_DO_VINCULO = "CRV_LINK_TOKEN"
+TIPO_DE_INSTITUICAO_DO_VINCULO = "Corretora"
+RECORTE_DO_VINCULO = {"institution_type": TIPO_DE_INSTITUICAO_DO_VINCULO, "resources": ["account", "category", "cash_entry"]}
 COMPRIMENTO_MINIMO_DO_TOKEN = 32
 MONEY_QUANT = Decimal("0.01")
 V4_MAX_CHANGE_LIMIT = 500
@@ -190,6 +198,31 @@ def _autorizacao(request, contrato: str):
         logger.warning("Contrato patrimonial %s recusado: token ausente ou inválido.", contrato)
         return JsonResponse({"erro": "não autorizado"}, status=401)
     return None
+
+
+def token_do_vinculo() -> str | None:
+    """O token que o CB e o CRV trocam: o do vínculo, ou o de integração sem ele."""
+    return _token_configurado(NOME_DO_SEGREDO_DO_VINCULO) or _token_configurado()
+
+
+def _autorizacao_do_snapshot(request):
+    """`(erro, recortado)`: o snapshot aceita os dois tokens, e o do vínculo recorta.
+
+    O token de integração é conferido primeiro: se os dois arquivos trouxerem o
+    mesmo valor, vale a foto inteira, e não um recorte que o consolidador leria
+    como patrimônio que sumiu.
+    """
+    integracao = _token_configurado()
+    vinculo = _token_configurado(NOME_DO_SEGREDO_DO_VINCULO)
+    if not integracao and not vinculo:
+        return JsonResponse({"erro": "integração de patrimônio não configurada neste servidor"}, status=503), False
+    recebido = _token_da_requisicao(request)
+    if recebido and integracao and secrets.compare_digest(recebido, integracao):
+        return None, False
+    if recebido and vinculo and secrets.compare_digest(recebido, vinculo):
+        return None, True
+    logger.warning("Contrato patrimonial v4 recusado: token ausente ou inválido.")
+    return JsonResponse({"erro": "não autorizado"}, status=401), False
 
 
 
@@ -609,8 +642,14 @@ def changes_v4_view(request):
 
 @require_GET
 def snapshot_v4_view(request):
-    """Foto consistente dos recursos bancários já persistidos no CB."""
-    erro = _autorizacao(request, "v4")
+    """Foto consistente dos recursos bancários já persistidos no CB.
+
+    Com o token do vínculo CB <-> CRV a foto é recortada: só as contas de
+    corretora e os lançamentos delas, todas as categorias (são só nomes, e o CRV
+    confere por eles se a de liquidação ainda existe) e nenhuma transferência. A
+    resposta diz o recorte em `scope` e marca a cobertura como parcial.
+    """
+    erro, recortado = _autorizacao_do_snapshot(request)
     if erro:
         return erro
     referencia = timezone.localdate()
@@ -620,6 +659,8 @@ def snapshot_v4_view(request):
         watermark = _cursor_v4(_watermark_v4())
         metadata = _metadata_v4(referencia, watermark)
         contas = list(FinancialAccount.objects.select_related("owner", "institution").order_by("id"))
+        if recortado:
+            contas = [c for c in contas if c.institution.institution_type == TIPO_DE_INSTITUICAO_DO_VINCULO]
         contas_ativas = [conta.id for conta in contas if conta.initial_balance_date <= referencia]
         saldos = decimal_balances_before_by_account(
             contas_ativas, referencia + timedelta(days=1), VIEW_REALIZED
@@ -627,11 +668,11 @@ def snapshot_v4_view(request):
         coberturas = coberturas_de_extrato([conta.id for conta in contas])
         carteiras = carteiras_de_extrato([conta.id for conta in contas])
         categorias = list(CashFlowCategory.objects.select_related("group").order_by("id"))
-        lancamentos = list(
-            CashFlowEntry.objects.select_related("account", "category", "investment_detail")
-            .order_by("id")
-        )
-        operacoes = list(
+        consulta = CashFlowEntry.objects.select_related("account", "category", "investment_detail").order_by("id")
+        if recortado:
+            consulta = consulta.filter(account_id__in=[conta.id for conta in contas])
+        lancamentos = list(consulta)
+        operacoes = [] if recortado else list(
             BankOperation.objects.filter(operation_type=OPERATION_INTERNAL_TRANSFER)
             .prefetch_related(Prefetch("entries", queryset=CashFlowEntry.objects.select_related("account")))
             .order_by("id")
@@ -681,7 +722,27 @@ def snapshot_v4_view(request):
             "snapshot_as_of": referencia.isoformat(),
             "items": items,
         }
+        if recortado:
+            payload.update(_recorte_do_vinculo(metadata, contas, lancamentos))
     return _resposta_v3(payload)
+
+
+def _recorte_do_vinculo(metadata: dict, contas: list, lancamentos: list) -> dict:
+    """O que muda no envelope quando a foto é a do vínculo: recorte dito, cobertura parcial."""
+    vencimentos = [entry.due_date for entry in lancamentos]
+    cobertura = dict(metadata["coverage"])
+    cobertura["account"] = {"state": "partial", "count": len(contas)}
+    cobertura["cash_entry"] = {
+        **cobertura["cash_entry"],
+        "state": "partial",
+        "count": len(lancamentos),
+        "due_date_from": min(vencimentos).isoformat() if vencimentos else None,
+        "due_date_through": max(vencimentos).isoformat() if vencimentos else None,
+    }
+    cobertura["transfer"] = {**cobertura["transfer"], "state": "partial", "note": "Transferências não entram no recorte do vínculo."}
+    capacidades = dict(metadata["capabilities"])
+    capacidades["resources"] = {**capacidades["resources"], "transfer": False}
+    return {"scope": RECORTE_DO_VINCULO, "coverage": cobertura, "capabilities": capacidades}
 
 
 # ---------------------------------------------------------------------------

@@ -335,6 +335,12 @@ Wealthfolio) por duas rotas somente leitura, sem sessão e sem escopo por titula
 |---|---|---|
 | `/patrimonio/v4/metadata`, `/snapshot`, `/changes` | `PATRIMONIO_INTEGRATION_TOKEN` | o contrato do consolidador (abaixo) |
 | `/patrimonio/v3/projection` | `PATRIMONIO_INTEGRATION_TOKEN` | a projeção de caixa, reservada para a fase de projeção consolidada |
+| `/patrimonio/v4/snapshot` | `CRV_LINK_TOKEN` | o mesmo snapshot, **recortado** para o Controle de Renda Variável: só contas de corretora e os lançamentos delas, todas as categorias, nenhuma transferência; a resposta declara `scope` e cobertura `partial` |
+
+O token do vínculo com o CRV é à parte de propósito: o CRV só precisa do caixa
+das corretoras, e com o token do consolidador ele recebia todo lançamento da
+casa. É também o token que o CB apresenta ao CRV no Roteiro de fechamento
+(`core.patrimonio.token_do_vinculo`; sem ele configurado, vale o de integração).
 
 Todas as rotas respondem só a `GET`, e o nginx fecha `/patrimonio/` para fora.
 
