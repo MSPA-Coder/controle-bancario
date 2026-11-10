@@ -1,0 +1,3 @@
+# Passos de scripts/quality.ps1 (formato no cabecalho do script).
+prefixo: --env-file .env.docker -f compose.yaml --profile quality
+run --build --rm quality

@@ -151,7 +151,7 @@ consultando os eventos `app_user_transfer_destination_access` e
 
 ## VPS
 
-A implantação atual usa Ubuntu 24.04 em VPS Oracle. O Nginx publica
+A implantação atual usa Ubuntu 26.04 em VPS Oracle. O Nginx publica
 `https://bancario-mspa.duckdns.org`; a aplicação e o PostgreSQL permanecem em
 loopback nas portas `5201` e `5202`. O vhost versionado e o instalador do nginx
 estão no repositório externo `../../_manutencao/vps/nginx/` (arquivo

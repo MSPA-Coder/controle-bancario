@@ -1,43 +1,88 @@
-# Executa o portão de qualidade sem permitir que duas execuções do mesmo
-# checkout disputem o PostgreSQL efêmero `postgres-teste`. Uma segunda chamada
-# aguarda a primeira terminar antes de o Compose poder recriar qualquer serviço.
+# Verificação completa do repositório, num comando só e uma de cada vez.
 #
-#   .\scripts\quality.ps1
-#   .\scripts\quality.ps1 run --build --rm quality mypy
+# Cópia de _manutencao/compartilhados/quality.ps1: mude lá e rode
+# `python compartilhados/sincronizar.py --aplicar`. O que muda de um
+# repositório para outro fica em `scripts/quality.passos`, uma linha por passo:
+#
+#   run --build --rm quality     argumentos de `docker compose`
+#   prefixo: --profile quality   argumentos postos antes de todo passo do Compose
+#   !docker run --rm ...         comando inteiro, como está; `{raiz}` vira a
+#                                pasta do checkout
+#   # comentário                 ignorado, como a linha vazia
+#
+# Os passos rodam em ordem e o primeiro que falha encerra. Não há aspas: cada
+# espaço separa um argumento.
+#
+#   .\scripts\quality.ps1                         todos os passos
+#   .\scripts\quality.ps1 run --rm quality mypy   um comando só, com o prefixo
+#
+# O mutex é do host e leva o nome da pasta do checkout: uma segunda chamada
+# espera a primeira, em vez de recriar o ambiente de teste debaixo dela. Por
+# isso a rodada parcial também passa por aqui.
+#
+# As mensagens vão sem acento de propósito: o PowerShell 5.1 lê este arquivo
+# (UTF-8 sem BOM) como ANSI e as mostraria trocadas.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ComposeArguments = @($args)
-if ($ComposeArguments.Count -eq 0) {
-    $ComposeArguments = @('run', '--build', '--rm', 'quality')
+$pedido = @($args)
+$root = Split-Path -Parent $PSScriptRoot
+$arquivo = Join-Path $PSScriptRoot 'quality.passos'
+$linhas = @(Get-Content -LiteralPath $arquivo -Encoding UTF8 |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -and -not $_.StartsWith('#') })
+
+$prefixo = @()
+$comandos = New-Object System.Collections.ArrayList
+foreach ($linha in $linhas) {
+    if ($linha.StartsWith('prefixo:')) {
+        $prefixo = @($linha.Substring(8).Trim() -split '\s+' | Where-Object { $_ })
+    } elseif ($linha.StartsWith('!')) {
+        $partes = @($linha.Substring(1).Trim() -split '\s+' | ForEach-Object { $_.Replace('{raiz}', $root) })
+        [void]$comandos.Add($partes)
+    } else {
+        [void]$comandos.Add(@('docker', 'compose') + $prefixo + @($linha -split '\s+'))
+    }
+}
+if ($pedido.Count -gt 0) {
+    $comandos.Clear()
+    [void]$comandos.Add(@('docker', 'compose') + $prefixo + $pedido)
+}
+if ($comandos.Count -eq 0) {
+    throw "Nenhum passo em $arquivo."
 }
 
-$root = Split-Path -Parent $PSScriptRoot
-# O mutex pertence ao host, não ao contêiner: ele cobre também o intervalo em
-# que o Compose prepara ou recria `postgres-teste`, antes de o runner existir.
-$mutex = New-Object System.Threading.Mutex($false, 'Global\ControleBancario.Quality')
+$mutex = New-Object System.Threading.Mutex($false, "Global\$(Split-Path -Leaf $root).Quality")
 $acquired = $false
 $exitCode = 1
 
 try {
-    Write-Host 'Aguardando exclusão mútua da suíte quality, se necessário...'
+    Write-Host 'Aguardando outra chamada deste script terminar, se houver...'
     try {
         $acquired = $mutex.WaitOne([TimeSpan]::FromMinutes(45))
     } catch [System.Threading.AbandonedMutexException] {
         # A execução anterior caiu; o Windows já concedeu o mutex a esta.
         $acquired = $true
-        Write-Warning 'A execução quality anterior terminou inesperadamente; retomando a trava.'
+        Write-Warning 'A chamada anterior caiu no meio; retomando a trava.'
     }
-
     if (-not $acquired) {
-        throw 'A suíte quality ficou ocupada por mais de 45 minutos. Verifique a execução anterior antes de tentar novamente.'
+        throw 'Ocupado por mais de 45 minutos. Confira a chamada anterior antes de tentar de novo.'
     }
 
     Push-Location $root
     try {
-        & docker compose --env-file .env.docker -f compose.yaml --profile quality @ComposeArguments
-        $exitCode = $LASTEXITCODE
+        foreach ($comando in $comandos) {
+            $programa = $comando[0]
+            $resto = @($comando | Select-Object -Skip 1)
+            Write-Host "==> $($comando -join ' ')"
+            & $programa @resto
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -ne 0) {
+                Write-Host "Passo reprovado (exit $exitCode): $($comando -join ' ')"
+                break
+            }
+        }
     } finally {
         Pop-Location
     }
