@@ -118,10 +118,29 @@ def _mesmo_valor(value) -> Q:
     return Q(entry_amount=value) | Q(status=STATUS_REALIZED, realized_amount=value)
 
 
+# Virada do mês: a conta que vence no fim de um mês e é paga no começo do
+# seguinte (o vencimento caiu no sábado, 31; o banco debitou na segunda, 2), ou
+# o contrário. O lançamento em aberto com vencimento a até estes dias da linha
+# é candidato mesmo estando no mês vizinho. Sem isso a linha ficava sem
+# candidato e virava um lançamento novo, ao lado do previsto ainda em aberto.
+JANELA_DA_VIRADA = timedelta(days=7)
+
+
+def _na_virada(entry: CashFlowEntry, line: BankStatementLine) -> bool:
+    """Se `entry`, de outro mês, é candidato de `line` pela virada do mês."""
+    return entry.status != STATUS_REALIZED and abs(entry.due_date - line.statement_date) <= JANELA_DA_VIRADA
+
+
+def _e_candidato_pela_data(entry: CashFlowEntry, line: BankStatementLine) -> bool:
+    mesmo_mes = (entry.due_date.year, entry.due_date.month) == (line.statement_date.year, line.statement_date.month)
+    return mesmo_mes or _na_virada(entry, line)
+
+
 def candidate_entries_for_line(line: BankStatementLine, limit: int = _CANDIDATE_LIMIT):
     """Lançamentos candidatos a conciliar com `line`: mesma conta, mesmo
     sinal (receita se valor > 0, despesa se < 0), mesmo valor absoluto, com
-    vencimento no mês do extrato.
+    vencimento no mês do extrato -- ou, se ainda em aberto, a poucos dias da
+    linha no mês vizinho (ver `JANELA_DA_VIRADA`).
 
     O teto é o mês inteiro, não a data do extrato: um recebimento alguns dias
     antes do vencimento (ex. aluguel que cai dia 11 com vencimento dia 12) é
@@ -138,13 +157,17 @@ def candidate_entries_for_line(line: BankStatementLine, limit: int = _CANDIDATE_
     entry_type = ENTRY_TYPE_INCOME if line.amount > 0 else ENTRY_TYPE_EXPENSE
     month_start = line.statement_date.replace(day=1)
     month_end_exclusive = add_months(month_start, 1)
+    no_mes = Q(due_date__gte=month_start, due_date__lt=month_end_exclusive)
+    na_virada = ~Q(status=STATUS_REALIZED) & Q(
+        due_date__gte=line.statement_date - JANELA_DA_VIRADA,
+        due_date__lte=line.statement_date + JANELA_DA_VIRADA,
+    )
     return (
         CashFlowEntry.objects.filter(
             _mesmo_valor(value),
+            no_mes | na_virada,
             account_id=line.account_id,
             entry_type=entry_type,
-            due_date__gte=month_start,
-            due_date__lt=month_end_exclusive,
         )
         .exclude(statement_matches__status=LINE_STATUS_RECONCILED)
         .order_by("-due_date", "-id")[:limit]
@@ -178,16 +201,52 @@ def linha_parecida_ja_conciliada(line: BankStatementLine) -> BankStatementLine |
     )
 
 
+def linha_igual_de_importacao_anterior(line: BankStatementLine) -> BankStatementLine | None:
+    """Outra linha da mesma conta, data e valor, ainda pendente, de uma importação anterior.
+
+    É o mesmo sinal de `linha_parecida_ja_conciliada`, antes de a primeira linha
+    ser conciliada: o mesmo período importado em dois arquivos (o PDF e depois o
+    OFX) deixa as duas pendentes, com textos diferentes, e criar as duas lançaria
+    tudo em dobro. Só a linha da importação mais nova é apontada; a mais antiga
+    segue o plano normal. Linha de texto idêntico não entra: se o hash não a
+    barrou, ela é outra ocorrência do mesmo movimento (dois Pix iguais no dia,
+    ver `adapters.numerar_repeticoes`), não a mesma."""
+    return (
+        BankStatementLine.objects.filter(
+            account_id=line.account_id,
+            statement_date=line.statement_date,
+            amount=line.amount,
+            status=LINE_STATUS_NEW,
+            import_batch_id__lt=line.import_batch_id,
+        )
+        .exclude(description__iexact=line.description.strip())
+        .select_related("import_batch")
+        .order_by("id")
+        .first()
+    )
+
+
 def desempatar_pelo_dia(line: BankStatementLine, candidates: list[CashFlowEntry]) -> list[CashFlowEntry]:
     """Entre vários candidatos, o único na data da linha (realizado nela, ou
     vencendo nela se ainda aberto), se houver; senão, todos.
 
     Duas compras iguais no mesmo mês (o mesmo Pix de 5.420,00 nos dias 19 e 23)
-    empatavam por mês e valor, e as duas linhas ficavam para escolha manual."""
+    empatavam por mês e valor, e as duas linhas ficavam para escolha manual.
+
+    Na virada do mês a recorrência empata sempre: o pagamento de 02/11 vê o
+    vencimento de 31/10, ainda aberto, e o de 30/11, já projetado. Vale o do mês
+    vizinho quando ele é o único em aberto a poucos dias da linha (ver
+    `JANELA_DA_VIRADA`); dois por perto continuam para escolha manual."""
     if len(candidates) < 2:
         return candidates
     mesmo_dia = [entry for entry in candidates if (entry.realized_date or entry.due_date) == line.statement_date]
-    return mesmo_dia if len(mesmo_dia) == 1 else candidates
+    if len(mesmo_dia) == 1:
+        return mesmo_dia
+    por_perto = [entry for entry in candidates if _na_virada(entry, line)]
+    mes_da_linha = (line.statement_date.year, line.statement_date.month)
+    if len(por_perto) == 1 and (por_perto[0].due_date.year, por_perto[0].due_date.month) != mes_da_linha:
+        return por_perto
+    return candidates
 
 
 def candidate_entries_for_lines(
@@ -226,18 +285,15 @@ def candidate_entries_for_lines(
                 _mesmo_valor(value),
                 account_id=account_id,
                 entry_type=entry_type,
-                due_date__gte=earliest_month_start,
-                due_date__lt=latest_month_end_exclusive,
+                # A folga cobre a virada do mês das linhas das pontas.
+                due_date__gte=earliest_month_start - JANELA_DA_VIRADA,
+                due_date__lt=latest_month_end_exclusive + JANELA_DA_VIRADA,
             )
             .exclude(statement_matches__status=LINE_STATUS_RECONCILED)
             .order_by("-due_date", "-id")
         )
         for gl in group_lines:
-            month_start = gl.statement_date.replace(day=1)
-            month_end_exclusive = add_months(month_start, 1)
-            candidates_by_line[gl.id] = [
-                entry for entry in pool if month_start <= entry.due_date < month_end_exclusive
-            ][:limit]
+            candidates_by_line[gl.id] = [entry for entry in pool if _e_candidato_pela_data(entry, gl)][:limit]
 
     return candidates_by_line
 
@@ -663,7 +719,33 @@ def undo_reconciliation(user, *, line_id) -> BankStatementLine:
     line.matched_entry = None
     line.status = LINE_STATUS_NEW
     line.save(update_fields=["matched_entry", "status", "updated_at"])
+    line.outras_pontas_devolvidas = _devolver_linha_da_outra_ponta(entry)
     return line
+
+
+def _devolver_linha_da_outra_ponta(entry: CashFlowEntry) -> int:
+    """Devolve a "novo" a linha conciliada com a outra ponta da transferência.
+
+    Desfazer a realização de uma ponta desfaz a da outra (as duas nunca ficam
+    em estados diferentes). A linha da outra conta ficava "conciliada" com um
+    lançamento que já não estava no saldo: a Situação das Contas mostrava o mês
+    em dia e o saldo do CB já não batia com o extrato. Devolve quantas voltaram."""
+    from transactions.services import transfer_counterparty
+
+    if entry.operation_type != "internal_transfer":
+        return 0
+    contraparte = transfer_counterparty(entry)
+    if contraparte is None:
+        return 0
+    devolvidas = 0
+    for outra in BankStatementLine.objects.select_for_update().filter(
+        matched_entry_id=contraparte.id, status=LINE_STATUS_RECONCILED
+    ):
+        outra.matched_entry = None
+        outra.status = LINE_STATUS_NEW
+        outra.save(update_fields=["matched_entry", "status", "updated_at"])
+        devolvidas += 1
+    return devolvidas
 
 
 @db_transaction.atomic

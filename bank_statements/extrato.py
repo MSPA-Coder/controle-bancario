@@ -16,16 +16,22 @@ O que uma linha vira, na ordem em que é decidido:
 - **transferência pareada**: a linha tem, em outra conta, a linha de sinal
   oposto, mesmo valor e até dois dias de distância, e há indício de que as duas
   são a mesma transferência (o nome de um titular no texto, ou as duas com
-  cara de transferência). As duas linhas viram uma transferência só;
+  cara de transferência). As duas linhas viram uma transferência só.
+  Transferências iguais entre as mesmas duas contas pareiam na ordem das datas;
 - **transferência por regra**: uma regra diz para qual conta do mesmo titular o
   dinheiro foi (Rende Fácil, caixinha) e a outra ponta não tem extrato;
+- **transferência ambígua**: a linha tem mais de uma linha possível na outra
+  conta e o grupo não fecha em N de um lado e N do outro (ver `_pares`). Fica
+  pendente, pelo mesmo motivo da seguinte;
 - **transferência sem par**: o texto cita um titular, mas a outra ponta ainda
   não foi importada. Fica pendente: criar receita e despesa para uma
   transferência própria é exatamente o erro que esta etapa existe para evitar;
 - **provável duplicata**: mesma conta, data e valor de uma linha já conciliada,
-  sem ser candidata de nenhuma etapa anterior — sinal de que é esta mesma
-  transação, reimportada com o texto do banco levemente diferente (o hash de
-  duplicata depende do texto; ver `reconciliation.linha_parecida_ja_conciliada`).
+  ou ainda pendente numa importação anterior, sem ser candidata de nenhuma etapa
+  anterior — sinal de que é esta mesma transação, reimportada com o texto do
+  banco levemente diferente (o hash de duplicata depende do texto; ver
+  `reconciliation.linha_parecida_ja_conciliada` e
+  `linha_igual_de_importacao_anterior`).
   Fica pendente: criar lançaria a mesma transferência ou compra duas vezes;
 - **cria**: um lançamento novo, com a categoria de `classificacao.sugerir_categoria`.
 
@@ -84,6 +90,7 @@ TRANSFERENCIA_PAR = "transferencia_par"
 TRANSFERENCIA_REGRA = "transferencia_regra"
 TRANSFERENCIA_COM_LANCAMENTO = "transferencia_com_lancamento"
 TRANSFERENCIA_SEM_PAR = "transferencia_sem_par"
+TRANSFERENCIA_AMBIGUA = "transferencia_ambigua"
 IGNORA = "ignora"
 AMBIGUA = "ambigua"
 MANUAL = "manual"
@@ -108,7 +115,10 @@ ROTULOS = {
     IGNORA: gettext_lazy("Ignora (regra)"),
     AMBIGUA: gettext_lazy("Mais de um lançamento candidato: escolha"),
     MANUAL: gettext_lazy("Decida manualmente"),
-    PROVAVEL_DUPLICATA: gettext_lazy("Provável duplicata de uma linha já conciliada"),
+    PROVAVEL_DUPLICATA: gettext_lazy("Provável duplicata de uma linha já importada"),
+    TRANSFERENCIA_AMBIGUA: gettext_lazy(
+        "Parece transferência sua, mas há mais de uma linha possível na outra conta: use Transferir"
+    ),
 }
 
 # Cada rótulo recebe a quantidade e devolve "<quantidade> <descrição>" já no plural certo.
@@ -264,14 +274,50 @@ def _pool_de_pareamento(user) -> list[BankStatementLine]:
     )
 
 
-def _pares(alvos: list[BankStatementLine], pool: list[BankStatementLine], padroes) -> dict[int, BankStatementLine]:
-    """Pareia linhas de sinal oposto de contas diferentes, só quando o par é único
-    dos dois lados e há indício de transferência."""
+def _grupo_de_gemeas(linha, vizinhas) -> tuple[list[BankStatementLine], list[BankStatementLine]] | None:
+    """As transferências iguais de que `linha` faz parte: N linhas de uma conta e N
+    de outra, cada uma vendo todas as do outro lado e mais nenhuma. `None` quando
+    o grupo não fecha assim (sobra linha de um lado, ou há uma terceira conta)."""
+    do_outro = vizinhas(linha)
+    deste = {linha.id: linha}
+    for outra in do_outro:
+        for de_volta in vizinhas(outra):
+            deste[de_volta.id] = de_volta
+    ids_deste, ids_do_outro = set(deste), {outra.id for outra in do_outro}
+    if len(ids_deste) != len(ids_do_outro):
+        return None
+    if len({item.account_id for item in deste.values()}) != 1 or len({item.account_id for item in do_outro}) != 1:
+        return None
+    if any({v.id for v in vizinhas(item)} != ids_do_outro for item in deste.values()):
+        return None
+    if any({v.id for v in vizinhas(item)} != ids_deste for item in do_outro):
+        return None
+    return list(deste.values()), do_outro
+
+
+def _pares(
+    alvos: list[BankStatementLine], pool: list[BankStatementLine], padroes
+) -> tuple[dict[int, BankStatementLine], set[int]]:
+    """Pareia linhas de sinal oposto de contas diferentes, quando há indício de
+    transferência e o par é único dos dois lados.
+
+    Transferências gêmeas (dois TEDs de 1.000,00 entre as mesmas duas contas, em
+    dias seguidos) não têm par único: cada linha vê as duas do outro lado. Quando
+    o grupo fecha (ver `_grupo_de_gemeas`), elas são pareadas na ordem das datas
+    -- são transferências idênticas entre as mesmas contas, e qualquer outra
+    ordem daria o mesmo resultado. Devolve também as linhas que têm vizinha mas
+    ficaram sem par: são transferência, e não podem virar receita e despesa."""
     por_valor: dict = defaultdict(list)
     for linha in pool:
         por_valor[abs(linha.amount)].append(linha)
+    ja_vistas: dict[int, list[BankStatementLine]] = {}
 
     def vizinhas(linha):
+        if linha.id not in ja_vistas:
+            ja_vistas[linha.id] = _vizinhas(linha)
+        return ja_vistas[linha.id]
+
+    def _vizinhas(linha):
         achadas = []
         for outra in por_valor.get(abs(linha.amount), ()):
             if outra.id == linha.id or outra.account_id == linha.account_id:
@@ -303,7 +349,22 @@ def _pares(alvos: list[BankStatementLine], pool: list[BankStatementLine], padroe
         if len(de_volta) == 1 and de_volta[0].id == linha.id:
             resultado[linha.id] = outra
             resultado[outra.id] = linha
-    return resultado
+
+    def ordem(item):
+        return (item.statement_date, item.id)
+
+    sem_par: set[int] = set()
+    for linha in alvos:
+        if linha.id in resultado or linha.account.is_credit_card or not vizinhas(linha):
+            continue
+        grupo = _grupo_de_gemeas(linha, vizinhas)
+        if grupo is None:
+            sem_par.add(linha.id)
+            continue
+        for deste, do_outro in zip(sorted(grupo[0], key=ordem), sorted(grupo[1], key=ordem), strict=True):
+            resultado[deste.id] = do_outro
+            resultado[do_outro.id] = deste
+    return resultado, sem_par
 
 
 def _lancamentos_para_par(user, linhas, padroes) -> dict[int, CashFlowEntry]:
@@ -393,7 +454,7 @@ def planejar(user, linhas) -> list[Plano]:
         return []
     regras = Regras()
     padroes = _nomes_dos_titulares()
-    pares = _pares(linhas, _pool_de_pareamento(user), padroes)
+    pares, transferencias_ambiguas = _pares(linhas, _pool_de_pareamento(user), padroes)
     com_lancamento = _lancamentos_para_par(
         user, [linha for linha in linhas if linha.id not in pares], padroes
     )
@@ -461,6 +522,9 @@ def planejar(user, linhas) -> list[Plano]:
         if len(aproximados) > 1:
             planos.append(Plano(linha, AMBIGUA, regra=regra))
             continue
+        if linha.id in transferencias_ambiguas:
+            planos.append(Plano(linha, TRANSFERENCIA_AMBIGUA, regra=regra))
+            continue
         if _cita_titular(linha, padroes):
             planos.append(Plano(linha, TRANSFERENCIA_SEM_PAR, regra=regra))
             continue
@@ -471,6 +535,15 @@ def planejar(user, linhas) -> list[Plano]:
                 "o texto do banco pode ter mudado entre as exportações. Confira e ignore se for a "
                 "mesma transação; crie se for outra, coincidindo por acaso."
             ) % {"descricao": duplicada.description, "id": duplicada.matched_entry_id}
+            planos.append(Plano(linha, PROVAVEL_DUPLICATA, motivo=motivo, regra=regra))
+            continue
+        anterior = reconciliation.linha_igual_de_importacao_anterior(linha)
+        if anterior is not None:
+            motivo = gettext(
+                "Mesma conta, data e valor de “%(descricao)s”, da importação %(arquivo)s, ainda pendente; "
+                "o mesmo período pode ter sido importado em dois arquivos. Resolva aquela linha, "
+                "depois ignore esta se for a mesma transação ou crie se for outra."
+            ) % {"descricao": anterior.description, "arquivo": anterior.import_batch.source_filename}
             planos.append(Plano(linha, PROVAVEL_DUPLICATA, motivo=motivo, regra=regra))
             continue
         regra_de_categoria = regra if regra is not None and regra.action == RULE_ACTION_CATEGORY else None

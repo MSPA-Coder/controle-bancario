@@ -721,3 +721,33 @@ def test_mes_fechado_depois_sem_compra_na_fatura_tambem_recebe_o_novo_saldo(cena
 
     abril = AccountMonthClose.objects.get(account=cenario["cartao"], year=2026, month=4, active=True)
     assert abril.closing_balance == marco - Decimal("60.00")
+
+
+@pytest.mark.django_db
+def test_fatura_reexportada_com_outro_portador_nao_lanca_as_compras_de_novo(cenario):
+    """O portador só entra na descrição quando o arquivo tem mais de um: a fatura
+    exportada aberta e de novo depois de fechada muda o hash de todas as linhas."""
+    aberta = (
+        "05/03/2026;MARIANO S;1111;Supermercados;MERCADO BOM;Única;0;0;200.00",
+        "07/03/2026;MARIANO S;1111;Eletrônicos;TV NOVA;1/3;0;0;300.00",
+        "08/03/2026;MARIANO S;1111;-;CAFE;Única;0;0;10.00",
+        "08/03/2026;MARIANO S;1111;-;CAFE;Única;0;0;10.00",
+    )
+
+    def lancados(descricao):
+        return CashFlowEntry.objects.filter(account=cenario["cartao"], description__startswith=descricao).count()
+
+    lote, _, _ = _importar(cenario, _c6(*aberta))
+    fatura.processar(cenario["usuario"], lote.id, {})
+    assert (lancados("MERCADO BOM"), lancados("TV NOVA"), lancados("CAFE")) == (1, 3, 2)
+
+    fechada = _c6(*aberta, "06/03/2026;CLAUDIA S;2222;Farmácia;FARMACIA;Única;0;0;80.00")
+    lote, inseridas, ignoradas = _importar(cenario, fechada)
+    assert (inseridas, ignoradas) == (5, 0)  # o hash não reconheceu nenhuma
+    assert lote.provaveis_repetidas == 4
+
+    contagem = fatura.processar(cenario["usuario"], lote.id, {})
+
+    assert contagem == {fatura.DUPLICATA_PENDENTE: 4, fatura.COMPRA: 1}
+    assert (lancados("MERCADO BOM"), lancados("TV NOVA"), lancados("CAFE"), lancados("FARMACIA")) == (1, 3, 2, 1)
+    assert lote.lines.filter(status="novo").count() == 4

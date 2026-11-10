@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections import Counter
 from collections.abc import Iterable
 from decimal import Decimal
 
@@ -167,9 +168,11 @@ def import_statement_file(
         )
         new_lines = []
         inserted = skipped = 0
+        repetidas_pelo_hash: Counter[tuple] = Counter()
         for line in parsed:
             if line.line_hash in existing_hashes:
                 skipped += 1
+                repetidas_pelo_hash[(line.statement_date, line.amount)] += 1
                 continue
             new_lines.append(
                 BankStatementLine(
@@ -189,12 +192,39 @@ def import_statement_file(
             )
             existing_hashes.add(line.line_hash)
             inserted += 1
+        provaveis_repetidas = _provaveis_repetidas(clean_account_id, new_lines, repetidas_pelo_hash)
         if new_lines:
             BankStatementLine.objects.bulk_create(new_lines)
         batch.row_count = inserted
         batch.save(update_fields=["row_count", "updated_at"])
 
+    # Só para o aviso de quem importa; o lote não guarda a contagem.
+    batch.provaveis_repetidas = provaveis_repetidas
     return batch, inserted, skipped
+
+
+def _provaveis_repetidas(account_id: int, new_lines: list[BankStatementLine], repetidas_pelo_hash: Counter) -> int:
+    """Quantas linhas novas têm a data e o valor de uma linha que a conta já tinha.
+
+    O hash reconhece a linha repetida pelo texto exato, e o mesmo banco escreve a
+    mesma transação de dois jeitos (PDF e OFX; "01/10" e "01 10"). A linha entra
+    como nova, e quem importa precisa saber disso antes de criar lançamentos. As
+    que a conta já tinha e este arquivo repetiu pelo hash não contam de novo:
+    dois Pix iguais no dia, um já importado, são um repetido e um novo."""
+    novas: Counter[tuple] = Counter((line.statement_date, line.amount) for line in new_lines)
+    if not novas:
+        return 0
+    ja_existentes: Counter[tuple] = Counter(
+        BankStatementLine.objects.filter(
+            account_id=account_id,
+            statement_date__in={data for data, _ in novas},
+            amount__in={valor for _, valor in novas},
+        ).values_list("statement_date", "amount")
+    )
+    return sum(
+        min(quantidade, max(0, ja_existentes[chave] - repetidas_pelo_hash[chave]))
+        for chave, quantidade in novas.items()
+    )
 
 
 

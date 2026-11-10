@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 08:26-0300\n"
+"POT-Creation-Date: 2026-11-10 07:25-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -854,8 +854,12 @@ msgid "Decida manualmente"
 msgstr "Decide manually"
 
 #: bank_statements/extrato.py
-msgid "Provável duplicata de uma linha já conciliada"
-msgstr "Probable duplicate of a line already reconciled"
+msgid "Provável duplicata de uma linha já importada"
+msgstr "Probable duplicate of a line already imported"
+
+#: bank_statements/extrato.py
+msgid "Parece transferência sua, mas há mais de uma linha possível na outra conta: use Transferir"
+msgstr "Looks like an internal transfer, but more than one line in the other account could be its other side: use Transfer"
 
 #: bank_statements/extrato.py templates/banking/extrato.html
 #, python-format
@@ -941,6 +945,11 @@ msgid "Mesma conta, data e valor de “%(descricao)s” (lançamento #%(id)s), j
 msgstr "Same account, date and amount as “%(descricao)s” (entry #%(id)s), already reconciled; the bank's text may have changed between exports. Check it and ignore if it's the same transaction; create it if it's another one, coinciding by chance."
 
 #: bank_statements/extrato.py
+#, python-format
+msgid "Mesma conta, data e valor de “%(descricao)s”, da importação %(arquivo)s, ainda pendente; o mesmo período pode ter sido importado em dois arquivos. Resolva aquela linha, depois ignore esta se for a mesma transação ou crie se for outra."
+msgstr "Same account, date and amount as “%(descricao)s”, from the import %(arquivo)s, still pending; the same period may have been imported in two files. Resolve that line first, then ignore this one if it's the same transaction or create it if it's another one."
+
+#: bank_statements/extrato.py
 msgid "Sem categoria: cadastre “Outros” ou escolha uma."
 msgstr "No category: add “Other” or choose one."
 
@@ -1017,6 +1026,10 @@ msgstr "Purchase with a similar entry: stays pending in Reconciliation for revie
 #: bank_statements/fatura.py
 msgid "Lançamento realizado com data ou valor diferente: fica pendente em Conciliação para revisão"
 msgstr "Realized entry with a different date or amount: stays pending in Reconciliation for review"
+
+#: bank_statements/fatura.py
+msgid "Provável duplicata de uma linha de outra importação desta fatura: fica pendente em Conciliação para revisão"
+msgstr "Probable duplicate of a line from another import of this statement: stays pending in Reconciliation for review"
 
 #: bank_statements/fatura.py
 msgid "Estorno ou crédito"
@@ -1537,6 +1550,13 @@ msgstr "%(nome)s: new lines %(novas)s, duplicates skipped %(duplicadas)s."
 
 #: bank_statements/views.py
 #, python-format
+msgid "%(nome)s: %(n)s linha nova tem a data e o valor de uma linha que esta conta já tinha, com outro texto. Pode ser repetição: confira antes de criar lançamentos."
+msgid_plural "%(nome)s: %(n)s linhas novas têm a data e o valor de linhas que esta conta já tinha, com outro texto. Podem ser repetição: confira antes de criar lançamentos."
+msgstr[0] "%(nome)s: %(n)s new line has the date and amount of a line this account already had, with different text. It may be a repeat: check before creating entries."
+msgstr[1] "%(nome)s: %(n)s new lines have the date and amount of lines this account already had, with different text. They may be repeats: check before creating entries."
+
+#: bank_statements/views.py
+#, python-format
 msgid "%(nome)s: %(erro)s"
 msgstr "%(nome)s: %(erro)s"
 
@@ -1616,6 +1636,13 @@ msgid "%(n)s lançamento realizado com divergência ficou em Conciliação para 
 msgid_plural "%(n)s lançamentos realizados com divergência ficaram em Conciliação para revisão."
 msgstr[0] "%(n)s realized entry with a discrepancy stayed in Reconciliation for review."
 msgstr[1] "%(n)s realized entries with discrepancies stayed in Reconciliation for review."
+
+#: bank_statements/views.py
+#, python-format
+msgid "%(n)s provável duplicata de outra importação ficou em Conciliação para revisão."
+msgid_plural "%(n)s prováveis duplicatas de outra importação ficaram em Conciliação para revisão."
+msgstr[0] "%(n)s probable duplicate from another import stayed in Reconciliation for review."
+msgstr[1] "%(n)s probable duplicates from another import stayed in Reconciliation for review."
 
 #: bank_statements/views.py
 #, python-format
@@ -1733,6 +1760,10 @@ msgstr "Invalid bulk action."
 #: bank_statements/views.py
 msgid "Conciliação desfeita. A linha voltou a pendente e o lançamento voltou a ficar em aberto, conforme o vencimento."
 msgstr "Reconciliation undone. The line is pending again, and the entry is open again based on its due date."
+
+#: bank_statements/views.py
+msgid "Era uma transferência: a linha da outra conta também voltou a pendente, porque a outra ponta deixou de estar realizada."
+msgstr "It was a transfer: the line in the other account is pending again too, because the other side is no longer realized."
 
 #: bank_statements/views.py
 #, python-format

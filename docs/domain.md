@@ -257,6 +257,10 @@ Importações, na conta do cartão, e passa por duas etapas:
    - *compra parcelada nova*, que cria as parcelas N a M
      (`TransactionRequest.first_installment`) e realiza a N;
    - *compra já lançada* à mão (mesmo valor, até 3 dias), que é conciliada;
+   - *provável duplicata*: criaria lançamento, mas uma importação anterior do
+     cartão já trouxe uma linha com a mesma data, valor e parcela e outro texto
+     (o portador só entra na descrição quando o arquivo tem mais de um, então a
+     fatura reexportada muda o hash). Fica pendente em Conciliação;
    - *compra* ou *estorno*, criados já realizados.
 
 A categoria sugerida segue a mesma ordem do extrato de conta (`classificacao.py`,
@@ -390,6 +394,10 @@ pode reabrir o mês fechado para isso, desde que o saldo de fechamento não mude
 (na prática, só a data dentro do mesmo mês); "Conciliar selecionadas" e
 "Aplicar sugestões" recusam e mandam usar o botão da linha.
 
+Desfazer a conciliação de uma ponta de transferência desfaz a realização das
+duas, e a linha conciliada com a outra ponta também volta a pendente: uma linha
+conciliada nunca aponta para lançamento fora do saldo.
+
 Os PDFs com adapter são o da Genial, o do Mercado Pago e o da conta de
 investimento da XP (`XpPdfStatementAdapter`). O da XP lê a geometria da tabela
 (a descrição quebra em até três linhas, antes e depois da data), valida a cadeia
@@ -486,14 +494,19 @@ que `fatura.planejar` faz para o cartão). Na ordem em que é decidido:
 
 1. **ignorar**, quando uma regra explícita manda;
 2. **conciliar** com o único lançamento candidato (mesma conta, sinal e valor,
-   no mês do extrato); entre vários, o único na data da linha, e sem ele a
-   escolha é manual. Um lançamento nunca é dado a duas linhas: o da data da
-   linha fica com ela, e a outra segue sem candidato;
+   no mês do extrato, ou ainda em aberto e com vencimento a até 7 dias da linha
+   no mês vizinho: a conta que vence no sábado, 31, e é paga na segunda, 2);
+   entre vários, o único na data da linha, depois o único do mês vizinho a
+   poucos dias dela, e sem eles a escolha é manual. Um lançamento nunca é dado a
+   duas linhas: o da data da linha fica com ela, e a outra segue sem candidato;
 3. **transferência pareada**: outra linha pendente, em outra conta do usuário,
    de sinal oposto, mesmo valor e até dois dias de distância, com o nome de um
    titular no texto (ou cara de transferência nas duas) e par único dos dois
    lados. As duas linhas viram **uma** transferência, cada ponta na sua data,
-   exigindo a permissão de destino de transferência;
+   exigindo a permissão de destino de transferência. Transferências iguais
+   entre as mesmas duas contas (N linhas de um lado, N do outro) pareiam na
+   ordem das datas; se o grupo não fecha, as linhas ficam pendentes como
+   transferência ambígua, para o **Transferir**, e nunca viram receita e despesa;
 4. **transferência por regra**: a regra aponta a conta de destino do mesmo
    titular e instituição (Rende Fácil, caixinha) e a outra ponta não tem extrato;
 5. **concilia com valor diferente**: recorrência aberta da conta, mesmo sinal,
@@ -510,7 +523,11 @@ que `fatura.planejar` faz para o cartão). Na ordem em que é decidido:
    "MARIANO01 10"). Fica pendente, com o lançamento já conciliado apontado na
    tela: confira e ignore se for a mesma transação, crie se for outra (o
    mesmo valor pode coincidir por acaso no mesmo dia)
-   (`reconciliation.linha_parecida_ja_conciliada`);
+   (`reconciliation.linha_parecida_ja_conciliada`). Vale também quando a
+   primeira linha ainda está pendente, numa importação anterior e com outro
+   texto (o mesmo período em PDF e em OFX): só a da importação mais nova
+   espera. A importação já avisa quantas linhas novas repetem a data e o valor
+   de linhas que a conta tinha;
 8. **criar** lançamento com a categoria sugerida.
 
 O que o plano não resolve, a linha resolve à mão. O seletor de categoria de cada

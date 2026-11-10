@@ -24,6 +24,9 @@ O que cada linha vira:
 - **compra já lançada**: lançamento avulso com o mesmo valor, descrição e até
   3 dias de distância. Se houver candidatos sem identificação inequívoca, a
   linha permanece pendente para conciliação manual;
+- **provável duplicata**: a linha criaria lançamento, mas uma importação
+  anterior do cartão já trouxe outra com a mesma data, valor e parcela (ver
+  `_ja_importada`). Fica pendente para conciliação manual;
 - **compra** e **estorno**: criam a despesa ou a receita, já realizadas.
 
 Mês fechado: a fatura de um mês traz compras do mês anterior, que pode já estar
@@ -102,6 +105,7 @@ PARCELADO_NOVO = "parcelado_novo"
 COMPRA_LANCADA = "compra_lancada"
 COMPRA_PENDENTE = "compra_pendente"
 REALIZACAO_PENDENTE = "realizacao_pendente"
+DUPLICATA_PENDENTE = "duplicata_pendente"
 COMPRA = "compra"
 ESTORNO = "estorno"
 
@@ -179,6 +183,10 @@ class Plano:
             return gettext("Compra com lançamento semelhante: fica pendente em Conciliação para revisão")
         if self.acao == REALIZACAO_PENDENTE:
             return gettext("Lançamento realizado com data ou valor diferente: fica pendente em Conciliação para revisão")
+        if self.acao == DUPLICATA_PENDENTE:
+            return gettext(
+                "Provável duplicata de uma linha de outra importação desta fatura: fica pendente em Conciliação para revisão"
+            )
         if self.acao == ESTORNO:
             return gettext("Estorno ou crédito")
         return gettext("Compra")
@@ -253,6 +261,25 @@ def _compra_lancada(conta, linha, usados) -> tuple[CashFlowEntry | None, bool]:
     return None, bool(candidatos)
 
 
+def _ja_importada(conta, linha: BankStatementLine) -> bool:
+    """Se uma importação anterior do cartão já trouxe esta linha: mesma data, valor e parcela.
+
+    O hash da fatura depende do texto, e o texto muda entre duas exportações da
+    mesma fatura: o portador só entra na descrição quando o arquivo tem mais de
+    um (`fatura_csv.ler_fatura`), então a fatura exportada aberta e de novo
+    depois de fechada pode não ter nenhuma linha reconhecida. Lançar de novo
+    dobraria as compras. Linha de texto idêntico não entra: se o hash não a
+    barrou, ela é outra compra igual no mesmo dia (dois cafés), não a mesma."""
+    return BankStatementLine.objects.filter(
+        account=conta,
+        statement_date=linha.statement_date,
+        amount=linha.amount,
+        installment_current=linha.installment_current,
+        installment_total=linha.installment_total,
+        import_batch_id__lt=linha.import_batch_id,
+    ).exclude(description__iexact=linha.description.strip()).exists()
+
+
 def _sugerir(plano: Plano) -> None:
     # A mesma loja em qualquer conta, a mais frequente entre as que o usuário
     # classificou (nunca "Outros"), e só depois a categoria do banco: ver
@@ -310,6 +337,8 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
         ):
             plano.lancamento = None
             plano.acao = REALIZACAO_PENDENTE
+        if plano.cria_lancamento and _ja_importada(conta, linha):
+            plano.acao = DUPLICATA_PENDENTE
         if plano.cria_lancamento:
             _sugerir(plano)
         if plano.lancamento is not None:
@@ -530,7 +559,7 @@ def _meses_tocados(planos) -> set[tuple[int, int]]:
                 restantes = linha.installment_total - plano.futuras_a_partir_de + 1
                 datas += [add_months(plano.futuras_vencimento, k) for k in range(restantes)]
             continue
-        if plano.acao in (PAGAMENTO_SEM_PAR, COMPRA_PENDENTE, REALIZACAO_PENDENTE):
+        if plano.acao in (PAGAMENTO_SEM_PAR, COMPRA_PENDENTE, REALIZACAO_PENDENTE, DUPLICATA_PENDENTE):
             continue
         datas.append(linha.statement_date)
         if plano.lancamento is not None:

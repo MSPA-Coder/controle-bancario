@@ -118,3 +118,21 @@ def test_reimportar_extrato_da_regra_antiga_recupera_so_as_repeticoes(conta):
 
     assert (inseridas, ignoradas) == (2, 2)
     assert BankStatementLine.objects.filter(account=conta, amount=Decimal("-50.00")).count() == 3
+    # As duas recuperadas são movimentos de verdade, não repetição com outro texto.
+    assert _lote.provaveis_repetidas == 0
+
+
+@pytest.mark.django_db
+def test_importacao_avisa_quando_a_linha_nova_repete_data_e_valor_com_outro_texto(conta):
+    """O mesmo período em dois arquivos, com o texto do banco diferente: o hash
+    não barra, e quem importa precisa saber antes de criar lançamentos."""
+    usuario, conta = conta
+    primeiro = b"data;descricao;valor\r\n2026-09-10;PIX TRANSF FULANO10/09;-50,00\r\n2026-09-11;TARIFA;-2,00\r\n"
+    segundo = b"data;descricao;valor\r\n2026-09-10;PIX TRANSF FULANO10 09;-50,00\r\n2026-09-12;MERCADO;-80,00\r\n"
+
+    lote, _, _ = import_statement_file(usuario, account_id=conta.id, uploaded_file=_csv(primeiro))
+    assert lote.provaveis_repetidas == 0
+    lote, inseridas, ignoradas = import_statement_file(usuario, account_id=conta.id, uploaded_file=_csv(segundo))
+
+    assert (inseridas, ignoradas) == (2, 0)
+    assert lote.provaveis_repetidas == 1

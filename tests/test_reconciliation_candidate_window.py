@@ -135,3 +135,68 @@ def test_lancamento_ja_conciliado_com_outra_linha_nao_e_candidato(cenario):
 
     assert list(candidate_entries_for_line(segunda)) == []
     assert candidate_entries_for_lines([segunda])[segunda.id] == []
+
+
+# --- virada do mês (10/11/2026) ----------------------------------------------
+#
+# A janela era só o mês do extrato: a conta que vence no sábado, 31/10, e é paga
+# na segunda, 02/11, ficava sem candidato, e a linha virava um lançamento novo ao
+# lado do previsto ainda em aberto.
+
+
+def test_vencimento_no_fim_do_mes_pago_no_comeco_do_seguinte_e_candidato(cenario):
+    user, conta, receita = cenario
+    lancamento = _criar_receita(user, conta, receita, vencimento=date(2026, 10, 31))
+    linha = _linha_extrato(conta, data=date(2026, 11, 2), valor=Decimal("990.00"))
+
+    assert [entry.id for entry in candidate_entries_for_line(linha)] == [lancamento.id]
+    assert [entry.id for entry in candidate_entries_for_lines([linha])[linha.id]] == [lancamento.id]
+
+
+def test_recebido_no_fim_do_mes_com_vencimento_no_comeco_do_seguinte_e_candidato(cenario):
+    user, conta, receita = cenario
+    lancamento = _criar_receita(user, conta, receita, vencimento=date(2026, 11, 2))
+    linha = _linha_extrato(conta, data=date(2026, 10, 30), valor=Decimal("990.00"))
+
+    assert [entry.id for entry in candidate_entries_for_line(linha)] == [lancamento.id]
+    assert [entry.id for entry in candidate_entries_for_lines([linha])[linha.id]] == [lancamento.id]
+
+
+def test_virada_do_mes_tem_limite_de_dias_e_so_vale_para_lancamento_em_aberto(cenario):
+    from transactions.services import realize_transaction
+
+    user, conta, receita = cenario
+    _criar_receita(user, conta, receita, vencimento=date(2026, 10, 20))  # 13 dias antes: longe demais
+    realizado = _criar_receita(user, conta, receita, vencimento=date(2026, 10, 30))
+    realize_transaction(realizado, realized_date=date(2026, 10, 30), realized_amount=Decimal("990.00"), user=user)
+    linha = _linha_extrato(conta, data=date(2026, 11, 2), valor=Decimal("990.00"))
+
+    assert list(candidate_entries_for_line(linha)) == []
+    assert candidate_entries_for_lines([linha])[linha.id] == []
+
+
+def test_recorrencia_na_virada_fica_com_o_vencimento_vizinho_e_nao_com_o_do_fim_do_mes(cenario):
+    """O pagamento de 02/11 vê o vencimento de 31/10, em aberto, e o de 30/11, já
+    projetado: vale o único que está a poucos dias da linha."""
+    from bank_statements.reconciliation import desempatar_pelo_dia
+
+    user, conta, receita = cenario
+    de_outubro = _criar_receita(user, conta, receita, vencimento=date(2026, 10, 31))
+    _criar_receita(user, conta, receita, vencimento=date(2026, 11, 30))
+    linha = _linha_extrato(conta, data=date(2026, 11, 2), valor=Decimal("990.00"))
+
+    candidatos = list(candidate_entries_for_line(linha))
+    assert len(candidatos) == 2
+    assert [entry.id for entry in desempatar_pelo_dia(linha, candidatos)] == [de_outubro.id]
+
+
+def test_dois_em_aberto_perto_da_linha_continuam_para_escolha_manual(cenario):
+    from bank_statements.reconciliation import desempatar_pelo_dia
+
+    user, conta, receita = cenario
+    _criar_receita(user, conta, receita, vencimento=date(2026, 10, 31))
+    _criar_receita(user, conta, receita, vencimento=date(2026, 11, 5))
+    linha = _linha_extrato(conta, data=date(2026, 11, 2), valor=Decimal("990.00"))
+
+    candidatos = list(candidate_entries_for_line(linha))
+    assert len(desempatar_pelo_dia(linha, candidatos)) == 2

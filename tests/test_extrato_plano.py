@@ -285,7 +285,10 @@ def test_par_ambiguo_nao_e_pareado(mundo):
     _linha(contas["c6"], "Pix de Mariano", "50.00", date(2026, 9, 24))
     _linha(contas["bb"], "Pix de Mariano", "50.00", date(2026, 9, 24))
     (plano,) = extrato.planejar(user, [saida])
-    assert plano.acao == extrato.TRANSFERENCIA_SEM_PAR
+    # Desde 10/11/2026 o rótulo diz o que acontece: as duas pontas possíveis
+    # estão importadas, então não é "falta importar a outra ponta".
+    assert plano.acao == extrato.TRANSFERENCIA_AMBIGUA
+    assert not plano.executavel
 
 
 # --- regras explícitas -------------------------------------------------------
@@ -663,3 +666,128 @@ def test_regra_de_transferencia_pode_apontar_a_conta_de_outra_instituicao(mundo)
     assert erros == [] and feitas[extrato.TRANSFERENCIA_REGRA] == 1
     linha.refresh_from_db()
     assert CashFlowEntry.objects.get(source_entry=linha.matched_entry).account_id == tesouro.id
+
+
+# --- achados de 10/11/2026 ---------------------------------------------------
+
+
+def _linha_de_outro_arquivo(conta, descricao, valor, dia, arquivo):
+    lote, _ = BankStatementImport.objects.get_or_create(
+        account=conta, source_filename=arquivo, defaults={"row_count": 0}
+    )
+    contador = BankStatementLine.objects.count()
+    return BankStatementLine.objects.create(
+        import_batch=lote, account=conta, statement_date=dia, description=descricao,
+        amount=Decimal(valor), line_hash=f"h{contador}-{conta.id}",
+    )
+
+
+def test_conta_paga_na_virada_do_mes_concilia_com_o_previsto_em_vez_de_criar(mundo):
+    user, contas, cat = mundo
+    previsto = services.create_transaction_batch(
+        services.TransactionRequest(
+            account_id=contas["bb"].id, category_id=cat["outros"].id, entry_type=ENTRY_TYPE_EXPENSE,
+            description="Condomínio", entry_amount=Decimal("800.00"), installments=1,
+            due_date=date(2026, 10, 31), status="a_vencer",
+        ),
+        user=user,
+    )[0]
+    linha = _linha(contas["bb"], "PAGAMENTO BOLETO CONDOMINIO", "-800.00", date(2026, 11, 2))
+
+    feitas, erros = extrato.aplicar(user, [linha])
+
+    assert erros == [] and feitas[extrato.CONCILIA] == 1
+    previsto.refresh_from_db()
+    assert previsto.status == STATUS_REALIZED and previsto.realized_date == date(2026, 11, 2)
+    assert CashFlowEntry.objects.filter(account=contas["bb"]).count() == 1
+
+
+def test_desfazer_uma_ponta_da_transferencia_devolve_tambem_a_linha_da_outra_conta(mundo):
+    """A outra linha ficava "conciliada" com um lançamento que saiu do saldo."""
+    from bank_statements.reconciliation import undo_reconciliation
+
+    user, contas, _ = mundo
+    saida = _linha(contas["genial"], "TED ENVIADA", "-500.00", date(2026, 10, 8))
+    entrada = _linha(contas["c6"], "TED RECEBIDA", "500.00", date(2026, 10, 8))
+    feitas, erros = extrato.aplicar(user, [saida, entrada])
+    assert erros == [] and feitas[extrato.TRANSFERENCIA_PAR] == 1
+
+    devolvida = undo_reconciliation(user, line_id=saida.id)
+
+    entrada.refresh_from_db()
+    assert devolvida.outras_pontas_devolvidas == 1
+    assert entrada.status == "novo" and entrada.matched_entry_id is None
+    assert not CashFlowEntry.objects.filter(status=STATUS_REALIZED).exists()
+    # As duas linhas voltam a se resolver sozinhas, com os lançamentos que ficaram.
+    saida.refresh_from_db()
+    feitas, erros = extrato.aplicar(user, [saida, entrada])
+    assert erros == [] and feitas[extrato.CONCILIA] == 2
+    assert CashFlowEntry.objects.count() == 2
+    assert CashFlowEntry.objects.filter(status=STATUS_REALIZED).count() == 2
+
+
+def test_transferencias_gemeas_entre_as_mesmas_contas_pareiam_na_ordem_das_datas(mundo):
+    user, contas, _ = mundo
+    saidas = [
+        _linha(contas["genial"], "TED ENVIADA", "-1000.00", date(2026, 10, 8)),
+        _linha(contas["genial"], "TED ENVIADA", "-1000.00", date(2026, 10, 9)),
+    ]
+    entradas = [
+        _linha(contas["c6"], "TED RECEBIDA", "1000.00", date(2026, 10, 8)),
+        _linha(contas["c6"], "TED RECEBIDA", "1000.00", date(2026, 10, 9)),
+    ]
+
+    planos = {plano.linha.id: plano for plano in extrato.planejar(user, [*saidas, *entradas])}
+    assert {plano.acao for plano in planos.values()} == {extrato.TRANSFERENCIA_PAR}
+    assert planos[saidas[0].id].par.id == entradas[0].id
+    assert planos[saidas[1].id].par.id == entradas[1].id
+
+    feitas, erros = extrato.aplicar(user, [*saidas, *entradas])
+    assert erros == [] and feitas[extrato.TRANSFERENCIA_PAR] == 2
+    assert not CashFlowEntry.objects.exclude(category__kind=CATEGORY_KIND_TRANSFER).exists()
+    assert CashFlowEntry.objects.count() == 4
+
+
+def test_transferencia_com_sobra_de_um_lado_espera_em_vez_de_virar_receita_e_despesa(mundo):
+    user, contas, _ = mundo
+    linhas = [
+        _linha(contas["genial"], "TED ENVIADA", "-1000.00", date(2026, 10, 8)),
+        _linha(contas["genial"], "TED ENVIADA", "-1000.00", date(2026, 10, 9)),
+        _linha(contas["c6"], "TED RECEBIDA", "1000.00", date(2026, 10, 8)),
+    ]
+
+    planos = extrato.planejar(user, linhas)
+    assert {plano.acao for plano in planos} == {extrato.TRANSFERENCIA_AMBIGUA}
+    assert not any(plano.executavel or plano.confiavel for plano in planos)
+
+    feitas, erros = extrato.aplicar(user, linhas)
+    assert not feitas and len(erros) == 3
+    assert not CashFlowEntry.objects.exists()
+
+
+def test_mesma_transacao_em_dois_arquivos_ainda_pendente_so_e_criada_uma_vez(mundo):
+    user, contas, _ = mundo
+    conta = contas["bb"]
+    do_pdf = _linha_de_outro_arquivo(conta, "PAG BOLETO ENERGIA 01/10", "-230.45", date(2026, 10, 1), "outubro.pdf")
+    do_ofx = _linha_de_outro_arquivo(conta, "PAG BOLETO ENERGIA 01 10", "-230.45", date(2026, 10, 1), "outubro.ofx")
+
+    planos = {plano.linha.id: plano for plano in extrato.planejar(user, [do_pdf, do_ofx])}
+    assert planos[do_pdf.id].acao == extrato.CRIA
+    assert planos[do_ofx.id].acao == extrato.PROVAVEL_DUPLICATA
+    assert "outubro.pdf" in planos[do_ofx.id].rotulo
+
+    feitas, erros = extrato.aplicar(user, [do_pdf, do_ofx])
+    assert feitas[extrato.CRIA] == 1 and len(erros) == 1
+    assert CashFlowEntry.objects.filter(account=conta, entry_amount=Decimal("230.45")).count() == 1
+
+
+def test_outra_ocorrencia_de_texto_identico_em_arquivo_novo_nao_e_duplicata(mundo):
+    """Dois Pix iguais no dia, um em cada exportação: o hash numerado já os
+    distingue, e o segundo é um movimento de verdade."""
+    user, contas, _ = mundo
+    conta = contas["bb"]
+    _linha_de_outro_arquivo(conta, "PIX ENVIADO BELTRANO", "-50.00", date(2026, 10, 1), "manha.ofx")
+    segundo = _linha_de_outro_arquivo(conta, "PIX ENVIADO BELTRANO", "-50.00", date(2026, 10, 1), "tarde.ofx")
+
+    (plano,) = extrato.planejar(user, [segundo])
+    assert plano.acao == extrato.CRIA

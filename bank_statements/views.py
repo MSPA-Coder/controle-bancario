@@ -152,6 +152,16 @@ def process_imports_view(request):
         messages.success(request, gettext(
             "%(nome)s: linhas novas %(novas)s, duplicadas ignoradas %(duplicadas)s."
         ) % {"nome": nome, "novas": inserted, "duplicadas": skipped})
+    for lote in lotes:
+        repetidas = getattr(lote, "provaveis_repetidas", 0)
+        if repetidas:
+            messages.warning(request, ngettext(
+                "%(nome)s: %(n)s linha nova tem a data e o valor de uma linha que esta conta já tinha, "
+                "com outro texto. Pode ser repetição: confira antes de criar lançamentos.",
+                "%(nome)s: %(n)s linhas novas têm a data e o valor de linhas que esta conta já tinha, "
+                "com outro texto. Podem ser repetição: confira antes de criar lançamentos.",
+                repetidas,
+            ) % {"nome": lote.source_filename, "n": repetidas})
     for nome, erro in erros:
         messages.error(request, gettext("%(nome)s: %(erro)s") % {"nome": nome, "erro": erro})
     if not resultados and not erros:
@@ -357,7 +367,8 @@ def processar_fatura_view(request, batch_id):
         pendentes = contagem.get(fatura.PAGAMENTO_SEM_PAR, 0)
         compras_pendentes = contagem.get(fatura.COMPRA_PENDENTE, 0)
         realizadas_pendentes = contagem.get(fatura.REALIZACAO_PENDENTE, 0)
-        feitas = sum(contagem.values()) - pendentes - compras_pendentes - realizadas_pendentes
+        duplicatas = contagem.get(fatura.DUPLICATA_PENDENTE, 0)
+        feitas = sum(contagem.values()) - pendentes - compras_pendentes - realizadas_pendentes - duplicatas
         texto = ngettext(
             "Fatura processada: %(n)s linha.",
             "Fatura processada: %(n)s linhas.",
@@ -381,6 +392,12 @@ def processar_fatura_view(request, batch_id):
                 "%(n)s lançamentos realizados com divergência ficaram em Conciliação para revisão.",
                 realizadas_pendentes,
             ) % {"n": realizadas_pendentes}
+        if duplicatas:
+            texto += " " + ngettext(
+                "%(n)s provável duplicata de outra importação ficou em Conciliação para revisão.",
+                "%(n)s prováveis duplicatas de outra importação ficaram em Conciliação para revisão.",
+                duplicatas,
+            ) % {"n": duplicatas}
         messages.success(request, texto)
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -765,7 +782,7 @@ def undo_reconciliation_view(request):
     """Desfaz a conciliação de uma linha."""
     line_id = request.POST.get('line_id')
     try:
-        reconciliation.undo_reconciliation(request.user, line_id=line_id)
+        linha = reconciliation.undo_reconciliation(request.user, line_id=line_id)
         audit_action(request, 'bank_statement_line', line_id, 'undo_reconciliation')
         messages.success(
             request,
@@ -774,6 +791,11 @@ def undo_reconciliation_view(request):
                 "voltou a ficar em aberto, conforme o vencimento."
             ),
         )
+        if getattr(linha, "outras_pontas_devolvidas", 0):
+            messages.info(request, gettext(
+                "Era uma transferência: a linha da outra conta também voltou a pendente, "
+                "porque a outra ponta deixou de estar realizada."
+            ))
     except ValueError as exc:
         messages.error(request, str(exc))
 
