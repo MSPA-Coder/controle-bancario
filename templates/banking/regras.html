@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Movimentação • Regras de extrato" %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/pages/bank-imports.css' %}">
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header-title">
+    <div>
+        <h1>📏 {% trans "Regras de extrato" %}</h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="chart-card u-mb-1">
+    <h3>{% if editando %}{% trans "Alterar a regra" %}{% else %}{% trans "Nova regra" %}{% endif %}</h3>
+    <p class="help-text">{% blocktrans trimmed %}A regra diz o que fazer com as linhas de extrato de conta que contêm um trecho de texto
+        (sem diferença de acento nem de maiúscula): dar uma categoria, lançar como transferência para outra conta do mesmo titular,
+        ou ignorar. Ela vale mais que o histórico. Quando duas regras servem à mesma linha, vence a que tem instituição e, depois,
+        a de trecho mais longo. Fatura de cartão não usa regra.{% endblocktrans %}</p>
+    <form method="post" action="{% url 'bank_statements:regras' %}" class="top-filter-row">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="salvar">
+        {% if editando %}<input type="hidden" name="regra_id" value="{{ editando }}">{% endif %}
+        <label>{% trans "Nome" %}
+            <input type="text" name="name" maxlength="120" required value="{{ formulario.name }}"
+                   placeholder="{% trans 'Ex.: Boleto do condomínio' %}">
+        </label>
+        <label>{% trans "A linha contém" %}
+            <input type="text" name="pattern" maxlength="120" minlength="3" required value="{{ formulario.pattern }}"
+                   placeholder="{% trans 'Trecho do texto do extrato' %}">
+        </label>
+        <label>{% trans "Instituição" %}
+            <select name="institution">
+                <option value="">{% trans "Qualquer" %}</option>
+                {% for instituicao in instituicoes %}
+                <option value="{{ instituicao.id }}" {% if formulario.institution == instituicao.id|stringformat:"s" %}selected{% endif %}>{{ instituicao.institution_name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>{% trans "Sinal" %}
+            <select name="sign">
+                {% for valor, rotulo in sinais %}
+                <option value="{{ valor }}" {% if formulario.sign == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>{% trans "O que fazer" %}
+            <select name="action" required>
+                <option value="">{% trans "Selecione…" %}</option>
+                {% for valor, rotulo in acoes %}
+                <option value="{{ valor }}" {% if formulario.action == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>{% trans "Categoria (para categorizar)" %}
+            <select name="category">
+                <option value="">{% trans "Categoria…" %}</option>
+                {% for categoria in categorias %}
+                <option value="{{ categoria.id }}" {% if formulario.category == categoria.id|stringformat:"s" %}selected{% endif %}>{{ categoria.category_name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>{% trans "Conta de destino (para transferir)" %}
+            <input type="text" name="destination_account_name" maxlength="100" list="contas-de-destino"
+                   value="{{ formulario.destination_account_name }}"
+                   title="{% trans 'O nome da conta, como em Cadastros › Contas. A conta é procurada entre as do titular da linha.' %}">
+            <datalist id="contas-de-destino">
+                {% for nome in contas_de_destino %}<option value="{{ nome }}">{% endfor %}
+            </datalist>
+        </label>
+        <label>{% trans "Instituição do destino" %}
+            <select name="destination_institution" title="{% trans 'Só quando a conta de destino é de outra instituição.' %}">
+                <option value="">{% trans "A mesma da linha" %}</option>
+                {% for instituicao in instituicoes %}
+                <option value="{{ instituicao.id }}" {% if formulario.destination_institution == instituicao.id|stringformat:"s" %}selected{% endif %}>{{ instituicao.institution_name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label><input type="checkbox" name="active" value="1" {% if formulario.active %}checked{% endif %}> {% trans "Ativa" %}</label>
+        <button type="submit" class="btn-sm btn-primary">{% trans "Salvar regra" %}</button>
+        {% if editando or formulario.pattern %}<a class="btn-sm btn-ghost" href="{% url 'bank_statements:regras' %}">{% trans "Cancelar" %}</a>{% endif %}
+    </form>
+</div>
+
+<div class="table-container">
+    <h3 class="u-mb-075">{% trans "Regras cadastradas" %}</h3>
+    <table class="tx-table">
+        <thead>
+            <tr>
+                <th>{% trans "Nome" %}</th>
+                <th>{% trans "A linha contém" %}</th>
+                <th>{% trans "Instituição" %}</th>
+                <th>{% trans "Sinal" %}</th>
+                <th>{% trans "O que fazer" %}</th>
+                <th>{% trans "Situação" %}</th>
+                <th>{% trans "Ações" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for regra in regras %}
+            <tr {% if editando == regra.id %}class="edit-row is-editing"{% endif %}>
+                <td>{{ regra.name }}</td>
+                <td>{{ regra.pattern }}</td>
+                <td>{% if regra.institution %}{{ regra.institution.institution_name }}{% else %}{% trans "Qualquer" %}{% endif %}</td>
+                <td>{{ regra.get_sign_display }}</td>
+                <td>{{ regra.get_action_display }}{% if regra.action == "categoria" and regra.category %}: {{ regra.category.category_name }}{% endif %}{% if regra.destination_account_name %}: {{ regra.destination_account_name }}{% if regra.destination_institution %} ({{ regra.destination_institution.institution_name }}){% endif %}{% endif %}</td>
+                <td>{% if regra.active %}{% trans "Ativa" %}{% else %}<span class="empty-state">{% trans "Inativa" %}</span>{% endif %}</td>
+                <td class="actions">
+                    <a class="btn-sm btn-action-edit" href="{% url 'bank_statements:regras' %}?editar={{ regra.id }}">{% trans "Alterar" %}</a>
+                    <form method="post" action="{% url 'bank_statements:regras' %}" class="u-d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="acao" value="alternar">
+                        <input type="hidden" name="regra_id" value="{{ regra.id }}">
+                        <button type="submit" class="btn-sm btn-ghost">{% if regra.active %}{% trans "Desativar" %}{% else %}{% trans "Ativar" %}{% endif %}</button>
+                    </form>
+                    <form method="post" action="{% url 'bank_statements:regras' %}" class="u-d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="acao" value="excluir">
+                        <input type="hidden" name="regra_id" value="{{ regra.id }}">
+                        <button type="submit" class="btn-sm btn-action-delete"
+                                data-sa-confirmar="{% trans 'Excluir esta regra? As linhas já conciliadas não mudam.' %}"
+                                data-sa-titulo="{% trans 'Excluir regra' %}"
+                                data-sa-severidade="warning"
+                                data-sa-ok="{% trans 'Excluir' %}">{% trans "Excluir" %}</button>
+                    </form>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7" class="empty-state">{% trans "Nenhuma regra cadastrada." %}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -29,6 +29,7 @@ urlpatterns = [
     path('banking/reconcile/undo/', views.undo_reconciliation_view, name='undo_reconciliation'),
     path('banking/ignore/', views.ignore_line_view, name='ignore_line'),
     path('banking/reclassification/', views.reclassificacao_view, name='reclassificacao'),
+    path('banking/rules/', views.regras_view, name='regras'),
     path('banking/balance/', views.atualizar_saldo_view, name='atualizar_saldo'),
 
     path('banking/attachments/', views.attachments_view, name='attachments_view'),

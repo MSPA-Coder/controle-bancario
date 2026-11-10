@@ -461,6 +461,16 @@ _RE_GENIAL_ENTRY = re.compile(
 )
 
 
+# O extrato tirado no meio do dia marca o lançamento ainda provisório com
+# "* Prov *" no começo da descrição; no extrato seguinte a mesma linha volta,
+# na mesma data e pelo mesmo valor, sem a marca. Com a marca no texto o hash das
+# duas diferia, a linha entrava de novo e era preciso ignorá-la à mão (na
+# produção, até 10/11/2026, as 4 provisórias voltaram assim). A marca sai antes
+# do hash. O "Estorno * Prov * ..." é outra coisa -- um lançamento de verdade,
+# que desfaz o provisório -- e fica como está: a marca dele não é no começo.
+_RE_GENIAL_PROVISORIO = re.compile(r"^\*\s*Prov\s*\*\s*", re.IGNORECASE)
+
+
 def _parse_genial_amount(sign: str, raw: str) -> Decimal:
     value = raw.strip().replace(".", "").replace(",", ".")
     amount = _to_decimal(value)
@@ -489,7 +499,7 @@ def _parse_genial_lines(text: str, account_id: int) -> list[ParsedStatementLine]
     def flush() -> None:
         if current is None:
             return
-        joined = " ".join(current["desc_lines"]).strip() or current["category"]
+        joined = _RE_GENIAL_PROVISORIO.sub("", " ".join(current["desc_lines"]).strip()) or current["category"]
         description = f"{current['category']} - {joined}"[:255]
         parsed.append(
             ParsedStatementLine(

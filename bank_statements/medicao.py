@@ -40,6 +40,7 @@ from transactions.models import CashFlowCategory, CashFlowEntry
 
 from .classificacao import (
     CATEGORIA_PADRAO,
+    Contexto,
     Sugestao,
     chave_da_linha,
     eh_generica,
@@ -93,6 +94,9 @@ def casos(*, desde: date | None = None, ate: date | None = None) -> list[Caso]:
     if ate is not None:
         linhas = linhas.filter(statement_date__lte=ate)
     regras = Regras()
+    # Um contexto por natureza: lê o histórico uma vez, e o `antes_de` de cada
+    # linha vale sobre ele inteiro, sem o teto da leitura por linha.
+    contextos = {True: Contexto(apenas_gerenciais=True), False: Contexto(apenas_gerenciais=False)}
     vistas: set = set()
     resultado: list[Caso] = []
     for linha in linhas:
@@ -112,7 +116,8 @@ def casos(*, desde: date | None = None, ate: date | None = None) -> list[Caso]:
         if regra is not None and regra.action != RULE_ACTION_CATEGORY:
             regra = None
         sugestao = sugerir_para_linha(
-            linha, regra=regra, apenas_gerenciais=cartao, antes_de=_inicio_do_mes(linha.statement_date)
+            linha, regra=regra, apenas_gerenciais=cartao, antes_de=_inicio_do_mes(linha.statement_date),
+            contexto=contextos[cartao],
         )
         novo = entrada.created_at is not None and linha.created_at is not None and entrada.created_at >= linha.created_at
         resultado.append(Caso(linha, entrada.category, sugestao, novo))

@@ -405,6 +405,12 @@ de saldos de linha a linha e informa como saldo o da linha mais recente na data
 final do período. A instituição cadastrada como "SCP XP Investimestos" (sic) usa
 o mesmo adapter, e a conta é reconhecida pelo número do rótulo "Conta:" do PDF.
 
+O da Genial tira a marca "* Prov *" do começo da descrição antes do hash: o
+extrato do meio do dia marca assim o lançamento ainda provisório, e no extrato
+seguinte a mesma linha volta sem a marca, na mesma data e valor. Sem a marca no
+texto a reimportação a reconhece como repetida. O "Estorno * Prov * ..." é um
+lançamento de verdade e fica como está.
+
 O do Itaú (`ItauPdfStatementAdapter`) lê o "extrato conta / lançamentos": uma
 linha por lançamento, com o sinal no valor. As linhas "SALDO DO DIA" não viram
 lançamento; elas conferem, dia a dia, saldo anterior + lançamentos do dia =
@@ -551,8 +557,14 @@ categoria), da categoria do banco já escolhida antes, do prefixo do extrato e d
 da linha de extrato conciliada com ele, um voto por lançamento: reescrever a
 descrição ("Salário") não apaga o que o banco manda ("PAGTO SALARIO"). O prefixo
 do PDF fica depois do histórico porque erra (a Genial chama o aluguel de ações de
-"Rendimentos"). A regra explícita (`StatementRule`, `manage.py regras_de_extrato`)
-descreve uma família de texto por instituição e sinal, nunca por id.
+"Rendimentos"). A regra explícita (`StatementRule`) descreve uma família de texto
+por instituição e sinal, nunca por id. Ela é criada, alterada, desativada e
+excluída em Movimentação › Importação › Regras de extrato (`/banking/rules/`,
+permissão de conciliar); o "Criar regra" de cada linha da Conciliação abre a tela
+com o texto, a instituição e o sinal da linha. A tela recusa a regra que nunca
+valeria (categoria de transferência, conta de destino que não existe) e diz
+quantas linhas pendentes a regra salva decide. `manage.py regras_de_extrato
+semear` continua semeando as de uso comum num ambiente novo.
 
 Cada sugestão tem um **nível de confiança**. É alta quando vem de regra ou de dois
 ou mais casos anteriores, todos na mesma categoria, fora de intermediador (Mercado

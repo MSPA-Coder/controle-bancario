@@ -84,6 +84,13 @@ def _build_menu_items() -> list[MenuItem]:
                             required_permission="banking.reconcile",
                         ),
                         MenuItem(
+                            gettext("Regras de extrato"),
+                            "/banking/rules/",
+                            "📏",
+                            "/banking/rules/",
+                            required_permission="banking.reconcile",
+                        ),
+                        MenuItem(
                             gettext("Extratos importados"),
                             "/banking/statements/",
                             "\U0001F9FE",

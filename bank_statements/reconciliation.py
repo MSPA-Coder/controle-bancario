@@ -25,6 +25,7 @@ conciliada -- o extrato continua existindo, só sem lançamento vinculado.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 
@@ -186,19 +187,7 @@ def linha_parecida_ja_conciliada(line: BankStatementLine) -> BankStatementLine |
     `candidate_entries_for_line` porque já está vinculado à linha antiga —
     sem este aviso, a tela cairia direto em "Cria lançamento", e criar
     lançaria a mesma transferência duas vezes. `None` quando não há sinal."""
-    return (
-        BankStatementLine.objects.filter(
-            account_id=line.account_id,
-            statement_date=line.statement_date,
-            amount=line.amount,
-            status=LINE_STATUS_RECONCILED,
-            matched_entry__isnull=False,
-        )
-        .exclude(id=line.id)
-        .select_related("matched_entry")
-        .order_by("-id")
-        .first()
-    )
+    return linhas_repetidas([line])[line.id].ja_conciliada
 
 
 def linha_igual_de_importacao_anterior(line: BankStatementLine) -> BankStatementLine | None:
@@ -211,19 +200,7 @@ def linha_igual_de_importacao_anterior(line: BankStatementLine) -> BankStatement
     segue o plano normal. Linha de texto idêntico não entra: se o hash não a
     barrou, ela é outra ocorrência do mesmo movimento (dois Pix iguais no dia,
     ver `adapters.numerar_repeticoes`), não a mesma."""
-    return (
-        BankStatementLine.objects.filter(
-            account_id=line.account_id,
-            statement_date=line.statement_date,
-            amount=line.amount,
-            status=LINE_STATUS_NEW,
-            import_batch_id__lt=line.import_batch_id,
-        )
-        .exclude(description__iexact=line.description.strip())
-        .select_related("import_batch")
-        .order_by("id")
-        .first()
-    )
+    return linhas_repetidas([line])[line.id].de_importacao_anterior
 
 
 def desempatar_pelo_dia(line: BankStatementLine, candidates: list[CashFlowEntry]) -> list[CashFlowEntry]:
@@ -255,45 +232,47 @@ def candidate_entries_for_lines(
     """Candidatos a conciliar para várias linhas de uma vez.
 
     Mesmo critério e mesmo limite de `candidate_entries_for_line` (teto no
-    mês inteiro, não na data do extrato), mas agrupado por (conta, tipo,
-    valor) para evitar uma consulta por linha: a tela de conciliação mostra
-    até 100 linhas, e é comum poucas contas e poucos valores se repetirem
-    entre elas (contas fixas, salário). Busca o conjunto que cobre a união
-    dos meses de cada grupo numa única consulta e aplica a janela e o limite
-    exatos de cada linha em Python -- resultado idêntico ao de chamar a
-    versão de uma linha para cada, com uma fração das consultas."""
+    mês inteiro, não na data do extrato). Busca numa única consulta o conjunto
+    que cobre as contas, os valores e a união dos meses das linhas, e aplica o
+    critério exato de cada linha em Python -- resultado idêntico ao de chamar a
+    versão de uma linha para cada."""
     from reports.services import add_months
 
     lines = list(lines)
     if not lines:
         return {}
 
-    groups: dict[tuple[int, str, object], list[BankStatementLine]] = {}
+    # Uma consulta para todas as linhas: agrupar por (conta, tipo, valor) dava
+    # uma consulta por linha sempre que os valores não se repetiam, que é o caso
+    # comum de um extrato (compras, Pix), e a tela a refazia a cada clique.
+    values = {abs(line.amount) for line in lines}
+    earliest_month_start = min(line.statement_date.replace(day=1) for line in lines)
+    latest_month_end_exclusive = add_months(max(line.statement_date.replace(day=1) for line in lines), 1)
+    pool = list(
+        CashFlowEntry.objects.filter(
+            Q(entry_amount__in=values) | Q(status=STATUS_REALIZED, realized_amount__in=values),
+            account_id__in={line.account_id for line in lines},
+            # A folga cobre a virada do mês das linhas das pontas.
+            due_date__gte=earliest_month_start - JANELA_DA_VIRADA,
+            due_date__lt=latest_month_end_exclusive + JANELA_DA_VIRADA,
+        )
+        .exclude(statement_matches__status=LINE_STATUS_RECONCILED)
+        # A tela mostra o valor do candidato na moeda da conta dele.
+        .select_related("account")
+        .order_by("-due_date", "-id")
+    )
+    candidates_by_line: dict[int, list[CashFlowEntry]] = {}
     for line in lines:
         value = abs(line.amount)
         entry_type = ENTRY_TYPE_INCOME if line.amount > 0 else ENTRY_TYPE_EXPENSE
-        groups.setdefault((line.account_id, entry_type, value), []).append(line)
-
-    candidates_by_line: dict[int, list[CashFlowEntry]] = {line.id: [] for line in lines}
-    for (account_id, entry_type, value), group_lines in groups.items():
-        earliest_month_start = min(gl.statement_date.replace(day=1) for gl in group_lines)
-        latest_month_end_exclusive = add_months(
-            max(gl.statement_date.replace(day=1) for gl in group_lines), 1
-        )
-        pool = list(
-            CashFlowEntry.objects.filter(
-                _mesmo_valor(value),
-                account_id=account_id,
-                entry_type=entry_type,
-                # A folga cobre a virada do mês das linhas das pontas.
-                due_date__gte=earliest_month_start - JANELA_DA_VIRADA,
-                due_date__lt=latest_month_end_exclusive + JANELA_DA_VIRADA,
-            )
-            .exclude(statement_matches__status=LINE_STATUS_RECONCILED)
-            .order_by("-due_date", "-id")
-        )
-        for gl in group_lines:
-            candidates_by_line[gl.id] = [entry for entry in pool if _e_candidato_pela_data(entry, gl)][:limit]
+        candidates_by_line[line.id] = [
+            entry for entry in pool
+            if entry.account_id == line.account_id
+            and entry.entry_type == entry_type
+            # O mesmo critério de `_mesmo_valor`.
+            and (entry.entry_amount == value or (entry.status == STATUS_REALIZED and entry.realized_amount == value))
+            and _e_candidato_pela_data(entry, line)
+        ][:limit]
 
     return candidates_by_line
 
@@ -313,26 +292,95 @@ def candidatos_aproximados(line: BankStatementLine, limit: int = 3) -> list[Cash
     Não inclui as de valor exato: essas são os candidatos normais
     (`candidate_entries_for_line`). Ordena pela data mais próxima e, em empate,
     pelo valor mais próximo."""
-    valor = abs(line.amount)
-    tipo = ENTRY_TYPE_INCOME if line.amount > 0 else ENTRY_TYPE_EXPENSE
-    candidatos = (
+    return candidatos_aproximados_por_linha([line], limit=limit)[line.id]
+
+
+def candidatos_aproximados_por_linha(
+    lines: Iterable[BankStatementLine], limit: int = 3
+) -> dict[int, list[CashFlowEntry]]:
+    """`candidatos_aproximados` de várias linhas, com uma consulta só."""
+    lines = list(lines)
+    if not lines:
+        return {}
+    abertas = list(
         CashFlowEntry.objects.filter(
-            account_id=line.account_id,
-            entry_type=tipo,
+            account_id__in={line.account_id for line in lines},
             is_recurring=True,
-            due_date__gte=line.statement_date - JANELA_DA_RECORRENCIA,
-            due_date__lte=line.statement_date + JANELA_DA_RECORRENCIA,
-            entry_amount__gte=valor * (1 - TOLERANCIA_DO_VALOR),
-            entry_amount__lte=valor * (1 + TOLERANCIA_DO_VALOR),
+            due_date__gte=min(line.statement_date for line in lines) - JANELA_DA_RECORRENCIA,
+            due_date__lte=max(line.statement_date for line in lines) + JANELA_DA_RECORRENCIA,
         )
         .exclude(status=STATUS_REALIZED)
-        .exclude(entry_amount=valor)
         .exclude(statement_matches__status=LINE_STATUS_RECONCILED)
     )
-    return sorted(
-        candidatos,
-        key=lambda c: (abs((c.due_date - line.statement_date).days), abs(c.entry_amount - valor), c.id),
-    )[:limit]
+    por_linha: dict[int, list[CashFlowEntry]] = {}
+    for line in lines:
+        valor = abs(line.amount)
+        tipo = ENTRY_TYPE_INCOME if line.amount > 0 else ENTRY_TYPE_EXPENSE
+        candidatos = [
+            entry for entry in abertas
+            if entry.account_id == line.account_id
+            and entry.entry_type == tipo
+            and abs(entry.due_date - line.statement_date) <= JANELA_DA_RECORRENCIA
+            and valor * (1 - TOLERANCIA_DO_VALOR) <= entry.entry_amount <= valor * (1 + TOLERANCIA_DO_VALOR)
+            and entry.entry_amount != valor
+        ]
+        por_linha[line.id] = sorted(
+            candidatos,
+            key=lambda c, line=line, valor=valor: (
+                abs((c.due_date - line.statement_date).days), abs(c.entry_amount - valor), c.id
+            ),
+        )[:limit]
+    return por_linha
+
+
+@dataclass(frozen=True)
+class Repetidas:
+    """As linhas que podem ser a mesma transação de uma linha (ver as duas funções abaixo)."""
+
+    ja_conciliada: BankStatementLine | None = None
+    de_importacao_anterior: BankStatementLine | None = None
+
+
+def linhas_repetidas(lines: Iterable[BankStatementLine]) -> dict[int, Repetidas]:
+    """`linha_parecida_ja_conciliada` e `linha_igual_de_importacao_anterior` de
+    várias linhas, com uma consulta só."""
+    lines = list(lines)
+    if not lines:
+        return {}
+    outras: dict[tuple, list[BankStatementLine]] = {}
+    for outra in (
+        BankStatementLine.objects.filter(
+            account_id__in={line.account_id for line in lines},
+            statement_date__in={line.statement_date for line in lines},
+            amount__in={line.amount for line in lines},
+            status__in=(LINE_STATUS_RECONCILED, LINE_STATUS_NEW),
+        )
+        .select_related("matched_entry", "import_batch")
+        .order_by("id")
+    ):
+        outras.setdefault((outra.account_id, outra.statement_date, outra.amount), []).append(outra)
+    resultado: dict[int, Repetidas] = {}
+    for line in lines:
+        mesmas = [
+            outra for outra in outras.get((line.account_id, line.statement_date, line.amount), ())
+            if outra.id != line.id
+        ]
+        conciliadas = [
+            outra for outra in mesmas
+            if outra.status == LINE_STATUS_RECONCILED and outra.matched_entry_id is not None
+        ]
+        texto = line.description.strip().upper()
+        anteriores = [
+            outra for outra in mesmas
+            if outra.status == LINE_STATUS_NEW
+            and outra.import_batch_id < line.import_batch_id
+            and outra.description.strip().upper() != texto
+        ]
+        resultado[line.id] = Repetidas(
+            ja_conciliada=conciliadas[-1] if conciliadas else None,
+            de_importacao_anterior=anteriores[0] if anteriores else None,
+        )
+    return resultado
 
 
 _FALLBACK_CATEGORY_NAME = "Outros"
@@ -486,9 +534,13 @@ def reconciliation_view_data(user, target_line_id: int | None = None) -> dict:
     # de dicionário por variável (`candidates[line.id]`); anexar o atributo
     # aqui é mais simples do que registrar um template filter só para isso.
     from . import extrato
+    from .classificacao import Contexto, sugerir_para_linha
 
+    contexto = Contexto()
     candidates_by_line = candidate_entries_for_lines(lines)
-    planos = {plano.linha.id: plano for plano in extrato.planejar(user, lines)}
+    planos = {plano.linha.id: plano for plano in extrato.planejar(
+        user, lines, contexto=contexto, candidatos_por_linha=candidates_by_line
+    )}
     # "Transferir": a saída vai para uma conta que o usuário pode receber; a
     # entrada vem de uma conta em que ele pode lançar.
     contas_de_destino = counterparty_accounts_for_transfer(user)
@@ -508,7 +560,7 @@ def reconciliation_view_data(user, target_line_id: int | None = None) -> dict:
         line.plano = plano
         suggested = (
             plano.sugestao.categoria if plano is not None and plano.sugestao is not None
-            else suggested_category_for_line(line)
+            else sugerir_para_linha(line, contexto=contexto).categoria
         )
         line.suggested_category_id = suggested.id if suggested else None
         line.confiavel = plano is not None and plano.confiavel

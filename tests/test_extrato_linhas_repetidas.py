@@ -74,6 +74,28 @@ def test_genial_repetido_tambem_e_numerado():
     assert linhas[0].line_hash != linhas[1].line_hash
 
 
+def test_genial_linha_provisoria_tem_o_hash_da_definitiva_e_o_estorno_fica_como_esta():
+    """O extrato do meio do dia marca "* Prov *"; no seguinte a linha volta sem a
+    marca, na mesma data e valor. Com a marca fora do texto, a reimportação a
+    reconhece. O "Estorno * Prov *" é outro lançamento e mantém o texto."""
+    provisorio = (
+        "Extrato de conta corrente\n"
+        "Ter 20 out 2026 Corretagem - R$ 0,03\n"
+        "* Prov * Corretagem Executor - Btc\n"
+        "Operações em bolsa + R$ 13,30\n"
+        "Estorno * Prov * Corretagem Executor - Btc\n"
+        "Nome: FULANO DE TAL\n"
+    )
+    definitivo = provisorio.replace("* Prov * Corretagem Executor", "Corretagem Executor", 1)
+
+    antes = _parse_genial_lines(provisorio, account_id=1)
+    depois = _parse_genial_lines(definitivo, account_id=1)
+
+    assert antes[0].description == "Corretagem - Corretagem Executor - Btc"
+    assert antes[1].description == "Operações em bolsa - Estorno * Prov * Corretagem Executor - Btc"
+    assert [linha.line_hash for linha in antes] == [linha.line_hash for linha in depois]
+
+
 @pytest.fixture
 def conta():
     usuario = AppUser.objects.create_user(

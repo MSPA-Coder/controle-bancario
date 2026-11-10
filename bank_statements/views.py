@@ -14,14 +14,16 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods, require_POST
 
 from accounts.services import has_function_permission
+from banking.models import FinancialInstitution
 from banking.services import accessible_account_ids
 from core.account_group_filter import account_group_q
 from core.currency_filter import currency_q
+from core.domain.finance import CATEGORY_KIND_TRANSFER
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
 from core.services import audit_action, audit_request_context
 from core.templatetags.money_filters import balance_signed
-from transactions.models import AccountMonthClose
+from transactions.models import AccountMonthClose, CashFlowCategory
 
 from . import (
     extrato,
@@ -31,6 +33,7 @@ from . import (
     pending_imports,
     reclassificacao,
     reconciliation,
+    regras,
     saldo,
     situacao,
 )
@@ -41,7 +44,7 @@ from .attachments import (
     recent_attachments_for_user,
     save_entry_attachment,
 )
-from .models import BankStatementLine
+from .models import RULE_SIGN_CREDIT, RULE_SIGN_DEBIT, BankStatementLine, StatementRule
 from .services import (
     accounts_for_import_form,
     statement_import_status,
@@ -532,6 +535,112 @@ def atualizar_saldo_view(request):
         "atualizacoes": saldo.atualizacoes(request.user),
         "categoria_de_ajuste": saldo.CATEGORIA_DE_AJUSTE,
         "destinos": saldo.DESTINOS,
+    })
+
+
+def _retrato_da_regra(regra) -> dict:
+    return {
+        "name": regra.name, "pattern": regra.pattern, "institution_id": regra.institution_id, "sign": regra.sign,
+        "action": regra.action, "category_id": regra.category_id,
+        "destination_account_name": regra.destination_account_name,
+        "destination_institution_id": regra.destination_institution_id, "active": regra.active,
+    }
+
+
+def _regra_a_partir_da_linha(user, line_id) -> dict:
+    """O formulário já preenchido com o que a linha diz: texto, instituição e sinal."""
+    try:
+        linha = BankStatementLine.objects.select_related("account").get(
+            id=int(line_id), account_id__in=accessible_account_ids(user, "view")
+        )
+    except (BankStatementLine.DoesNotExist, ValueError, TypeError):
+        return {}
+    return {
+        "pattern": linha.description[:120],
+        "institution": str(linha.account.institution_id),
+        "sign": RULE_SIGN_CREDIT if linha.amount > 0 else RULE_SIGN_DEBIT,
+        "active": "1",
+    }
+
+
+@login_required
+@permission_required('banking.view')
+@permission_required('banking.reconcile', fallback='dashboard:dashboard')
+@require_http_methods(["GET", "POST"])
+def regras_view(request):
+    """Regras de extrato: o que fazer com uma família de linhas (categorizar, transferir, ignorar)."""
+    formulario = {"active": "1"}
+    editando = None
+    if request.method == 'POST':
+        acao = request.POST.get('acao')
+        regra_id = request.POST.get('regra_id') or None
+        try:
+            if acao == 'salvar':
+                antes = None
+                if regra_id:
+                    anterior = StatementRule.objects.filter(id=regra_id).first()
+                    antes = _retrato_da_regra(anterior) if anterior else None
+                regra = regras.salvar(regra_id, request.POST)
+                audit_action(
+                    request, 'statement_rule', regra.id, 'update' if regra_id else 'create',
+                    old_values=antes, new_values=_retrato_da_regra(regra),
+                )
+                casam = regras.linhas_pendentes_da_regra(request.user, regra)
+                messages.success(request, ngettext(
+                    "Regra salva. Ela decide %(n)s linha pendente agora.",
+                    "Regra salva. Ela decide %(n)s linhas pendentes agora.",
+                    casam,
+                ) % {"n": casam})
+                return redirect('bank_statements:regras')
+            regra = StatementRule.objects.filter(id=regra_id).first()
+            if regra is None:
+                raise ValueError(gettext("Regra não encontrada."))
+            if acao == 'alternar':
+                regra.active = not regra.active
+                regra.save(update_fields=["active", "updated_at"])
+                audit_action(request, 'statement_rule', regra.id, 'update', new_values={"active": regra.active})
+                messages.success(
+                    request, gettext("Regra ativada.") if regra.active else gettext("Regra desativada.")
+                )
+            elif acao == 'excluir':
+                retrato = _retrato_da_regra(regra)
+                regra.delete()
+                audit_action(request, 'statement_rule', regra_id, 'delete', old_values=retrato)
+                messages.success(request, gettext("Regra excluída."))
+            else:
+                raise ValueError(gettext("Ação inválida."))
+            return redirect('bank_statements:regras')
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            formulario = request.POST
+            editando = regra_id if acao == 'salvar' else None
+    elif request.GET.get('editar'):
+        regra = StatementRule.objects.filter(id=request.GET.get('editar')).first() if request.GET['editar'].isdigit() else None
+        if regra is None:
+            messages.warning(request, gettext("Regra não encontrada."))
+        else:
+            editando = regra.id
+            formulario = {
+                "name": regra.name, "pattern": regra.pattern, "institution": str(regra.institution_id or ""),
+                "sign": regra.sign, "action": regra.action, "category": str(regra.category_id or ""),
+                "destination_account_name": regra.destination_account_name,
+                "destination_institution": str(regra.destination_institution_id or ""),
+                "active": "1" if regra.active else "",
+            }
+    elif request.GET.get('linha'):
+        formulario = _regra_a_partir_da_linha(request.user, request.GET.get('linha')) or formulario
+
+    return render(request, 'banking/regras.html', {
+        "regras": StatementRule.objects.select_related("institution", "category", "destination_institution"),
+        "formulario": formulario,
+        "editando": editando,
+        "instituicoes": FinancialInstitution.objects.order_by("institution_name"),
+        "categorias": CashFlowCategory.objects.exclude(kind=CATEGORY_KIND_TRANSFER).order_by("category_name"),
+        "contas_de_destino": sorted({
+            conta.account_name for conta in accounts_for_import_form(request.user) if not conta.is_credit_card
+        }),
+        "sinais": StatementRule._meta.get_field("sign").choices,
+        "acoes": StatementRule._meta.get_field("action").choices,
     })
 
 

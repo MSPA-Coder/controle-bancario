@@ -267,46 +267,130 @@ def _vencedora(votos: list[CashFlowCategory]) -> _Votacao | None:
     return _Votacao(por_id[melhor], len(votos), contagem[melhor])
 
 
+@dataclass(frozen=True)
+class _Voto:
+    vencimento: date
+    lancamento_id: int
+    categoria_id: int
+    # Preenchida quando o lançamento entrou pelo texto da linha conciliada com ele.
+    data_da_linha: date | None = None
+
+
+class Historico:
+    """Os lançamentos já classificados, por chave: cada um vota uma vez, sem "Outros".
+
+    Um lançamento entra pela própria descrição ou pelo texto da linha de extrato
+    conciliada com ele. Com `termo`, lê só o que contém aquela palavra, até
+    `_LIMITE_DE_HISTORICO` de cada (é o que serve a uma linha só). Sem ele, lê
+    tudo de uma vez e responde por qualquer linha: é o que um plano inteiro usa,
+    em vez de duas consultas por linha."""
+
+    def __init__(self, *, apenas_gerenciais: bool, termo: str | None = None) -> None:
+        tipos = _tipos(apenas_gerenciais)
+        lancamentos = CashFlowEntry.objects.filter(category__kind__in=tipos).exclude(
+            category__category_name__iexact=CATEGORIA_PADRAO
+        )
+        linhas = BankStatementLine.objects.filter(
+            status=LINE_STATUS_RECONCILED, matched_entry__category__kind__in=tipos
+        ).exclude(matched_entry__category__category_name__iexact=CATEGORIA_PADRAO)
+        if termo is not None:
+            lancamentos = lancamentos.filter(description__icontains=termo).order_by("-due_date", "-id")
+            lancamentos = lancamentos[:_LIMITE_DE_HISTORICO]
+            linhas = linhas.filter(description__icontains=termo).order_by("-statement_date", "-id")
+            linhas = linhas[:_LIMITE_DE_HISTORICO]
+        self._por_chave: dict[str, dict[int, _Voto]] = {}
+        for lancamento_id, descricao, vencimento, categoria_id in lancamentos.values_list(
+            "id", "description", "due_date", "category_id"
+        ):
+            self._por_chave.setdefault(chave_da_linha(descricao), {})[lancamento_id] = _Voto(
+                vencimento, lancamento_id, categoria_id
+            )
+        for descricao, data, lancamento_id, vencimento, categoria_id in linhas.values_list(
+            "description", "statement_date", "matched_entry_id", "matched_entry__due_date",
+            "matched_entry__category_id",
+        ):
+            self._por_chave.setdefault(chave_da_linha(descricao), {}).setdefault(
+                lancamento_id, _Voto(vencimento, lancamento_id, categoria_id, data)
+            )
+        self._categorias: dict[int, CashFlowCategory] | None = None
+
+    def _categoria(self, categoria_id: int) -> CashFlowCategory:
+        if self._categorias is None:
+            ids = {voto.categoria_id for votos in self._por_chave.values() for voto in votos.values()}
+            self._categorias = CashFlowCategory.objects.in_bulk(ids)
+        return self._categorias[categoria_id]
+
+    def votacao(self, descricao: str, *, antes_de: date | None = None) -> _Votacao | None:
+        """A votação da descrição. `antes_de` limita o histórico ao que existia
+        antes daquela data (é o que `medir_sugestoes` usa para refazer o passado
+        sem olhar o futuro). Descrição genérica não tem histórico."""
+        if eh_generica(descricao):
+            return None
+        votos = self._por_chave.get(chave_da_linha(descricao), {}).values()
+        if antes_de is not None:
+            votos = [
+                voto for voto in votos
+                if voto.vencimento < antes_de and (voto.data_da_linha is None or voto.data_da_linha < antes_de)
+            ]
+        recentes = sorted(votos, key=lambda voto: (voto.vencimento, voto.lancamento_id), reverse=True)
+        return _vencedora([self._categoria(voto.categoria_id) for voto in recentes])
+
+
+class Contexto:
+    """O que a classificação de várias linhas lê uma vez só.
+
+    A tela de Conciliação e a prévia da fatura classificam dezenas de linhas de
+    uma vez; sem isto cada linha refazia as mesmas consultas (histórico,
+    categoria do banco, categoria da conta, categoria pelo nome), e a tela de
+    100 linhas custava centenas de consultas a cada clique."""
+
+    def __init__(self, *, apenas_gerenciais: bool = False) -> None:
+        self.apenas_gerenciais = apenas_gerenciais
+        self._historico: Historico | None = None
+        self._do_banco: dict[tuple, _Votacao | None] = {}
+        self._da_conta: dict[tuple, _Votacao | None] = {}
+        self._pelo_nome: dict[str, CashFlowCategory] | None = None
+
+    @property
+    def historico(self) -> Historico:
+        if self._historico is None:
+            self._historico = Historico(apenas_gerenciais=self.apenas_gerenciais)
+        return self._historico
+
+    def do_banco(self, bank_category: str, antes_de: date | None) -> _Votacao | None:
+        chave = (bank_category, antes_de)
+        if chave not in self._do_banco:
+            self._do_banco[chave] = _votacao_do_banco(
+                bank_category, apenas_gerenciais=self.apenas_gerenciais, antes_de=antes_de
+            )
+        return self._do_banco[chave]
+
+    def da_conta(self, conta, tipo: str, antes_de: date | None) -> _Votacao | None:
+        chave = (conta.id, tipo, antes_de)
+        if chave not in self._da_conta:
+            self._da_conta[chave] = _votacao_da_conta(
+                conta, tipo, apenas_gerenciais=self.apenas_gerenciais, antes_de=antes_de
+            )
+        return self._da_conta[chave]
+
+    def categoria_pelo_nome(self, nome: str | None) -> CashFlowCategory | None:
+        if not nome:
+            return None
+        if self._pelo_nome is None:
+            self._pelo_nome = {}
+            for categoria in _categorias_validas(self.apenas_gerenciais):
+                self._pelo_nome.setdefault(categoria.category_name.upper(), categoria)
+        return self._pelo_nome.get(nome.strip().upper())
+
+
 def _votacao_do_historico(
     descricao: str, *, apenas_gerenciais: bool, antes_de: date | None = None
 ) -> _Votacao | None:
-    """Os lançamentos de mesma chave, cada um com um voto, sem "Outros".
-
-    Um lançamento entra pela própria descrição ou pelo texto da linha de
-    extrato conciliada com ele, e vota uma vez só. `antes_de` limita o
-    histórico ao que existia antes daquela data (é o que `medir_sugestoes` usa
-    para refazer o passado sem olhar o futuro)."""
+    """A votação do histórico para uma descrição só (ver `Historico`)."""
     if eh_generica(descricao):
         return None
-    chave = chave_da_linha(descricao)
-    termo = _termo_de_busca(descricao)
-    tipos = _tipos(apenas_gerenciais)
-    lancamentos = (
-        CashFlowEntry.objects.filter(category__kind__in=tipos, description__icontains=termo)
-        .exclude(category__category_name__iexact=CATEGORIA_PADRAO)
-        .select_related("category")
-    )
-    linhas = (
-        BankStatementLine.objects.filter(
-            status=LINE_STATUS_RECONCILED,
-            matched_entry__category__kind__in=tipos,
-            description__icontains=termo,
-        )
-        .exclude(matched_entry__category__category_name__iexact=CATEGORIA_PADRAO)
-        .select_related("matched_entry__category")
-    )
-    if antes_de is not None:
-        lancamentos = lancamentos.filter(due_date__lt=antes_de)
-        linhas = linhas.filter(statement_date__lt=antes_de, matched_entry__due_date__lt=antes_de)
-    achados: dict[int, CashFlowEntry] = {}
-    for anterior in lancamentos.order_by("-due_date", "-id")[:_LIMITE_DE_HISTORICO]:
-        if chave_da_linha(anterior.description) == chave:
-            achados[anterior.id] = anterior
-    for linha in linhas.order_by("-statement_date", "-id")[:_LIMITE_DE_HISTORICO]:
-        if chave_da_linha(linha.description) == chave:
-            achados.setdefault(linha.matched_entry_id, linha.matched_entry)
-    recentes = sorted(achados.values(), key=lambda entrada: (entrada.due_date, entrada.id), reverse=True)
-    return _vencedora([entrada.category for entrada in recentes])
+    historico = Historico(apenas_gerenciais=apenas_gerenciais, termo=_termo_de_busca(descricao))
+    return historico.votacao(descricao, antes_de=antes_de)
 
 
 def categoria_do_historico(
@@ -387,6 +471,7 @@ def sugerir_categoria(
     conta=None,
     tipo: str | None = None,
     antes_de: date | None = None,
+    contexto: Contexto | None = None,
 ) -> Sugestao:
     """A categoria sugerida, de onde ela veio e o quanto confiar. Nunca grava nada.
 
@@ -394,27 +479,47 @@ def sugerir_categoria(
     para esta função não depender do contexto da linha (instituição). `conta` e
     `tipo` (receita ou despesa) servem só à descrição genérica, que cai na
     categoria dominante da conta. `antes_de` é para a medição (ver
-    `_votacao_do_historico`)."""
+    `Historico.votacao`). `contexto` é de quem classifica várias linhas (ver
+    `Contexto`): a resposta é a mesma, só as leituras são compartilhadas, e a
+    natureza das categorias passa a ser a dele."""
     if regra is not None and regra.category_id:
         return Sugestao(regra.category, ORIGEM_REGRA)
+    if contexto is not None:
+        apenas_gerenciais = contexto.apenas_gerenciais
     intermediador = eh_intermediador(descricao)
-    historico = _votacao_do_historico(descricao, apenas_gerenciais=apenas_gerenciais, antes_de=antes_de)
+    if contexto is not None:
+        historico = contexto.historico.votacao(descricao, antes_de=antes_de)
+    else:
+        historico = _votacao_do_historico(descricao, apenas_gerenciais=apenas_gerenciais, antes_de=antes_de)
     if historico is not None:
         return Sugestao(historico.categoria, ORIGEM_HISTORICO, historico.votos, historico.iguais, intermediador)
     if conta is not None and tipo is not None and eh_generica(descricao):
-        da_conta = _votacao_da_conta(conta, tipo, apenas_gerenciais=apenas_gerenciais, antes_de=antes_de)
+        if contexto is not None:
+            da_conta = contexto.da_conta(conta, tipo, antes_de)
+        else:
+            da_conta = _votacao_da_conta(conta, tipo, apenas_gerenciais=apenas_gerenciais, antes_de=antes_de)
         if da_conta is not None:
             return Sugestao(da_conta.categoria, ORIGEM_CONTA, da_conta.votos, da_conta.iguais)
-    aprendida = _votacao_do_banco(bank_category, apenas_gerenciais=apenas_gerenciais, antes_de=antes_de)
+    if contexto is not None:
+        aprendida = contexto.do_banco(bank_category, antes_de)
+    else:
+        aprendida = _votacao_do_banco(bank_category, apenas_gerenciais=apenas_gerenciais, antes_de=antes_de)
     if aprendida is not None:
         return Sugestao(aprendida.categoria, ORIGEM_BANCO_APRENDIDA, aprendida.votos, aprendida.iguais, intermediador)
-    do_prefixo = _categoria_pelo_nome(prefixo_de_categoria(descricao), apenas_gerenciais)
+
+    def pelo_nome(nome: str | None) -> CashFlowCategory | None:
+        if contexto is not None:
+            return contexto.categoria_pelo_nome(nome)
+        return _categoria_pelo_nome(nome, apenas_gerenciais)
+
+    do_prefixo = pelo_nome(prefixo_de_categoria(descricao))
     if do_prefixo is not None:
         return Sugestao(do_prefixo, ORIGEM_PREFIXO)
-    do_banco = _categoria_pelo_nome(bank_category, apenas_gerenciais)
+    do_banco = pelo_nome(bank_category)
     if do_banco is not None:
         return Sugestao(do_banco, ORIGEM_BANCO)
-    return Sugestao(_categoria_padrao(apenas_gerenciais), ORIGEM_PADRAO)
+    padrao = pelo_nome(CATEGORIA_PADRAO) if contexto is not None else _categoria_padrao(apenas_gerenciais)
+    return Sugestao(padrao, ORIGEM_PADRAO)
 
 
 def tipo_da_linha(linha: BankStatementLine) -> str:
@@ -422,7 +527,8 @@ def tipo_da_linha(linha: BankStatementLine) -> str:
 
 
 def sugerir_para_linha(
-    linha: BankStatementLine, *, regra=None, apenas_gerenciais: bool = False, antes_de: date | None = None
+    linha: BankStatementLine, *, regra=None, apenas_gerenciais: bool = False, antes_de: date | None = None,
+    contexto: Contexto | None = None,
 ) -> Sugestao:
     """`sugerir_categoria` com o que a própria linha diz: texto, categoria do banco,
     conta e sinal."""
@@ -434,4 +540,5 @@ def sugerir_para_linha(
         conta=linha.account,
         tipo=tipo_da_linha(linha),
         antes_de=antes_de,
+        contexto=contexto,
     )

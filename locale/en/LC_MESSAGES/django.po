@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 07:25-0300\n"
+"POT-Creation-Date: 2026-11-10 11:43-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1327,6 +1327,47 @@ msgstr "No candidate entry to reconcile."
 msgid "Mais de um lançamento candidato — concilie manualmente."
 msgstr "More than one candidate entry — reconcile manually."
 
+#: bank_statements/regras.py
+msgid "Escolha inválida no formulário da regra."
+msgstr "Invalid choice in the rule form."
+
+#: bank_statements/regras.py
+msgid "Dê um nome à regra."
+msgstr "Give the rule a name."
+
+#: bank_statements/regras.py
+msgid "Nome e trecho do texto têm no máximo 120 caracteres."
+msgstr "Name and text fragment are at most 120 characters long."
+
+#: bank_statements/regras.py
+msgid "O trecho do texto precisa de pelo menos 3 letras ou números."
+msgstr "The text fragment needs at least 3 letters or digits."
+
+#: bank_statements/regras.py banking/services.py
+msgid "Instituição não encontrada."
+msgstr "Institution not found."
+
+#: bank_statements/regras.py
+msgid "Escolha a categoria que a regra dá à linha."
+msgstr "Choose the category the rule gives to the line."
+
+#: bank_statements/regras.py
+msgid "Transferência tem outra ponta: use a ação de transferência e diga a conta de destino."
+msgstr "A transfer has another side: use the transfer action and name the destination account."
+
+#: bank_statements/regras.py
+msgid "Diga o nome da conta de destino da transferência."
+msgstr "Name the destination account of the transfer."
+
+#: bank_statements/regras.py
+#, python-format
+msgid "Não há conta chamada “%(conta)s”: confira o nome em Cadastros › Contas."
+msgstr "There is no account named “%(conta)s”: check the name in Records › Accounts."
+
+#: bank_statements/regras.py bank_statements/views.py
+msgid "Regra não encontrada."
+msgstr "Rule not found."
+
 #: bank_statements/saldo.py
 msgid "Rendimentos"
 msgstr "Yields"
@@ -1670,6 +1711,29 @@ msgstr "Balance recorded as a check: nothing was posted. If it differs from the 
 
 #: bank_statements/views.py
 #, python-format
+msgid "Regra salva. Ela decide %(n)s linha pendente agora."
+msgid_plural "Regra salva. Ela decide %(n)s linhas pendentes agora."
+msgstr[0] "Rule saved. It decides %(n)s pending line now."
+msgstr[1] "Rule saved. It decides %(n)s pending lines now."
+
+#: bank_statements/views.py
+msgid "Regra ativada."
+msgstr "Rule enabled."
+
+#: bank_statements/views.py
+msgid "Regra desativada."
+msgstr "Rule disabled."
+
+#: bank_statements/views.py
+msgid "Regra excluída."
+msgstr "Rule deleted."
+
+#: bank_statements/views.py
+msgid "Ação inválida."
+msgstr "Invalid action."
+
+#: bank_statements/views.py
+#, python-format
 msgid "Linha conciliada; realização corrigida pelo extrato (%(correcao)s)."
 msgstr "Line reconciled; settlement corrected by the statement (%(correcao)s)."
 
@@ -1936,10 +2000,6 @@ msgid "Acesso negado: você não tem permissão para criar contas para este titu
 msgstr "Access denied: you do not have permission to create accounts for this account holder."
 
 #: banking/services.py
-msgid "Instituição não encontrada."
-msgstr "Institution not found."
-
-#: banking/services.py
 msgid "Acesso negado: você não tem permissão para alterar contas deste titular."
 msgstr "Access denied: you do not have permission to change accounts for this account holder."
 
@@ -2049,6 +2109,10 @@ msgstr "Import statements and card statements"
 #: templates/banking/extratos.html
 msgid "Conciliação"
 msgstr "Reconciliation"
+
+#: core/context_processors.py templates/banking/regras.html
+msgid "Regras de extrato"
+msgstr "Statement rules"
 
 #: core/context_processors.py templates/banking/extratos.html
 msgid "Extratos importados"
@@ -2407,7 +2471,8 @@ msgstr "Unavailable"
 msgid "Confirmar"
 msgstr "Confirm"
 
-#: core/textos_js.py templates/tables/_cadastro_acoes.html
+#: core/textos_js.py templates/banking/regras.html
+#: templates/tables/_cadastro_acoes.html
 #: templates/transactions/_table_body.html templates/transactions/index.html
 msgid "Cancelar"
 msgstr "Cancel"
@@ -3783,7 +3848,7 @@ msgstr "Change your password now?"
 msgid "Confirmar alteração de senha"
 msgstr "Confirm password change"
 
-#: templates/accounts/change_password.html
+#: templates/accounts/change_password.html templates/banking/regras.html
 msgid "Alterar"
 msgstr "Change"
 
@@ -3809,7 +3874,7 @@ msgstr "Size"
 
 #: templates/banking/_attachments_table.html
 #: templates/banking/_import_table.html
-#: templates/banking/_reconciliation_tables.html
+#: templates/banking/_reconciliation_tables.html templates/banking/regras.html
 #: templates/permissions/index.html templates/tables/accounts.html
 #: templates/tables/banks.html templates/tables/categories.html
 #: templates/tables/category_groups.html templates/tables/owners.html
@@ -3830,8 +3895,8 @@ msgstr "Delete this receipt from storage?"
 msgid "Excluir comprovante"
 msgstr "Delete receipt"
 
-#: templates/banking/_attachments_table.html templates/permissions/index.html
-#: templates/tables/_accounts_table.html
+#: templates/banking/_attachments_table.html templates/banking/regras.html
+#: templates/permissions/index.html templates/tables/_accounts_table.html
 #: templates/tables/_categories_table.html
 #: templates/tables/_institutions_table.html
 #: templates/tables/_owners_table.html templates/tables/category_groups.html
@@ -4163,7 +4228,7 @@ msgid "Selecionar linha"
 msgstr "Select line"
 
 #: templates/banking/_reconciliation_tables.html
-#: templates/banking/atualizar_saldo.html
+#: templates/banking/atualizar_saldo.html templates/banking/regras.html
 #: templates/management/partials/management_content.html
 #: templates/settings/monthly_close.html templates/transactions/_fields.html
 msgid "Selecione…"
@@ -4190,7 +4255,7 @@ msgstr "Status: %(status)s"
 msgid "Categoria do lançamento"
 msgstr "Entry category"
 
-#: templates/banking/_reconciliation_tables.html
+#: templates/banking/_reconciliation_tables.html templates/banking/regras.html
 msgid "Categoria…"
 msgstr "Category…"
 
@@ -4241,6 +4306,14 @@ msgstr "Skip this statement line?"
 #: templates/banking/_reconciliation_tables.html
 msgid "Ignorar linha"
 msgstr "Skip line"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Criar uma regra para as linhas com este texto"
+msgstr "Create a rule for lines with this text"
+
+#: templates/banking/_reconciliation_tables.html
+msgid "Criar regra"
+msgstr "Create rule"
 
 #: templates/banking/_reconciliation_tables.html
 #: templates/settings/monthly_close.html
@@ -5067,6 +5140,128 @@ msgstr "Activity • Reconciliation"
 msgid "Conciliação de lançamentos"
 msgstr "Entry reconciliation"
 
+#: templates/banking/regras.html
+msgid "Movimentação • Regras de extrato"
+msgstr "Activity • Statement rules"
+
+#: templates/banking/regras.html
+msgid "Alterar a regra"
+msgstr "Edit the rule"
+
+#: templates/banking/regras.html
+msgid "Nova regra"
+msgstr "New rule"
+
+#: templates/banking/regras.html
+msgid "A regra diz o que fazer com as linhas de extrato de conta que contêm um trecho de texto (sem diferença de acento nem de maiúscula): dar uma categoria, lançar como transferência para outra conta do mesmo titular, ou ignorar. Ela vale mais que o histórico. Quando duas regras servem à mesma linha, vence a que tem instituição e, depois, a de trecho mais longo. Fatura de cartão não usa regra."
+msgstr "A rule says what to do with account statement lines that contain a text fragment (ignoring accents and case): give them a category, post them as a transfer to another account of the same owner, or ignore them. It outranks the history. When two rules fit the same line, the one with an institution wins, then the one with the longer fragment. Credit card statements do not use rules."
+
+#: templates/banking/regras.html
+#: templates/management/partials/management_content.html
+#: templates/permissions/index.html templates/tables/accounts.html
+#: templates/tables/banks.html templates/tables/owners.html
+msgid "Nome"
+msgstr "Name"
+
+#: templates/banking/regras.html
+msgid "Ex.: Boleto do condomínio"
+msgstr "E.g.: Condo fee slip"
+
+#: templates/banking/regras.html
+msgid "A linha contém"
+msgstr "The line contains"
+
+#: templates/banking/regras.html
+msgid "Trecho do texto do extrato"
+msgstr "Fragment of the statement text"
+
+#: templates/banking/regras.html templates/dashboard/index.html
+#: templates/management/index.html templates/reports/account_position.html
+#: templates/reports/partials/account_position_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/reports/projections.html templates/reports/upcoming_movements.html
+#: templates/tables/_accounts_table.html templates/tables/accounts.html
+#: templates/transactions/index.html
+msgid "Instituição"
+msgstr "Institution"
+
+#: templates/banking/regras.html
+msgid "Qualquer"
+msgstr "Any"
+
+#: templates/banking/regras.html
+msgid "Sinal"
+msgstr "Sign"
+
+#: templates/banking/regras.html
+msgid "O que fazer"
+msgstr "What to do"
+
+#: templates/banking/regras.html
+msgid "Categoria (para categorizar)"
+msgstr "Category (to categorize)"
+
+#: templates/banking/regras.html
+msgid "Conta de destino (para transferir)"
+msgstr "Destination account (to transfer)"
+
+#: templates/banking/regras.html
+msgid "O nome da conta, como em Cadastros › Contas. A conta é procurada entre as do titular da linha."
+msgstr "The account name, as in Records › Accounts. The account is looked up among those of the line's owner."
+
+#: templates/banking/regras.html
+msgid "Instituição do destino"
+msgstr "Destination institution"
+
+#: templates/banking/regras.html
+msgid "Só quando a conta de destino é de outra instituição."
+msgstr "Only when the destination account belongs to another institution."
+
+#: templates/banking/regras.html
+msgid "A mesma da linha"
+msgstr "Same as the line"
+
+#: templates/banking/regras.html
+#: templates/management/partials/management_content.html
+msgid "Ativa"
+msgstr "Active"
+
+#: templates/banking/regras.html
+msgid "Salvar regra"
+msgstr "Save rule"
+
+#: templates/banking/regras.html
+msgid "Regras cadastradas"
+msgstr "Existing rules"
+
+#: templates/banking/regras.html templates/transactions/_card_invoices.html
+msgid "Situação"
+msgstr "Status"
+
+#: templates/banking/regras.html
+msgid "Inativa"
+msgstr "Inactive"
+
+#: templates/banking/regras.html
+msgid "Desativar"
+msgstr "Disable"
+
+#: templates/banking/regras.html
+msgid "Ativar"
+msgstr "Enable"
+
+#: templates/banking/regras.html
+msgid "Excluir esta regra? As linhas já conciliadas não mudam."
+msgstr "Delete this rule? Lines already reconciled do not change."
+
+#: templates/banking/regras.html
+msgid "Excluir regra"
+msgstr "Delete rule"
+
+#: templates/banking/regras.html
+msgid "Nenhuma regra cadastrada."
+msgstr "No rules added."
+
 #: templates/banking/situacao_das_contas.html
 msgid "Movimentação • Situação das contas"
 msgstr "Activity • Account status"
@@ -5331,16 +5526,6 @@ msgstr "Account holder"
 #: templates/transactions/operations.html
 msgid "Todos"
 msgstr "All"
-
-#: templates/dashboard/index.html templates/management/index.html
-#: templates/reports/account_position.html
-#: templates/reports/partials/account_position_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/reports/projections.html templates/reports/upcoming_movements.html
-#: templates/tables/_accounts_table.html templates/tables/accounts.html
-#: templates/transactions/index.html
-msgid "Instituição"
-msgstr "Institution"
 
 #: templates/dashboard/index.html templates/management/index.html
 #: templates/reports/account_position.html
@@ -5701,12 +5886,6 @@ msgid "Criar projeto / centro de custo"
 msgstr "Create project / cost center"
 
 #: templates/management/partials/management_content.html
-#: templates/permissions/index.html templates/tables/accounts.html
-#: templates/tables/banks.html templates/tables/owners.html
-msgid "Nome"
-msgstr "Name"
-
-#: templates/management/partials/management_content.html
 msgid "Ex.: Reforma Apto"
 msgstr "E.g.: Apartment renovation"
 
@@ -5789,10 +5968,6 @@ msgstr "Items with no links are deleted. Items with history are archived and sto
 #: templates/management/partials/management_content.html
 msgid "Nome / período"
 msgstr "Name / period"
-
-#: templates/management/partials/management_content.html
-msgid "Ativa"
-msgstr "Active"
 
 #: templates/management/partials/management_content.html
 msgid "Arquivada"
@@ -7174,10 +7349,6 @@ msgstr "Statements are shown by due date. The ledger below contains only transac
 #: templates/transactions/_card_invoices.html
 msgid "Cartão"
 msgstr "Card"
-
-#: templates/transactions/_card_invoices.html
-msgid "Situação"
-msgstr "Status"
 
 #: templates/transactions/_card_invoices.html
 msgid "Detalhe"

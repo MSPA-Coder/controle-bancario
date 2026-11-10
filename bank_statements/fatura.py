@@ -83,6 +83,7 @@ from .classificacao import (
     CONFIANCA_BAIXA,
     CONFIANCA_MEDIA,
     CONFIANCA_NENHUMA,
+    Contexto,
     Sugestao,
     chave_da_linha,
     sugerir_para_linha,
@@ -280,11 +281,11 @@ def _ja_importada(conta, linha: BankStatementLine) -> bool:
     ).exclude(description__iexact=linha.description.strip()).exists()
 
 
-def _sugerir(plano: Plano) -> None:
+def _sugerir(plano: Plano, contexto: Contexto) -> None:
     # A mesma loja em qualquer conta, a mais frequente entre as que o usuário
     # classificou (nunca "Outros"), e só depois a categoria do banco: ver
     # `classificacao`, que o extrato de conta também usa.
-    plano.sugestao = sugerir_para_linha(plano.linha, apenas_gerenciais=True)
+    plano.sugestao = sugerir_para_linha(plano.linha, contexto=contexto)
     plano.categoria = plano.sugestao.categoria
 
 
@@ -294,6 +295,8 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
 
     planos: list[Plano] = []
     usados: set[int] = set()
+    # A fatura só aceita receita e despesa; o contexto lê o histórico uma vez.
+    contexto = Contexto(apenas_gerenciais=True)
     for linha in sorted(linhas, key=lambda item: (item.statement_date, item.id)):
         plano = Plano(linha=linha, acao=COMPRA)
         antes_do_saldo = linha.statement_date < conta.initial_balance_date
@@ -316,7 +319,7 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
                 if _parcela(conta, linha, vencimento, usados, livres=False) is None:
                     plano.futuras_a_partir_de = primeira
                     plano.futuras_vencimento = vencimento
-                    _sugerir(plano)
+                    _sugerir(plano, contexto)
         elif eh_pagamento(linha):
             plano.lancamento = _transferencia(conta, linha, usados)
             plano.acao = PAGAMENTO if plano.lancamento else PAGAMENTO_SEM_PAR
@@ -340,7 +343,7 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
         if plano.cria_lancamento and _ja_importada(conta, linha):
             plano.acao = DUPLICATA_PENDENTE
         if plano.cria_lancamento:
-            _sugerir(plano)
+            _sugerir(plano, contexto)
         if plano.lancamento is not None:
             usados.add(plano.lancamento.id)
         planos.append(plano)

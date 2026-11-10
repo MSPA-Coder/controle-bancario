@@ -194,6 +194,10 @@
                                 data-sa-severidade="warning"
                                 data-sa-ok="{% trans 'Ignorar' %}">{% trans "Ignorar" %}</button>
                     </form>
+                    {% if not line.account.is_credit_card %}
+                    <a class="btn-sm btn-ghost" href="{% url 'bank_statements:regras' %}?linha={{ line.id }}"
+                       title="{% trans 'Criar uma regra para as linhas com este texto' %}">{% trans "Criar regra" %}</a>
+                    {% endif %}
                     {% else %}
                     <span class="empty-state">{% trans "Sem ação" %}</span>
                     {% endif %}

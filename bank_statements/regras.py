@@ -8,13 +8,20 @@ from __future__ import annotations
 
 import unicodedata
 
-from banking.models import FinancialAccount
+from django.db import transaction as db_transaction
+from django.utils.translation import gettext
+
+from banking.models import FinancialAccount, FinancialInstitution
+from core.domain.finance import CATEGORY_KIND_TRANSFER
 
 from .models import (
+    RULE_ACTION_CATEGORY,
     RULE_ACTION_LINKED,
     RULE_ACTION_TRANSFER,
     RULE_SIGN_ANY,
     RULE_SIGN_CREDIT,
+    VALID_RULE_ACTIONS,
+    VALID_RULE_SIGNS,
     BankStatementLine,
     StatementRule,
 )
@@ -48,6 +55,106 @@ class Regras:
             if padrao and padrao in texto:
                 return regra
         return None
+
+
+def _inteiro_ou_nada(valor) -> int | None:
+    try:
+        return int(valor) if str(valor or "").strip() else None
+    except (TypeError, ValueError) as exc:
+        raise ValueError(gettext("Escolha inválida no formulário da regra.")) from exc
+
+
+@db_transaction.atomic
+def salvar(regra_id, dados) -> StatementRule:
+    """Cria ou altera uma regra a partir do formulário (Movimentação › Importação › Regras de extrato).
+
+    Cada ação guarda só o que ela usa: a categoria some de uma regra que deixou
+    de categorizar, e a conta de destino, de uma que deixou de transferir.
+    `ValueError` com a mensagem para a tela."""
+    from transactions.models import CashFlowCategory
+
+    nome = " ".join((dados.get("name") or "").split())
+    padrao = " ".join((dados.get("pattern") or "").split())
+    acao = dados.get("action") or ""
+    sinal = dados.get("sign") or RULE_SIGN_ANY
+    if not nome:
+        raise ValueError(gettext("Dê um nome à regra."))
+    if len(nome) > 120 or len(padrao) > 120:
+        raise ValueError(gettext("Nome e trecho do texto têm no máximo 120 caracteres."))
+    if len(normalizar(padrao)) < 3:
+        raise ValueError(gettext("O trecho do texto precisa de pelo menos 3 letras ou números."))
+    if acao not in VALID_RULE_ACTIONS or sinal not in VALID_RULE_SIGNS:
+        raise ValueError(gettext("Escolha inválida no formulário da regra."))
+
+    instituicao_id = _inteiro_ou_nada(dados.get("institution"))
+    if instituicao_id is not None and not FinancialInstitution.objects.filter(id=instituicao_id).exists():
+        raise ValueError(gettext("Instituição não encontrada."))
+
+    categoria = None
+    conta_de_destino_nome = ""
+    instituicao_de_destino_id = None
+    if acao == RULE_ACTION_CATEGORY:
+        categoria = CashFlowCategory.objects.filter(id=_inteiro_ou_nada(dados.get("category")) or 0).first()
+        if categoria is None:
+            raise ValueError(gettext("Escolha a categoria que a regra dá à linha."))
+        if categoria.kind == CATEGORY_KIND_TRANSFER:
+            raise ValueError(gettext(
+                "Transferência tem outra ponta: use a ação de transferência e diga a conta de destino."
+            ))
+    elif acao in (RULE_ACTION_TRANSFER, RULE_ACTION_LINKED):
+        conta_de_destino_nome = " ".join((dados.get("destination_account_name") or "").split())
+        if acao == RULE_ACTION_TRANSFER:
+            if not conta_de_destino_nome:
+                raise ValueError(gettext("Diga o nome da conta de destino da transferência."))
+            instituicao_de_destino_id = _inteiro_ou_nada(dados.get("destination_institution"))
+        if conta_de_destino_nome and not FinancialAccount.objects.filter(
+            account_name__iexact=conta_de_destino_nome
+        ).exists():
+            raise ValueError(
+                gettext("Não há conta chamada “%(conta)s”: confira o nome em Cadastros › Contas.")
+                % {"conta": conta_de_destino_nome}
+            )
+        if instituicao_de_destino_id is not None and not FinancialInstitution.objects.filter(
+            id=instituicao_de_destino_id
+        ).exists():
+            raise ValueError(gettext("Instituição não encontrada."))
+
+    if regra_id:
+        try:
+            regra = StatementRule.objects.select_for_update().get(id=regra_id)
+        except (StatementRule.DoesNotExist, ValueError, TypeError) as exc:
+            raise ValueError(gettext("Regra não encontrada.")) from exc
+    else:
+        regra = StatementRule()
+    regra.name = nome
+    regra.pattern = padrao
+    regra.institution_id = instituicao_id
+    regra.sign = sinal
+    regra.action = acao
+    regra.category = categoria
+    regra.destination_account_name = conta_de_destino_nome
+    regra.destination_institution_id = instituicao_de_destino_id
+    regra.active = dados.get("active") == "1"
+    regra.save()
+    return regra
+
+
+def linhas_pendentes_da_regra(user, regra: StatementRule) -> int:
+    """Quantas linhas pendentes, ao alcance de `user`, a regra decide agora.
+
+    Conta pelo mesmo caminho do plano (`Regras.da_linha`, com todas as regras
+    ativas): uma regra mais específica que vença esta não entra na conta."""
+    from banking.services import accessible_account_ids
+
+    from .models import LINE_STATUS_NEW
+
+    if not regra.active:
+        return 0
+    regras = Regras()
+    pendentes = BankStatementLine.objects.filter(
+        account_id__in=accessible_account_ids(user, "view"), status=LINE_STATUS_NEW
+    ).exclude(account__account_kind="cartao_credito").select_related("account")
+    return sum(1 for linha in pendentes if getattr(regras.da_linha(linha), "id", None) == regra.id)
 
 
 def conta_de_destino(regra: StatementRule, conta: FinancialAccount) -> FinancialAccount | None:

@@ -70,7 +70,7 @@ from transactions.services import (
 )
 
 from . import reconciliation
-from .classificacao import Sugestao, sugerir_para_linha
+from .classificacao import Contexto, Sugestao, sugerir_para_linha
 from .meses import meses_reabertos
 from .models import (
     LINE_STATUS_NEW,
@@ -447,18 +447,29 @@ def _candidatos_sem_repetir(linhas, por_linha: dict) -> dict:
     return resultado
 
 
-def planejar(user, linhas) -> list[Plano]:
-    """Decide o destino de cada linha nova, sem gravar nada."""
+def planejar(user, linhas, *, contexto: Contexto | None = None, candidatos_por_linha: dict | None = None) -> list[Plano]:
+    """Decide o destino de cada linha nova, sem gravar nada.
+
+    O que depende de consulta é lido uma vez para todas as linhas (candidatos,
+    recorrências próximas, linhas repetidas e o `contexto` da classificação, que
+    quem chama pode passar para reaproveitar, como os `candidatos_por_linha` de
+    `reconciliation.candidate_entries_for_lines`): o plano de 100 linhas custava
+    centenas de consultas, refeitas a cada clique da tela."""
     linhas = [linha for linha in linhas if linha.status == LINE_STATUS_NEW]
     if not linhas:
         return []
+    contexto = contexto or Contexto()
+    aproximados_por_linha = reconciliation.candidatos_aproximados_por_linha(linhas, limit=2)
+    repetidas = reconciliation.linhas_repetidas(linhas)
     regras = Regras()
     padroes = _nomes_dos_titulares()
     pares, transferencias_ambiguas = _pares(linhas, _pool_de_pareamento(user), padroes)
     com_lancamento = _lancamentos_para_par(
         user, [linha for linha in linhas if linha.id not in pares], padroes
     )
-    candidatos = _candidatos_sem_repetir(linhas, reconciliation.candidate_entries_for_lines(linhas))
+    if candidatos_por_linha is None:
+        candidatos_por_linha = reconciliation.candidate_entries_for_lines(linhas)
+    candidatos = _candidatos_sem_repetir(linhas, candidatos_por_linha)
 
     planos: list[Plano] = []
     for linha in sorted(linhas, key=lambda item: (item.statement_date, item.id)):
@@ -515,7 +526,7 @@ def planejar(user, linhas) -> list[Plano]:
             else:
                 planos.append(Plano(linha, TRANSFERENCIA_COM_LANCAMENTO, lancamento=existente, regra=regra))
             continue
-        aproximados = reconciliation.candidatos_aproximados(linha, limit=2)
+        aproximados = aproximados_por_linha[linha.id]
         if len(aproximados) == 1:
             planos.append(Plano(linha, CONCILIA_APROXIMADA, lancamento=aproximados[0], regra=regra))
             continue
@@ -528,7 +539,7 @@ def planejar(user, linhas) -> list[Plano]:
         if _cita_titular(linha, padroes):
             planos.append(Plano(linha, TRANSFERENCIA_SEM_PAR, regra=regra))
             continue
-        duplicada = reconciliation.linha_parecida_ja_conciliada(linha)
+        duplicada = repetidas[linha.id].ja_conciliada
         if duplicada is not None:
             motivo = gettext(
                 "Mesma conta, data e valor de “%(descricao)s” (lançamento #%(id)s), já conciliada; "
@@ -537,7 +548,7 @@ def planejar(user, linhas) -> list[Plano]:
             ) % {"descricao": duplicada.description, "id": duplicada.matched_entry_id}
             planos.append(Plano(linha, PROVAVEL_DUPLICATA, motivo=motivo, regra=regra))
             continue
-        anterior = reconciliation.linha_igual_de_importacao_anterior(linha)
+        anterior = repetidas[linha.id].de_importacao_anterior
         if anterior is not None:
             motivo = gettext(
                 "Mesma conta, data e valor de “%(descricao)s”, da importação %(arquivo)s, ainda pendente; "
@@ -547,7 +558,7 @@ def planejar(user, linhas) -> list[Plano]:
             planos.append(Plano(linha, PROVAVEL_DUPLICATA, motivo=motivo, regra=regra))
             continue
         regra_de_categoria = regra if regra is not None and regra.action == RULE_ACTION_CATEGORY else None
-        sugestao = sugerir_para_linha(linha, regra=regra_de_categoria)
+        sugestao = sugerir_para_linha(linha, regra=regra_de_categoria, contexto=contexto)
         if sugestao.categoria is None:
             planos.append(
                 Plano(linha, MANUAL, motivo=gettext("Sem categoria: cadastre “Outros” ou escolha uma."), regra=regra)

@@ -60,6 +60,7 @@ def test_movimentacao_na_ordem_pedida_e_sem_o_nivel_banking():
     assert [i["label"] for i in _item(menu, "Movimentação", "Importação")["children"]] == [
         "Importar extratos e faturas",
         "Conciliação",
+        "Regras de extrato",
         "Extratos importados",
         "Faturas e projeção",
         "Situação das contas",
