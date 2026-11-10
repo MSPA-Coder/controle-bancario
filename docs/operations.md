@@ -89,12 +89,17 @@ automaticamente.
 
 ## Backup e restauração
 
-O backup central do PostgreSQL é feito pelo projeto irmão
-[BackupRestore](../../BackupRestore/), que fica fora deste repositório e deve
-estar disponível no checkout da frota:
+O backup que protege a produção é o do VPS: o `backup-db.sh` do `_manutencao`
+grava o dump diário, e o projeto irmão [BackupRestore](../../BackupRestore/) o
+busca e cataloga nesta máquina (projeto `controle_bancario_vps`). Antes de uma
+mudança destrutiva ou de uma migração que transforma dados em produção, peça
+um dump novo com `~/backup-db.sh --forcar` no VPS e confira-o no catálogo.
+
+O banco local é de teste e não pede backup. Quando for útil guardar um estado
+local, o comando é:
 
 ```powershell
-# Execute from the controle-bancario checkout root; BackupRestore is a sibling.
+# A partir da raiz deste checkout; o BackupRestore é a pasta irmã.
 Push-Location ..\BackupRestore
 try {
   & .\.venv\Scripts\python.exe .\cli.py backup --projeto controle_bancario --tipos banco
@@ -103,8 +108,8 @@ try {
 }
 ```
 
-Esse comando protege o banco e valida que o dump customizado pode ser listado;
-ele não inclui `media_volume` e não demonstra uma restauração completa. Use o
+Esse comando copia o banco local e valida que o dump customizado pode ser
+listado; ele não inclui `media_volume` e não demonstra uma restauração completa. Use o
 ensaio oferecido pelo BackupRestore para validar o banco e o procedimento de
 mídia descrito abaixo.
 

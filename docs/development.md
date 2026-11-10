@@ -160,22 +160,10 @@ vazando na tradução e catálogo fora de dia com o código.
 e dados em ASCII e reprova se sobrar letra acentuada ou palavra de interface em
 português. Tela nova entra na lista `TELAS` dele.
 
-## Validação proporcional
+## O que a CI roda
 
-- documentação: `git diff --check`, links/caminhos e comandos documentados;
-- template, HTMX ou JavaScript: fluxo afetado no navegador;
-- regra, view ou service: testes focados e fluxo completo com dados
-  representativos;
-- autenticação, autorização, sessão ou CSRF: serviço `quality` completo;
-- schema ou transformação de dados: backup validado e revisão da migration.
-  O bootstrap em PostgreSQL vazio não é mais passo manual: o serviço
-  `quality` sobe o `postgres-teste` e o pytest-django aplica a cadeia
-  inteira de migrações a um banco vazio para construir o banco de teste;
-- dependências, Dockerfile ou Compose: build sem cache quando pertinente,
-  `docker compose config`, serviço `quality` e smoke test da pilha.
-
-Em qualquer mudança de código, o serviço `quality` completo roda na máquina
-antes do commit: é essa verificação que vale. O commit vai direto ao `main`.
+O que validar em cada tipo de mudança está na seção "Validação" do
+[`AGENTS.md`](../AGENTS.md).
 
 A CI valida o Compose, executa Ruff e pytest, audita as dependências Python,
 varre a imagem operacional e confere a fronteira de escrita do runtime. Ela
@@ -185,9 +173,11 @@ ensaio de restauração.
 
 ## Antes de alterar dados reais
 
-Leia [Operação, dados e backup](operations.md), faça o backup correspondente e
-confirme que ele é restaurável. Não use `down -v`, não remova volumes e não
-substitua arquivos de mídia sem autorização explícita.
+Dados reais só existem em produção; o banco desta máquina é de teste. Antes de
+uma alteração em produção, faça o dump descrito em
+[Operação, dados e backup](operations.md) e confira-o no catálogo do
+BackupRestore. Não use `down -v`, não remova volumes e não substitua arquivos
+de mídia sem autorização explícita.
 
 ## Reclassificar lançamentos em lote
 
