@@ -6,9 +6,10 @@ Django, HTMX e PostgreSQL e é executado por Docker Compose.
 
 O produto administra contas, lançamentos simples, parcelados e recorrentes,
 transferências internas, extratos e conciliações, comprovantes, fechamentos
-mensais, projeções, relatórios e permissões funcionais. Investimentos,
-tributação, patrimônio completo e funções de ERP não fazem parte do escopo
-atual.
+mensais, projeções, relatórios e permissões funcionais. Registra também o
+dinheiro das contas de aplicação e de corretora e publica o caixa para a
+consolidação do patrimônio. Fora do escopo: carteira de ativos e quantidades
+(é do Controle de Renda Variável), tributação e funções de ERP.
 
 ## Ambiente oficial
 
