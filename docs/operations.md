@@ -27,6 +27,14 @@ superusuário, e ele é dono das tabelas. Só o serviço `postgres`, o
 SELECT/INSERT/UPDATE/DELETE, uso de sequências e MAINTAIN (para o VACUUM
 ANALYZE de Configurações > Banco de dados) — nenhum DDL.
 
+Na trilha de auditoria (`audit_log`) o papel restrito só insere: um gatilho
+recusa UPDATE e DELETE de quem não é superusuário (migração `core/0003`).
+Expurgar ou corrigir a trilha se faz com o papel administrativo.
+
+O `postgres` registra no log do contêiner toda consulta acima de 500 ms e toda
+espera por lock acima de 1 s, sem os valores dos parâmetros
+(`docker compose logs postgres`).
+
 O `db-provision` roda `scripts/provision-db-runtime.sh` a cada subida, antes
 do `migrate`: cria o papel se faltar, reaplica a senha do arquivo e concede o
 acesso às tabelas existentes; os privilégios padrão cobrem as que o `migrate`
@@ -49,6 +57,9 @@ Variáveis principais:
 | `POSTGRES_DB` | banco da aplicação | `controle_bancario` |
 | `POSTGRES_USER` | papel administrativo (dono das tabelas; `migrate`) | `controle_bancario` |
 | `POSTGRES_APP_USER` | papel restrito com que o `web` conecta | `controle_bancario_app` |
+| `DB_STATEMENT_TIMEOUT_MS` | tempo máximo de uma consulta da aplicação; `0` desliga | `55000` (`0` no `migrate`) |
+| `DB_LOCK_TIMEOUT_MS` | espera máxima por um lock | `10000` |
+| `DB_IDLE_IN_TRANSACTION_TIMEOUT_MS` | transação aberta e parada | `300000` |
 | `POSTGRES_PORT` | porta local publicada | `5202` |
 | `POSTGRES_BIND_ADDRESS` | endereço local onde a porta do PostgreSQL é publicada | `127.0.0.1` |
 | `APP_PORT` | porta local da aplicação | `5201` |

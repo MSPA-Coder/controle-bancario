@@ -35,20 +35,21 @@ depois: as migrações nunca construíram as tabelas mais antigas dele. O
 `postgres-teste` nasce das migrações. Os dois diferem, e a diferença foi medida
 em 10/11/2026:
 
-- 52 colunas que os modelos exigem preenchidas aceitam nulo em produção
-  (`status` e `operation_type` do lançamento entre elas), e 30 linhas têm
-  `created_at` ou `updated_at` nulo;
-- 25 chaves estrangeiras são imediatas em produção; as que o Django cria são
-  adiáveis, e é assim que a suíte as vê;
 - as chaves mais antigas são `integer` em produção e `bigint` nas migrações;
-- índices e restrições têm nomes diferentes dos que o Django conhece, e a
-  tabela `alembic_version` só existe em produção.
+- índices e restrições têm nomes diferentes dos que o Django conhece;
+- as tabelas `alembic_version` e `django_admin_log` e duas colunas
+  `updated_at` só existem em produção.
+
+Outras duas diferenças foram fechadas pela migração
+`core/0002_alinhar_esquema_de_producao`: 52 colunas que os modelos exigem
+preenchidas aceitavam nulo (`status` e `operation_type` do lançamento entre
+elas) e 25 chaves estrangeiras eram imediatas, quando as que o Django cria são
+adiáveis.
 
 Consequências práticas: suíte verde prova o código contra o banco das
 migrações, não contra o de produção; migração que altere, renomeie ou remova
 índice ou restrição **pelo nome** pode passar na suíte e falhar no `migrate` do
-deploy; código que dependa de chave adiável ou de coluna sempre preenchida
-precisa ser conferido no esquema real. O banco local de desenvolvimento tem o
+deploy. O banco local de desenvolvimento tem o
 esquema de produção e é onde isso se confere antes do deploy: recriá-lo pelas
 migrações apaga essa referência.
 

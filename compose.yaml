@@ -128,6 +128,18 @@ services:
     mem_limit: 512m
     stop_grace_period: 60s
     logging: *service-logging
+    # Consulta acima de 500 ms e espera por lock acima de 1 s vão para o log do
+    # contêiner: sem isto não há como saber, depois, qual consulta ficou lenta.
+    # `log_parameter_max_length=0` deixa os valores de fora: o log mostra a
+    # forma da consulta, nunca dinheiro nem nome.
+    command:
+      - postgres
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - log_lock_waits=on
+      - -c
+      - log_parameter_max_length=0
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-controle_bancario}
       POSTGRES_USER: ${POSTGRES_USER:-controle_bancario}
@@ -205,6 +217,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-controle_bancario}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       DB_EXIGIR_PAPEL_RESTRITO: "0"
+      # Migração pode demorar de propósito; o limite de espera por lock continua.
+      DB_STATEMENT_TIMEOUT_MS: "0"
     secrets:
       - django_secret_key
       - postgres_password

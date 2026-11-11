@@ -107,7 +107,8 @@ As migrações começam na base de 03/11/2026: a `0001_initial` de cada app
 (ver a docstring de `core/migrations/0001_initial.py`). O banco de produção
 ainda registra em `django_migrations` os nomes das migrações antigas, que
 estão no git até 9f7f4cb. Migração nova não pode repetir um desses nomes:
-o Django a daria por aplicada sem rodá-la.
+o Django a daria por aplicada sem rodá-la
+(`tests/test_nomes_de_migracao.py` reprova).
 
 "PostgreSQL vazio" não é o banco de produção, que tem outro esquema
 (`docs/architecture.md`, "O esquema de produção não é o das migrações"). Rode

@@ -169,6 +169,19 @@ DATABASES = {
         'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
             'connect_timeout': 10,
+            # Limites de servidor para toda sessão da aplicação. O Gunicorn mata
+            # a requisição aos 60 s, mas sem isto o PostgreSQL seguia rodando a
+            # consulta ou esperando o lock, e segurava quem viesse atrás. Em
+            # milissegundos; 0 desliga (o `migrate` desliga o de consulta, porque
+            # uma migração pode legitimamente demorar).
+            'options': ' '.join(
+                f'-c {parametro}={os.environ.get(variavel, padrao)}'
+                for parametro, variavel, padrao in (
+                    ('statement_timeout', 'DB_STATEMENT_TIMEOUT_MS', '55000'),
+                    ('lock_timeout', 'DB_LOCK_TIMEOUT_MS', '10000'),
+                    ('idle_in_transaction_session_timeout', 'DB_IDLE_IN_TRANSACTION_TIMEOUT_MS', '300000'),
+                )
+            ),
         },
     }
 }
