@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from django.utils.cache import patch_vary_headers
 from sharedauth.security import SECURITY_HEADERS, montar_csp
@@ -102,4 +103,24 @@ class ContentSecurityPolicyMiddleware:
         # `patch_vary_headers` acrescenta sem apagar o que ja houver (o Django
         # costuma pos `Cookie` aqui), e nao duplica se rodar duas vezes.
         patch_vary_headers(response, CABECALHOS_QUE_VARIAM_A_RESPOSTA)
+        if _resposta_de_sessao(request):
+            # Tela de quem entrou (e a senha temporaria, que sai em claro numa
+            # resposta renderizada) nao fica no cache do navegador: o botao
+            # Voltar depois do logout nao reabre dado financeiro. `setdefault`
+            # respeita quem ja decidiu (o v4 do patrimonio manda `no-store`).
+            response.setdefault("Cache-Control", "no-store, private")
         return response
+
+
+def _resposta_de_sessao(request: HttpRequest) -> bool:
+    """Requisicao autenticada que nao e estatico nem sonda de saude.
+
+    Estatico (hash no nome, o WhiteNoise ja o atende antes deste middleware) e
+    `/health` ficam de fora: o primeiro precisa de cache, e o segundo nao
+    deve abrir a sessao so para sondar o banco.
+    """
+    caminho = request.path
+    if caminho in {"/health", "/health/"} or caminho.startswith(f"/{settings.STATIC_URL.strip('/')}/"):
+        return False
+    usuario = getattr(request, "user", None)
+    return bool(usuario is not None and usuario.is_authenticated)

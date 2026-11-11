@@ -140,3 +140,90 @@ def test_a_casca_nao_traz_estilo_embutido() -> None:
     rendered = render_to_string("base.html", {"app_menu_items": []})
 
     assert "<style" not in rendered
+
+
+# ---------------------------------------------------------------------------
+# Cache do navegador (SEG-L1)
+# ---------------------------------------------------------------------------
+#
+# Sem `Cache-Control`, o navegador pode reabrir pelo botao Voltar, depois do
+# logout, a tela com dado financeiro, e guardar a pagina que mostra a senha
+# temporaria em claro.
+
+
+@pytest.fixture
+def administrador(client):
+    from django.contrib.auth import get_user_model
+
+    usuario = get_user_model().objects.create_user(
+        username="adm-cache", password="senha-segura-123", user_type="administrator",
+    )
+    client.force_login(usuario)
+    return usuario
+
+
+@pytest.mark.django_db
+def test_pagina_de_quem_entrou_nao_fica_no_cache_do_navegador(client, administrador):
+    resposta = client.get("/dashboard/")
+
+    assert resposta.status_code == 200
+    diretivas = {d.strip() for d in resposta.headers["Cache-Control"].split(",")}
+    assert {"no-store", "private"} <= diretivas
+
+
+@pytest.mark.django_db
+def test_a_resposta_com_a_senha_temporaria_nao_fica_no_cache(client, administrador):
+    from django.contrib.auth import get_user_model
+
+    alvo = get_user_model().objects.create_user(
+        username="alvo-cache", password="senha-segura-456", user_type="user",
+    )
+
+    resposta = client.post(
+        "/permissions/",
+        {"table": "users", "action": "reset_password", "id": alvo.id, "user_id": alvo.id},
+    )
+
+    assert resposta.status_code == 200
+    assert "no-store" in resposta.headers["Cache-Control"]
+    alvo.refresh_from_db()
+    assert alvo.must_change_password is True  # a redefinicao de fato ocorreu
+
+
+@pytest.mark.django_db
+def test_sonda_de_saude_nao_recebe_no_store_mesmo_com_sessao(client, administrador, banco_sondavel):
+    assert "no-store" not in client.get("/health/").headers.get("Cache-Control", "")
+
+
+@pytest.mark.django_db
+def test_estatico_de_quem_entrou_segue_cacheavel(administrador):
+    from django.http import HttpResponse
+    from django.test import RequestFactory
+
+    from core.security import ContentSecurityPolicyMiddleware
+
+    requisicao = RequestFactory().get("/static/css/core/application.css")
+    requisicao.user = administrador
+
+    resposta = ContentSecurityPolicyMiddleware(lambda _r: HttpResponse("css"))(requisicao)
+
+    assert "Cache-Control" not in resposta.headers
+
+
+def test_quem_nao_entrou_nao_ganha_diretiva_nova(client, banco_sondavel):
+    # A tela de login ja traz a dela (`LoginView`); o que nao tem sessao nao
+    # muda por causa deste middleware.
+    from django.http import HttpResponse
+    from django.test import RequestFactory
+
+    from core.security import ContentSecurityPolicyMiddleware
+
+    class Anonimo:
+        is_authenticated = False
+
+    requisicao = RequestFactory().get("/qualquer/")
+    requisicao.user = Anonimo()
+
+    resposta = ContentSecurityPolicyMiddleware(lambda _r: HttpResponse("x"))(requisicao)
+
+    assert "Cache-Control" not in resposta.headers
