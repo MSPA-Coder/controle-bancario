@@ -151,9 +151,10 @@ todo commit de código, o script completo.
   `/change-password/` até a troca. O tamanho da senha sorteada vem de
   Configurações > Parâmetros.
 - O SharedAuth entra sem o extra `[flask]`, de propósito: só o núcleo
-  (constantes de segurança, formatação, `gerar_senha_temporaria`), sem
-  middleware nem autenticação. Vem do GitHub, na tag do `pyproject.toml` e no
-  commit do `uv.lock`.
+  (`secrets`, `security`, `formatting`, `passwords`, `logs`, `ui`), sem
+  middleware nem autenticação; `secrets` e `ui` quebram o boot, então subir a
+  tag se valida abrindo uma tela. Vem do GitHub, na tag do `pyproject.toml` e
+  no commit do `uv.lock`.
 
 ## Armadilhas
 

@@ -313,11 +313,17 @@ origem, mas a revogação bloqueia novas mutações financeiras e recorrências.
 
 ## Dependência compartilhada
 
-SharedAuth fornece constantes de cabeçalhos defensivos/CSP e formatação de
-números em pt-BR. A aplicação dos cabeçalhos, a autenticação, o modelo de
-usuário e as permissões continuam pertencendo a este projeto. O repositório do
-SharedAuth é público: o build o instala por Git, na tag fixada no
-`pyproject.toml` e no commit registrado no `uv.lock`, sem credencial.
+SharedAuth fornece seis submódulos, todos de código que o boot ou as telas
+importam: `secrets` (`resolver_segredo`, que lê todos os segredos, inclusive a
+senha do banco, em `financeiro/settings.py` e `core/patrimonio.py`), `security`
+(cabeçalhos defensivos e CSP), `formatting` (números em pt-BR), `passwords`
+(senha temporária), `logs` (`sanitizar_log`) e `ui` (os estáticos em
+`STATICFILES_DIRS`, as severidades e `svg_icone`). A aplicação dos cabeçalhos, a
+autenticação, o modelo de usuário e as permissões continuam pertencendo a este
+projeto. O repositório do SharedAuth é público: o build o instala por Git, na
+tag fixada no `pyproject.toml` e no commit registrado no `uv.lock`, sem
+credencial. Subir a tag se valida subindo a pilha e abrindo uma tela, não só
+rodando a suíte: `secrets` e `ui` quebram o boot e as telas.
 
 ## Idioma e formato regional
 
