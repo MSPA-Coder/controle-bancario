@@ -321,6 +321,10 @@ class BankStatementLine(models.Model):
     installment_total = models.PositiveSmallIntegerField(null=True, blank=True)
     card_holder = models.CharField(max_length=60, blank=True, default="")
     bank_category = models.CharField(max_length=100, blank=True, default="")
+    # Resultado de `fatura.eh_pagamento` (crédito cuja descrição é de pagamento
+    # de fatura), guardado para quem lê o banco de fora (`leitura.extrato_linha`).
+    # Preenchido por `save` e pela importação; não é editado à mão.
+    is_card_payment = models.BooleanField(default=False)
     status = models.CharField(
         max_length=20,
         choices=[
@@ -379,6 +383,13 @@ class BankStatementLine(models.Model):
         return f"{self.statement_date} - {self.description} ({self.amount})"
 
     def save(self, *args, **kwargs):
+        # Import tardio: `fatura` importa este módulo.
+        from .fatura import eh_pagamento
+
+        self.is_card_payment = eh_pagamento(self)
         if self.pk:
             self.updated_at = timezone.now()
+        campos = kwargs.get("update_fields")
+        if campos is not None and {"description", "amount"} & set(campos):
+            kwargs["update_fields"] = {*campos, "is_card_payment"}
         super().save(*args, **kwargs)

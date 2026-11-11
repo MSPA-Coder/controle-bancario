@@ -418,7 +418,7 @@ regras em views, e o usuário de leitura recebe `SELECT` só nelas.
 | `leitura.conta` | saldo realizado hoje, vencido em aberto e saldo com todo o previsto |
 | `leitura.categoria` | natureza (`gerencial`, `transferencia`, `movimentacao`, `valorizacao`) e grupo |
 | `leitura.orcamento_mensal`, `leitura.operacao`, `leitura.fechamento_mes` | metas, parcelas/recorrências e meses fechados |
-| `leitura.extrato_importacao`, `leitura.extrato_linha` | extratos e faturas importados |
+| `leitura.extrato_importacao`, `leitura.extrato_linha` | extratos e faturas importados; `extrato_linha.pagamento_de_fatura` é `eh_pagamento` gravado na linha (crédito com descrição de pagamento de fatura) |
 | `leitura.saldo_conferido` | saldos informados por conta, dia e origem (manual, print ou myprofit); mais de uma origem no mesmo dia é conferência |
 | `leitura.lancamento_etiqueta`, `leitura.lancamento_projeto` | etiquetas e projetos por lançamento |
 

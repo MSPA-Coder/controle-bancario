@@ -300,6 +300,16 @@ def test_importar_so_grava_linhas_e_reimportar_nao_duplica(cenario):
 
 
 @pytest.mark.django_db
+def test_importacao_marca_o_pagamento_de_fatura_na_linha(cenario):
+    lote, _, _ = _importar(cenario, FATURA_MARCO)
+
+    marcadas = BankStatementLine.objects.filter(import_batch=lote, is_card_payment=True)
+    assert sorted(marcadas.values_list("amount", flat=True)) == [Decimal("200.00"), Decimal("300.00")]
+    assert all(d.startswith("Pag Fatura Boleto") for d in marcadas.values_list("description", flat=True))
+    assert BankStatementLine.objects.filter(import_batch=lote).count() == 12
+
+
+@pytest.mark.django_db
 def test_previa_diz_o_que_cada_linha_vira(cenario):
     _compra_anterior_no_mercado(cenario)
     _pagamento_de_300(cenario)

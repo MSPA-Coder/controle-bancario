@@ -29,6 +29,7 @@ from .adapters import (
 )
 from .contracts import ConferenciaDeSaldo as ConferenciaDeSaldo
 from .document import StatementDocument, parse_statement
+from .fatura import eh_pagamento
 from .fatura_csv import CartaoCsvAdapter, formato_da_fatura
 from .models import BankStatementImport, BankStatementLine
 from .queries import conferencia_de_saldo as conferencia_de_saldo
@@ -190,6 +191,7 @@ def import_statement_file(
                     status="novo",
                 )
             )
+            new_lines[-1].is_card_payment = eh_pagamento(new_lines[-1])
             existing_hashes.add(line.line_hash)
             inserted += 1
         provaveis_repetidas = _provaveis_repetidas(clean_account_id, new_lines, repetidas_pelo_hash)

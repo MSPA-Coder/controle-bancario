@@ -219,6 +219,8 @@ def test_conta_sem_lancamento_aparece_com_o_saldo_inicial(conta):
         "ALTER TABLE cash_flow_entry DROP COLUMN status",
         "ALTER TABLE financial_account DROP COLUMN initial_balance",
         "ALTER TABLE cash_flow_entry ALTER COLUMN entry_amount TYPE text",
+        "ALTER TABLE bank_statement_line DROP COLUMN is_card_payment",
+        "ALTER TABLE bank_statement_line ALTER COLUMN is_card_payment TYPE text",
     ],
 )
 def test_postgres_recusa_mexer_em_coluna_que_uma_view_le(alteracao):
