@@ -12,6 +12,8 @@ import importlib
 
 import pytest
 from django.db import DatabaseError, connection, transaction
+from psycopg import sql as psycopg_sql
+from psycopg.sql import Composable
 
 from banking.models import FinancialInstitution
 from core.esquema import diferencas as todas_as_diferencas
@@ -22,9 +24,9 @@ pytestmark = pytest.mark.django_db
 SQL = importlib.import_module("core.migrations.0002_alinhar_esquema_de_producao").SQL
 
 
-def _executar(sql: str) -> None:
+def _executar(comando: str | Composable, params: tuple[object, ...] | None = None) -> None:
     with connection.cursor() as cursor:
-        cursor.execute(sql)
+        cursor.execute(comando, params)
 
 
 @pytest.fixture(autouse=True)
@@ -61,9 +63,13 @@ def test_alinha_coluna_anulavel_timestamp_nulo_e_chave_imediata():
     _executar("ALTER TABLE cash_flow_category ALTER COLUMN created_at DROP NOT NULL")
     _executar("ALTER TABLE cash_flow_entry ALTER COLUMN status DROP NOT NULL")
     chave = _chave_de("cash_flow_entry", "account_id")
-    _executar(f'ALTER TABLE cash_flow_entry ALTER CONSTRAINT "{chave}" NOT DEFERRABLE')
+    _executar(
+        psycopg_sql.SQL("ALTER TABLE cash_flow_entry ALTER CONSTRAINT {} NOT DEFERRABLE").format(
+            psycopg_sql.Identifier(chave)
+        )
+    )
     categoria = CashFlowCategory.objects.create(category_name="Sem data de criação", kind="gerencial")
-    _executar(f"UPDATE cash_flow_category SET created_at = NULL WHERE id = {categoria.id}")
+    _executar("UPDATE cash_flow_category SET created_at = NULL WHERE id = %s", (categoria.id,))
     assert {d.tipo for d in diferencas()} == {"aceita nulo", "chave estrangeira imediata"}
 
     _executar(SQL)
@@ -78,7 +84,7 @@ def test_nulo_onde_nao_ha_o_que_inventar_faz_a_migracao_falhar():
     instituicao = FinancialInstitution.objects.create(
         institution_name="Sem tipo", institution_type="Banco"
     )
-    _executar(f"UPDATE financial_institution SET institution_type = NULL WHERE id = {instituicao.id}")
+    _executar("UPDATE financial_institution SET institution_type = NULL WHERE id = %s", (instituicao.id,))
 
     with pytest.raises(DatabaseError, match="institution_type"), transaction.atomic():
         _executar(SQL)

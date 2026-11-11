@@ -12,15 +12,17 @@ from __future__ import annotations
 import pytest
 from django.core.management import call_command
 from django.db import connection
+from psycopg import sql
+from psycopg.sql import Composable
 
 from core.esquema import diferencas
 
 pytestmark = pytest.mark.django_db
 
 
-def _executar(sql: str) -> None:
+def _executar(comando: str | Composable, params: tuple[object, ...] | None = None) -> None:
     with connection.cursor() as cursor:
-        cursor.execute(sql)
+        cursor.execute(comando, params)
 
 
 def _tipos_em(onde: str) -> set[str]:
@@ -46,7 +48,11 @@ def test_chave_estrangeira_imediata_aparece():
             "AND a.attname = 'account_id'"
         )
         (nome,) = cursor.fetchone()
-    _executar(f'ALTER TABLE cash_flow_entry ALTER CONSTRAINT "{nome}" NOT DEFERRABLE')
+    _executar(
+        sql.SQL("ALTER TABLE cash_flow_entry ALTER CONSTRAINT {} NOT DEFERRABLE").format(
+            sql.Identifier(nome)
+        )
+    )
 
     assert _tipos_em("cash_flow_entry.account_id") == {"chave estrangeira imediata"}
 
