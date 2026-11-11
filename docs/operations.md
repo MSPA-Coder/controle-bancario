@@ -146,8 +146,10 @@ PostgreSQL validado pelo BackupRestore, depois um arquivo do volume de mídia
 publicado por troca atômica e acompanhado de SHA-256. A restauração deve parar
 o `web`, restaurar o banco no sandbox, extrair a mídia em diretório temporário,
 comparar o manifesto de arquivos e só então substituir o volume operacional.
-Até o ensaio automatizado externo do VPS estar disponível, não trate os
-comprovantes como cobertos pelo backup central.
+Os comprovantes entram no backup do VPS pelo rótulo `mspa.backup.volume:
+/workspace/media` do serviço `web`, que o `backup-db.sh` descobre. Até o ensaio
+automatizado externo de restauração estar disponível, não os trate como
+restauração provada.
 
 Restaurações são administrativas: pare a aplicação, preserve o estado atual,
 confirme o destino e use um procedimento já ensaiado. Nunca execute

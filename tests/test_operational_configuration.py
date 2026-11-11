@@ -220,6 +220,15 @@ def _servicos() -> dict:
     return yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
 
 
+def test_web_declara_o_volume_de_comprovantes_para_o_backup_do_vps():
+    """`backup-db.sh` descobre o volume pelo rótulo; o caminho é a montagem de `media_volume`."""
+    web = _servicos()["web"]
+    caminho = web["labels"]["mspa.backup.volume"]
+
+    assert caminho == "/workspace/media"
+    assert f"media_volume:{caminho}" in web["volumes"]
+
+
 def test_todo_servico_roda_sem_privilegios_extras():
     """Nenhum contêiner ganha escrita na raiz, capability ou escalada.
 

@@ -253,6 +253,10 @@ services:
     pids_limit: 256
     stop_grace_period: 45s
     logging: *service-logging
+    # Backup diário no VPS (`backup-db.sh`): copia o diretório deste caminho,
+    # dentro do contêiner, que é a montagem de `media_volume` (comprovantes).
+    labels:
+      mspa.backup.volume: /workspace/media
     # Só o `web` recebe o token do vínculo com o CRV; o `migrate` não o usa.
     secrets:
       - django_secret_key
