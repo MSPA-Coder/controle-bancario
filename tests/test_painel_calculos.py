@@ -32,6 +32,8 @@ from core.domain.finance import (
     STATUS_PROJECTED,
     STATUS_REALIZED,
     VIEW_ALL,
+    VIEW_PENDING,
+    VIEW_REALIZED,
 )
 from core.domain.identity import USER_TYPE_ADMINISTRATOR
 from reports import services as reports_services
@@ -250,3 +252,43 @@ def test_lancamentos_em_real_nao_listam_nem_somam_a_conta_em_dolar(usuario):
     assert {tx.account_id for tx in contexto["txs"]} == {real.id}
     assert [bloco["currency"] for bloco in contexto["blocos"]] == [CURRENCY_BRL]
     assert contexto["blocos"][0]["total_despesas"] == Decimal("100.00")
+
+
+@pytest.mark.parametrize("modo", [VIEW_ALL, VIEW_PENDING, VIEW_REALIZED])
+def test_saldo_diario_do_painel_e_o_saldo_corrente_do_extrato(cenario, painel, client, modo):
+    """O gráfico do dia a dia mostra o saldo que a tela Lançamentos mostra.
+
+    `dashboard/views.py::_saldo_diario` recalcula o saldo corrente por conta
+    própria (o docstring diz "pelo mesmo cálculo do extrato"), e nenhum teste
+    comparava os dois: mudar a regra num lado e esquecer o outro faria o
+    gráfico divergir da tela sem erro. Aqui o mesmo cenário, com lançamentos a
+    vencer (vencidos, para o mês de junho já passado) no meio e no fim do mês, passa pelas duas telas e o saldo do fim de
+    cada dia tem de ser igual.
+    """
+    corrente = cenario["corrente"]
+    mercado = _categoria("Mercado")
+    for dia, valor in ((date(2026, 6, 15), "80.00"), (date(2026, 6, 25), "45.50")):
+        CashFlowEntry.objects.create(
+            account=corrente, category=mercado, entry_type=ENTRY_TYPE_EXPENSE,
+            description="A vencer", entry_amount=Decimal(valor), due_date=dia,
+            status=STATUS_PROJECTED, operation_type=OPERATION_SINGLE,
+        )
+
+    painel_ctx = painel(mode=modo)
+    extrato = client.get(
+        "/transactions/",
+        {"period": PERIODO, "mode": modo, "grupos": TODOS_OS_GRUPOS, "currency": CURRENCY_BRL,
+         "card_presentation": "detalhes"},
+    )
+    assert extrato.status_code == 200
+
+    saldo_do_extrato_por_dia = {}
+    for tx in extrato.context["txs"]:
+        if tx.is_last_of_day:
+            saldo_do_extrato_por_dia[tx.display_date] = tx.running_balance
+
+    dados = painel_ctx["chart_data"]
+    assert len(dados["dailyBal"]) >= 2  # o cenário tem movimento em mais de um dia, em todos os modos
+    assert dados["dailyBal"] == [
+        float(saldo) for _dia, saldo in sorted(saldo_do_extrato_por_dia.items())
+    ]
