@@ -51,8 +51,6 @@ falharia. `tests/test_nomes_de_migracao.py` cobra a dependência.
 
 Ficou de fora, de propósito:
 
-- `financial_account.is_default`: nenhum código a lê, mas 6 contas de produção
-  estão marcadas; apagar é decisão de produto, não de esquema;
 - a ordem das colunas, que difere em 13 tabelas e não se corrige sem recriá-las;
 - as restrições de `statement_rule` com `.{3,}`.
 

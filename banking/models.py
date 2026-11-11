@@ -92,7 +92,6 @@ class FinancialAccount(models.Model):
         default=localdate,
         help_text='Data a que o saldo inicial se refere.',
     )
-    is_default = models.BooleanField(default=False)
     # Cartão de crédito: saldo negativo é a fatura em aberto. Os dias guiam a
     # fatura projetada; o pagamento em si é uma ou mais transferências, de
     # quantas contas forem, e a conta padrão só serve para projetar.
@@ -191,10 +190,7 @@ class FinancialAccount(models.Model):
                 name='ck_financial_account_card_fields',
             ),
         ]
-        indexes = [
-            models.Index(fields=['is_default']),
-        ]
-    
+
     def __str__(self):
         return self.account_name
 
