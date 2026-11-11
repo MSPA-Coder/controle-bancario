@@ -293,7 +293,9 @@ termina com sucesso antes de `web` iniciar.
 ## Segurança e acesso
 
 - autenticação é obrigatória nas telas operacionais;
-- nomes de usuário são autenticados sem distinção de maiúsculas e minúsculas;
+- nomes de usuário são autenticados sem distinção de maiúsculas e minúsculas, e
+  por isso o banco os recusa quando só diferem na caixa
+  (`uq_app_user_username_ci`); o mesmo vale para categoria e grupo de categoria;
 - permissões funcionais e acesso por titular são verificados no servidor;
 - perfis agrupam permissões, mas não substituem as verificações efetivas;
 - o **Modo discreto** mascara valores e esconde gráficos para quem está vendo
