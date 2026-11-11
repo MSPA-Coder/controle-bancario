@@ -14,7 +14,7 @@ import pytest
 from django.db import DatabaseError, connection, transaction
 
 from banking.models import FinancialInstitution
-from core.esquema import diferencas
+from core.esquema import diferencas as todas_as_diferencas
 from transactions.models import CashFlowCategory
 
 pytestmark = pytest.mark.django_db
@@ -25,6 +25,22 @@ SQL = importlib.import_module("core.migrations.0002_alinhar_esquema_de_producao"
 def _executar(sql: str) -> None:
     with connection.cursor() as cursor:
         cursor.execute(sql)
+
+
+@pytest.fixture(autouse=True)
+def coluna_que_a_producao_tinha():
+    """A `0002` foi escrita quando `financial_account.is_default` existia.
+
+    A coluna saiu na `banking/0003`; como o SQL da `0002` ainda a nomeia, ela
+    volta aqui, dentro da transação do teste, como estava no banco a que a
+    migração se destinava.
+    """
+    _executar("ALTER TABLE financial_account ADD COLUMN is_default boolean NOT NULL DEFAULT false")
+
+
+def diferencas():
+    """As diferenças do esquema, sem a coluna que a fixture devolveu de propósito."""
+    return [d for d in todas_as_diferencas() if "is_default" not in d.onde]
 
 
 def _chave_de(tabela: str, coluna: str) -> str:
