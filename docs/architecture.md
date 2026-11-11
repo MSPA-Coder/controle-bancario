@@ -153,11 +153,17 @@ carrega a permissão que o libera. Três regras, todas guardadas por teste:
 
 ### Dashboard
 
-O painel não tem cálculo próprio: meses, receitas, despesas, geração e saldo
-saem de `reports.services.projection_months_between`, e o saldo diário do
-mesmo cálculo do extrato. Só categorias gerenciais entram em receita e
-despesa; o saldo é o real. Assim a fatia ou a barra clicada é a soma da tela de
-Lançamentos que ela abre.
+Meses, receitas, despesas, geração e saldo mensal saem de
+`reports.services.projection_months_between`, a mesma conta da tela
+Projeções. O painel calcula em `dashboard/views.py` o que é só dele: o saldo
+diário (`_saldo_diario`, que refaz o saldo corrente do extrato sobre os
+lançamentos do mês e começa do saldo de abertura do período), os indicadores
+de saúde financeira (`_saude`: cobertura, média móvel de três meses e
+tendência, com limiar de 5%), os totais por categoria ou grupo e a janela de
+13 meses (`_shift_month`). O saldo diário e o do extrato têm de coincidir:
+`tests/test_painel_calculos.py` compara os dois. Só categorias gerenciais
+entram em receita e despesa; o saldo é o real. Assim a fatia ou a barra
+clicada é a soma da tela de Lançamentos que ela abre.
 
 O fluxo de referência é:
 
