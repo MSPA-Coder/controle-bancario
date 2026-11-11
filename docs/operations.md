@@ -61,6 +61,7 @@ Variáveis principais:
 | `DB_STATEMENT_TIMEOUT_MS` | tempo máximo de uma consulta da aplicação; `0` desliga | `55000` (`0` no `migrate`) |
 | `DB_LOCK_TIMEOUT_MS` | espera máxima por um lock | `10000` |
 | `DB_IDLE_IN_TRANSACTION_TIMEOUT_MS` | transação aberta e parada | `300000` |
+| `DJANGO_LOG_LEVEL` | nível do log do Django (`financeiro/settings.py`); não está no Compose | `INFO` |
 | `POSTGRES_PORT` | porta local publicada | `5202` |
 | `POSTGRES_BIND_ADDRESS` | endereço local onde a porta do PostgreSQL é publicada | `127.0.0.1` |
 | `APP_PORT` | porta local da aplicação | `5201` |

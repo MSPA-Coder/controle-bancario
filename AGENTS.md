@@ -79,7 +79,10 @@ Leia só o documento do assunto da mudança:
 - `docs/development.md`: comandos e imagens-base;
 - `docs/operations.md`: configuração, volumes, backup e VPS;
 - `docs/CONCEITOS_FINANCEIROS.md`: vocabulário comum com o CRV e o Wealthfolio;
-- `docs/travas.md`: locks de banco e o que cada um protege.
+- `docs/travas.md`: locks de banco e o que cada um protege;
+- `docs/decisoes-evolucao.md`: por que a projeção mensal roda no middleware, com
+  as medidas e a condição de revisão; leia antes de mexer nesse gatilho;
+- `docs/annual-planning-report.md`: contrato de contexto do relatório anual.
 
 O projeto subiu para o Django 6.1 em 08/09/2026: ao depender de comportamento
 do framework, confira as notas da série 6 em vez de assumir a 5.2.
