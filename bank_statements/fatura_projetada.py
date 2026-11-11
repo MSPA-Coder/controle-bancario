@@ -20,8 +20,8 @@ a anuidade (que vem com a data do lançamento) é tratada como parcela antiga.
 `FinancialAccount.card_estimated_spend`, quando preenchido, substitui a
 mediana em todos os `k`.
 
-A fatura projetada vira lançamentos, para o fluxo de caixa e a Projeção do
-NetWorth enxergarem: uma despesa "Gasto estimado" no cartão, na data do
+A fatura projetada vira lançamentos, para o fluxo de caixa e a projeção do
+consolidador (Wealthfolio) enxergarem: uma despesa "Gasto estimado" no cartão, na data do
 fechamento, e a transferência do pagamento, da conta de pagamento padrão, no
 vencimento. As duas coisas são refeitas inteiras a cada atualização, e são
 reconhecidas pelo `operation_key` da `BankOperation` (`PREFIXO_*`). Vão até o

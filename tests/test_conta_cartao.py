@@ -4,7 +4,7 @@ O saldo de um cartão é dívida: fica negativo por natureza. Os dias de
 fechamento e de vencimento guiam a fatura projetada, e a conta de pagamento
 padrão só diz de onde ela sai -- o pagamento real pode ser dividido entre
 contas, com uma transferência de cada. Os testes fixam essas regras no serviço,
-no banco e nos contratos que o NetWorth lê.
+no banco e nos contratos que o consolidador (Wealthfolio) lê.
 """
 
 from __future__ import annotations

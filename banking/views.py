@@ -47,7 +47,7 @@ def _referencia_da_conta(request) -> date:
     """Data pontual para o saldo que o contrato patrimonial publica.
 
     ``data`` é opcional na navegação normal, mas precisa manter o significado
-    quando o NetWorth abre uma foto histórica. O período mensal continua sendo
+    quando o consolidador (Wealthfolio) abre uma foto histórica. O período mensal continua sendo
     resolvido pelo contexto de transações.
     """
     raw_value = request.GET.get("data", "")
