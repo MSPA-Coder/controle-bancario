@@ -51,7 +51,7 @@ falharia. `tests/test_nomes_de_migracao.py` cobra a dependência.
 
 Ficou de fora, de propósito:
 
-- a ordem das colunas, que difere em 13 tabelas e não se corrige sem recriá-las;
+- a ordem das colunas, que difere em 13 tabelas (contagem de 10/11/2026) e não se corrige sem recriá-las;
 - as restrições de `statement_rule` com `.{3,}`.
 
 A concessão de leitura ao papel `mcp_leitura` nas views de `leitura` não vem dos
@@ -381,7 +381,7 @@ ele ao exibir (`core/regional.py`).
 ## Publicação patrimonial
 
 Este sistema publica o caixa para quem consolida o patrimônio (hoje, o
-Wealthfolio) por duas rotas somente leitura, sem sessão e sem escopo por titular:
+Wealthfolio) pelas rotas somente leitura da tabela abaixo, sem sessão e sem escopo por titular:
 
 | Rota | Token | Para quê |
 |---|---|---|
@@ -400,9 +400,9 @@ Todas as rotas respondem só a `GET`, e o nginx fecha `/patrimonio/` para fora.
 
 Quem lê o PostgreSQL direto (hoje, o FinancasMCP, por um usuário `mcp_leitura`
 só de leitura) não deve ler as tabelas: acopla o próprio SQL ao schema e
-reescreve as regras do domínio. O esquema `leitura` (hoje em
-`core/migrations/0001_initial.sql`) publica essas regras em views, e o usuário de
-leitura recebe `SELECT` só nelas.
+reescreve as regras do domínio. O esquema `leitura` (criado em
+`core/migrations/0001_initial.sql`; a `core/0004` o preserva) publica essas
+regras em views, e o usuário de leitura recebe `SELECT` só nelas.
 
 | View | O que carrega |
 |---|---|
@@ -411,6 +411,7 @@ leitura recebe `SELECT` só nelas.
 | `leitura.categoria` | natureza (`gerencial`, `transferencia`, `movimentacao`, `valorizacao`) e grupo |
 | `leitura.orcamento_mensal`, `leitura.operacao`, `leitura.fechamento_mes` | metas, parcelas/recorrências e meses fechados |
 | `leitura.extrato_importacao`, `leitura.extrato_linha` | extratos e faturas importados |
+| `leitura.saldo_conferido` | saldos informados por conta, dia e origem (manual, print ou myprofit); mais de uma origem no mesmo dia é conferência |
 | `leitura.lancamento_etiqueta`, `leitura.lancamento_projeto` | etiquetas e projetos por lançamento |
 
 `leitura.hoje()` é a data do fuso de São Paulo, e não a do servidor. Ficam de
