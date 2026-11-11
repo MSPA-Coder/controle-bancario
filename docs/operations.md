@@ -98,6 +98,20 @@ banco e `media_volume`. Substituir o diretório clonado não substitui esses
 volumes. Instalações local e VPS têm dados independentes e não sincronizam
 automaticamente.
 
+### Retenção
+
+O serviço `migrate` roda, a cada deploy e depois das migrações,
+`manage.py clearsessions` (sessões vencidas) e `manage.py expurgar_outbox_v4`
+(outbox do v4 com mais de 30 dias; `--dias N` muda o prazo, mínimo 1). Se um
+deles falhar, o `migrate` avisa no log e segue, para o expurgo não impedir a
+subida. Para rodar à mão:
+
+```powershell
+docker compose --env-file .env.docker -f compose.yaml run --rm migrate python manage.py expurgar_outbox_v4
+```
+
+A decisão e o que fica sem expurgo estão em `docs/architecture.md`, "Retenção".
+
 ## Backup e restauração
 
 O backup que protege a produção é o do VPS: o `backup-db.sh` do `_manutencao`

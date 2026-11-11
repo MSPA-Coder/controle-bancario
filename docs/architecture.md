@@ -20,7 +20,7 @@ O `compose.yaml` define estes serviços (a lista completa sai de
 |---|---|
 | `postgres` | persistência relacional e health check |
 | `db-provision` | cria ou atualiza o papel restrito da aplicação (só DML), a cada subida e antes do `migrate` |
-| `migrate` | migrations e `collectstatic`, antes da aplicação; o único serviço de aplicação com a credencial administrativa do banco |
+| `migrate` | migrations, retenção (sessões e outbox v4) e `collectstatic`, antes da aplicação; o único serviço de aplicação com a credencial administrativa do banco |
 | `web` | aplicação Gunicorn, com filesystem raiz somente leitura, conectada com o papel restrito |
 | `postgres-teste` | banco efêmero (em `tmpfs`) da suíte, no perfil `quality`: nunca é o `postgres` com dados reais |
 | `quality` | Ruff, pytest e ferramentas de auditoria, no perfil `quality` |
@@ -56,6 +56,23 @@ Ficou de fora, de propósito:
 
 A concessão de leitura ao papel `mcp_leitura` nas views de `leitura` não vem dos
 modelos e a `0004` a preserva; migração que recriar uma view deve repô-la.
+
+### Retenção
+
+- **Sessões** (`django_session`): as vencidas saem a cada deploy, por
+  `clearsessions` no serviço `migrate`. Sem isso, nenhuma saía (em produção,
+  98 de 98 estavam vencidas).
+- **Outbox do v4** (`patrimonio_v4_outbox`): guarda 30 dias, por
+  `expurgar_outbox_v4`, no mesmo passo. A linha mais nova nunca sai. O feed é de
+  invalidação: o consumidor só pergunta se há item depois do checkpoint
+  (`?after=<cursor>&limit=N`) e então busca o snapshot, e o cursor é a posição
+  no contador, não a contagem de linhas. Com a mais nova preservada, um
+  checkpoint antigo continua vendo uma mudança e um em dia continua sem ver
+  nada, então a resposta não muda. Aqui não há dono por linha, ao contrário do
+  CRV, que guarda a mais nova de cada dono.
+- **Trilha `audit_log`**: sem expurgo, de propósito. É só de inserção, por
+  gatilho (ninguém atualiza nem apaga), e pesa cerca de 2,5 MB em seis meses.
+  Apagar a história de auditoria custaria mais do que guardá-la.
 
 ## Organização do código
 
