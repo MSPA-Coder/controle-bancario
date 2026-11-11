@@ -95,3 +95,45 @@ def test_excluir_lancamento_nao_conciliado_continua_funcionando(cenario):
     services.delete_transaction_or_operation(lancamento, OPERATION_SCOPE_ALL, user=user)
 
     assert not CashFlowEntry.objects.filter(id=lancamento.id).exists()
+
+
+@pytest.mark.parametrize(
+    ("tabela", "evento"),
+    [("entry_attachment", "DELETE"), ("bank_statement_line", "UPDATE")],
+)
+def test_erro_de_banco_ao_limpar_vinculos_derruba_a_exclusao_com_a_causa(cenario, tabela, evento):
+    """O erro real do banco chega a quem chamou, e o lançamento não é apagado.
+
+    A exclusão engolia qualquer `Exception` nos dois comandos que limpam anexo
+    e vínculo de extrato (`except Exception: pass`, com o comentário de que o
+    app poderia não estar instalado, e `bank_statements` é app obrigatório).
+    Um erro de banco (timeout de 55 s, trava de 10 s, gatilho) sumia, e o
+    comando seguinte falhava com "transação abortada", que esconde a causa.
+    O gatilho abaixo faz o comando recusar com uma mensagem própria, no banco
+    real e dentro da transação do teste.
+    """
+    from django.db import DatabaseError, connection
+
+    from bank_statements.models import EntryAttachment
+
+    user, conta, categoria = cenario
+    lancamento = _lancamento(user, conta, categoria)
+    # O DELETE do anexo só é emitido se houver anexo a apagar.
+    EntryAttachment.objects.create(
+        entry=lancamento, original_filename="recibo.txt", stored_filename="recibo.txt",
+        stored_path="attachments/recibo.txt", file_size=1,
+    )
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "CREATE FUNCTION recusa_de_proposito() RETURNS trigger LANGUAGE plpgsql AS "
+            "$$ BEGIN RAISE EXCEPTION 'travado de proposito'; END $$"
+        )
+        cursor.execute(
+            f"CREATE TRIGGER recusa_de_proposito BEFORE {evento} ON {tabela} "
+            "FOR EACH STATEMENT EXECUTE FUNCTION recusa_de_proposito()"
+        )
+
+    with pytest.raises(DatabaseError, match="travado de proposito"):
+        services.delete_transaction_or_operation(lancamento, OPERATION_SCOPE_ALL, user=user)
+
+    assert CashFlowEntry.objects.filter(id=lancamento.id).exists()

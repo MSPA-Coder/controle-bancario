@@ -1860,32 +1860,27 @@ def delete_transaction_or_operation(
     if operation_type in (OPERATION_INSTALLMENT, OPERATION_INTERNAL_TRANSFER):
         remaining = [entry for entry in all_entries if entry.id not in deleted_ids]
 
-    try:
-        from bank_statements.models import EntryAttachment
+    from bank_statements.models import (
+        LINE_STATUS_NEW,
+        LINE_STATUS_RECONCILED,
+        BankStatementLine,
+        EntryAttachment,
+    )
 
-        EntryAttachment.objects.filter(entry_id__in=deleted_ids).delete()
-    except Exception:  # pragma: no cover - app pode não estar instalado em algum contexto
-        pass
+    # Erro de banco aqui sobe com a causa: engoli-lo deixava a transação
+    # abortada e o comando seguinte falhava com "transação abortada".
+    EntryAttachment.objects.filter(entry_id__in=deleted_ids).delete()
 
-    try:
-        from bank_statements.models import (
-            LINE_STATUS_NEW,
-            LINE_STATUS_RECONCILED,
-            BankStatementLine,
-        )
-
-        # BankStatementLine.matched_entry é PROTECT (ver bank_statements/models.py):
-        # excluir o lançamento sem desfazer o vínculo primeiro levantaria
-        # ProtectedError. Em vez de recusar a exclusão, a linha volta para
-        # "novo" -- o extrato que ela representa não deixou de existir só
-        # porque o lançamento que alguém ligou a ela foi apagado, e o usuário
-        # decide o que fazer com ela (conciliar com outro lançamento, criar um
-        # novo, ou ignorar) na tela de Conciliação.
-        BankStatementLine.objects.filter(
-            matched_entry_id__in=deleted_ids, status=LINE_STATUS_RECONCILED
-        ).update(matched_entry=None, status=LINE_STATUS_NEW, updated_at=timezone.now())
-    except Exception:  # pragma: no cover - app pode não estar instalado em algum contexto
-        pass
+    # BankStatementLine.matched_entry é PROTECT (ver bank_statements/models.py):
+    # excluir o lançamento sem desfazer o vínculo primeiro levantaria
+    # ProtectedError. Em vez de recusar a exclusão, a linha volta para
+    # "novo" -- o extrato que ela representa não deixou de existir só
+    # porque o lançamento que alguém ligou a ela foi apagado, e o usuário
+    # decide o que fazer com ela (conciliar com outro lançamento, criar um
+    # novo, ou ignorar) na tela de Conciliação.
+    BankStatementLine.objects.filter(
+        matched_entry_id__in=deleted_ids, status=LINE_STATUS_RECONCILED
+    ).update(matched_entry=None, status=LINE_STATUS_NEW, updated_at=timezone.now())
 
     count = len(scoped)
     bank_operation_id = tx.bank_operation_id
