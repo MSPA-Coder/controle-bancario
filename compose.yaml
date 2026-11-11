@@ -232,10 +232,13 @@ services:
         condition: service_completed_successfully
     # `--clear` é necessário: sem ele, um asset removido do código continua
     # sendo servido a partir do volume indefinidamente.
+    # Retenção (sessões vencidas e outbox do v4 com mais de 30 dias) roda a
+    # cada deploy, aqui, sem timer. Se falhar, avisa e segue: expurgo atrasado
+    # não pode impedir a aplicação de subir.
     command:
       - sh
       - -c
-      - "python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear"
+      - "python manage.py migrate --noinput && { python manage.py clearsessions && python manage.py expurgar_outbox_v4 || echo 'Retencao falhou: seguindo sem expurgar.' >&2; } && python manage.py collectstatic --noinput --clear"
     restart: "no"
     volumes:
       - app_logs:/workspace/logs

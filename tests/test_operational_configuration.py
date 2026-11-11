@@ -318,6 +318,52 @@ def test_bootstrap_de_migrations_antecipa_o_web():
     assert "manage.py collectstatic --noinput --clear" in comando
 
 
+def test_deploy_expurga_sessoes_e_outbox_sem_barrar_a_subida():
+    """A retenção roda no `migrate`, depois das migrações, e sua falha não derruba o deploy.
+
+    Em produção, 98 de 98 sessões estavam vencidas e a outbox do v4 só crescia:
+    nada rodava `clearsessions` nem expurgo. Aqui o comando do serviço é
+    executado por um `sh` de verdade, com `python` trocado por um eco, para ver a
+    ordem e o que acontece quando o expurgo falha.
+    """
+    servicos = _servicos()
+    comando = servicos["migrate"]["command"][-1]
+
+    def rodar(falha_em: str | None) -> tuple[int, list[str]]:
+        # `python manage.py X ...` vira o eco "manage.py X ..."; o passo que
+        # começa por `FALHA` devolve erro.
+        shell = (
+            'python() { echo "$*"; case "$*" in "manage.py $FALHA"*) return 1;; esac; return 0; }; '
+            + comando
+        )
+        resultado = subprocess.run(
+            ["sh", "-c", shell], capture_output=True, text=True, check=False,
+            env={**os.environ, "FALHA": falha_em or "nenhum-passo"},
+        )
+        return resultado.returncode, resultado.stdout.splitlines()
+
+    codigo, passos = rodar(None)
+    assert codigo == 0
+    assert passos == [
+        "manage.py migrate --noinput",
+        "manage.py clearsessions",
+        "manage.py expurgar_outbox_v4",
+        "manage.py collectstatic --noinput --clear",
+    ]
+
+    codigo, passos = rodar("expurgar_outbox_v4")
+    assert codigo == 0
+    assert passos[-1] == "manage.py collectstatic --noinput --clear"
+
+    codigo, passos = rodar("clearsessions")
+    assert codigo == 0
+    assert "manage.py expurgar_outbox_v4" not in passos
+    assert passos[-1] == "manage.py collectstatic --noinput --clear"
+
+    codigo, passos = rodar("collectstatic")
+    assert codigo != 0
+
+
 def test_nome_do_banco_de_teste_difere_do_operacional():
     """Se um teste precisar de banco, Django deriva um banco de teste próprio."""
     # Lido da mesma fonte que `settings.py`, e não de `settings_dict["NAME"]`:
