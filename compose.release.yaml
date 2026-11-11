@@ -1,15 +1,15 @@
-# Exclusivo de deploy.sh. As referências são resolvidas e conferidas antes
-# do fast-forward; nunca usar tags móveis ou reconstruir neste caminho.
+# Exclusivo de deploy.sh. O script monta as imagens no servidor, antes de trocar
+# qualquer contêiner; aqui elas sobem por ID, sem tag móvel e sem reconstruir.
 services:
   web:
-    image: ${APP_IMAGE:?deploy.sh deve fornecer APP_IMAGE por digest}
+    image: ${APP_IMAGE:?deploy.sh deve fornecer APP_IMAGE (ID da imagem)}
     pull_policy: never
   migrate:
-    image: ${APP_IMAGE:?deploy.sh deve fornecer APP_IMAGE por digest}
+    image: ${APP_IMAGE:?deploy.sh deve fornecer APP_IMAGE (ID da imagem)}
     pull_policy: never
   postgres:
-    image: ${POSTGRES_IMAGE:?deploy.sh deve fornecer POSTGRES_IMAGE por digest}
+    image: ${POSTGRES_IMAGE:?deploy.sh deve fornecer POSTGRES_IMAGE (ID da imagem)}
     pull_policy: never
   db-provision:
-    image: ${POSTGRES_IMAGE:?deploy.sh deve fornecer POSTGRES_IMAGE por digest}
+    image: ${POSTGRES_IMAGE:?deploy.sh deve fornecer POSTGRES_IMAGE (ID da imagem)}
     pull_policy: never

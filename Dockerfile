@@ -43,8 +43,8 @@ RUN apt-get update \
 #
 # POR QUE `uv` E NAO `pip install`: o `pip` resolvia as faixas do
 # `pyproject.toml` no instante do build, entao dois builds do MESMO commit
-# podiam produzir imagens diferentes. O deploy agora recebe a imagem testada
-# por digest; o lock também mantém a coerência entre quality e runtime. O
+# podiam produzir imagens diferentes. O deploy monta a imagem no servidor, a
+# partir do mesmo commit, e o lock mantém a coerência entre quality e runtime. O
 # `uv.lock` fixa versao e hash SHA-256 de cada dependencia.
 #
 # O FLAG E `--locked`, E A DIFERENCA IMPORTA. `--frozen` apenas usa o lock sem

@@ -165,8 +165,8 @@ jobs:
       # o socket do Docker e dar root na pratica, que foi exatamente o motivo
       # de o `autoheal` ter sido recusado no VPS. Nao vale reabrir aqui.
       #
-      # Imagem fixada por digest do indice multi-arquitetura, pelo mesmo motivo
-      # que as actions sao fixadas por SHA.
+      # Imagem do Trivy fixada por versao exata (tag em `.github/docker-compose.yml`),
+      # nao por digest: o Dependabot a atualiza. As actions, essas sim, vao por SHA.
       #
       # `--ignore-unfixed` de proposito: CVE de pacote de sistema sem correcao
       # publicada nao e acionavel. Reprovar por ele travaria PR sem relacao

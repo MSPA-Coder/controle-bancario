@@ -1,9 +1,10 @@
 # Operação, dados e backup
 
-O VPS é `linux/arm64`. O job `Qualidade` usa runner ARM64 nativo e confere a
-arquitetura das duas imagens antes de smoke, Chromium, Trivy e publicação.
-Não se publica uma variante reconstruída e não testada para produção; o
-desenvolvimento local AMD64 continua usando seu próprio build Docker.
+O VPS é `linux/arm64`, e o `deploy.sh` monta a imagem no próprio servidor, a
+partir do `main`: a CI não publica imagem nem há registro. O job `Qualidade`
+usa runner ARM64 nativo e confere a arquitetura das duas imagens antes de
+smoke, Chromium e Trivy; o desenvolvimento local AMD64 continua usando seu
+próprio build Docker.
 
 ## Configuração e serviços
 
