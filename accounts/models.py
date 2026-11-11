@@ -57,6 +57,9 @@ class AppUser(AbstractUser):
     class Meta:
         db_table = 'app_user'
         constraints = [
+            # O login procura por `username__iexact`: dois nomes que só diferem
+            # na caixa dariam MultipleObjectsReturned.
+            models.UniqueConstraint(Lower('username'), name='uq_app_user_username_ci'),
             models.CheckConstraint(
                 condition=models.Q(user_type__in=VALID_USER_TYPES),
                 name='ck_app_user_user_type_valid',

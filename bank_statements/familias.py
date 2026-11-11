@@ -162,7 +162,9 @@ def _meses_fechados(entradas) -> int:
 
 
 def _garantir_categoria(familia: Familia) -> CashFlowCategory:
-    grupo, _ = CashFlowCategoryGroup.objects.get_or_create(group_name=familia.grupo)
+    grupo = CashFlowCategoryGroup.objects.filter(group_name__iexact=familia.grupo).first()
+    if grupo is None:
+        grupo = CashFlowCategoryGroup.objects.create(group_name=familia.grupo)
     categoria = CashFlowCategory.objects.filter(category_name__iexact=familia.para).first()
     if categoria is None:
         categoria = CashFlowCategory.objects.create(

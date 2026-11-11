@@ -276,7 +276,7 @@ def _categoria_de_transferencia(conta: FinancialAccount) -> CashFlowCategory | N
 
 
 def _categoria_da_estimativa() -> CashFlowCategory:
-    categoria = CashFlowCategory.objects.filter(category_name=CATEGORIA_ESTIMATIVA).first()
+    categoria = CashFlowCategory.objects.filter(category_name__iexact=CATEGORIA_ESTIMATIVA).first()
     if categoria is None:
         categoria = CashFlowCategory.objects.create(
             category_name=CATEGORIA_ESTIMATIVA, kind=CATEGORY_KIND_MANAGERIAL

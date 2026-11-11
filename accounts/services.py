@@ -412,7 +412,10 @@ def user_mutation_block_message(
 
 
 def _username_taken(username: str, *, excluding_user_id: int | None = None) -> bool:
-    queryset = AppUser.objects.filter(username=username)
+    # Sem diferenciar maiúsculas: o login acha o usuário por `username__iexact`, e
+    # dois nomes que só diferem na caixa dariam MultipleObjectsReturned (erro 500).
+    # O banco também recusa (`uq_app_user_username_ci`); aqui sai a mensagem.
+    queryset = AppUser.objects.filter(username__iexact=username)
     if excluding_user_id is not None:
         queryset = queryset.exclude(id=excluding_user_id)
     return queryset.exists()

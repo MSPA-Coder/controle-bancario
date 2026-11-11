@@ -1,5 +1,6 @@
 """Models de transações e fluxo de caixa."""
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
 
@@ -48,6 +49,7 @@ class CashFlowCategoryGroup(models.Model):
         db_table = 'cash_flow_category_group'
         ordering = ['position', 'group_name']
         constraints = [
+            models.UniqueConstraint(Lower('group_name'), name='uq_cash_flow_category_group_name_ci'),
             models.CheckConstraint(
                 condition=models.Q(group_name__regex=r'\S'),
                 name='ck_cash_flow_category_group_name_not_blank',
@@ -94,6 +96,7 @@ class CashFlowCategory(models.Model):
         db_table = 'cash_flow_category'
         ordering = ['category_name']
         constraints = [
+            models.UniqueConstraint(Lower('category_name'), name='uq_cash_flow_category_name_ci'),
             models.CheckConstraint(
                 condition=models.Q(category_name__regex=r'\S'),
                 name='ck_cash_flow_category_name_not_blank',
