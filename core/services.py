@@ -13,6 +13,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.db import connection
 from django.utils.translation import gettext, ngettext
+from sharedauth.passwords import MIN_PASSWORD_LENGTH
 
 from core import regional
 from core.domain.settings import (
@@ -331,7 +332,7 @@ def audit_snapshot(obj, *fields: str) -> dict:
 
 # --- Parâmetros: política de senha ---
 
-_PASSWORD_MIN_LENGTH_FLOOR = 8
+PASSWORD_MIN_LENGTH_FLOOR = _PASSWORD_MIN_LENGTH_FLOOR = MIN_PASSWORD_LENGTH
 _PASSWORD_MAX_FAILURES_CEILING = 1000
 
 

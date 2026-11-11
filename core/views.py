@@ -53,6 +53,7 @@ from core.domain.settings import (
 )
 from core.permissions import permission_required
 from core.services import (
+    PASSWORD_MIN_LENGTH_FLOOR,
     audit_filter_options,
     audit_request_context,
     available_inspection_tables,
@@ -764,6 +765,7 @@ def settings_home_view(request):
         "projection_settings": projection_settings,
         "last_projection_run": format_last_projection_run(projection_settings.last_projection_run),
         "password_policy_settings": get_password_policy_settings(),
+        "password_min_length_floor": PASSWORD_MIN_LENGTH_FLOOR,
         "login_lockout_policy_settings": get_login_lockout_policy_settings(),
         "current_system_start_date": system_start_date(),
         # Quem não pode gravar não vê o formulário: o servidor recusaria o envio.

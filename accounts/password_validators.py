@@ -1,7 +1,8 @@
 """Validador de senha com política configurável via AppSetting.
 
-Tamanho mínimo configurável (com piso de 8 caracteres, que a configuração não
-pode furar) mais requisitos opcionais de maiúsculas, números e especiais.
+Tamanho mínimo configurável (com piso igual ao do SharedAuth, 10 caracteres, que a
+configuração não pode furar; valor gravado abaixo do piso, como o 8 antigo, vale
+o piso) mais requisitos opcionais de maiúsculas, números e especiais.
 
 Ocupa o lugar de `MinimumLengthValidator` em AUTH_PASSWORD_VALIDATORS de
 propósito: os dois juntos aplicariam mínimos diferentes, e a tela
@@ -14,12 +15,13 @@ import re
 
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext, ngettext
+from sharedauth.passwords import MIN_PASSWORD_LENGTH
 
-DEFAULT_MIN_LENGTH = 8
+DEFAULT_MIN_LENGTH = MIN_PASSWORD_LENGTH
 DEFAULT_MIN_UPPERCASE = 0
 DEFAULT_MIN_NUMBERS = 0
 DEFAULT_MIN_SPECIAL = 0
-MIN_LENGTH_FLOOR = 8
+MIN_LENGTH_FLOOR = MIN_PASSWORD_LENGTH
 MAX_LENGTH_CEILING = 256
 
 _SPECIAL_CHARS_RE = re.compile(r"[^A-Za-z0-9]")

@@ -61,7 +61,7 @@ def test_management_template_displays_expense_with_negative_sign():
 
 
 def test_password_floor_cannot_be_configured_away(monkeypatch):
-    """O piso de 8 vale mesmo que a configuração grave um valor menor."""
+    """O piso vale mesmo que a configuração grave um valor menor."""
     from accounts import password_validators
     from core import services as core_services
 
