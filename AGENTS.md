@@ -149,10 +149,9 @@ todo commit de código, o script completo.
 
 - Autorização é de servidor, por titular e permissão; escrita usa CSRF; CSP
   sem código inline.
-- O piso de senha é o do SharedAuth (`sharedauth.passwords.MIN_PASSWORD_LENGTH`,
-  10), lido por `accounts/password_validators.py` e `core/services.py`. Vale só
-  para senha nova ou trocada; o login não revalida o tamanho, e o valor gravado
-  em `app_setting` abaixo do piso vale o piso.
+- O piso de senha é o do SharedAuth (`MIN_PASSWORD_LENGTH`, 10), lido por
+  `accounts/password_validators.py` e `core/services.py`. Vale para senha nova
+  ou trocada; o login não revalida, e `app_setting` abaixo do piso vale o piso.
 - Senha criada ou redefinida pelo administrador liga `must_change_password`, e
   o middleware de `accounts/middleware.py` desvia toda requisição para
   `/change-password/` até a troca. O tamanho da senha sorteada vem de
