@@ -28,6 +28,35 @@ O `compose.yaml` define estes serviços (a lista completa sai de
 `compose.dev.yaml` altera somente o desenvolvimento: monta o repositório no
 serviço `web`, habilita `DEBUG` e usa `runserver`.
 
+### O esquema de produção não é o das migrações
+
+O banco de produção foi criado antes da conversão para Django e adotado
+depois: as migrações nunca construíram as tabelas mais antigas dele. O
+`postgres-teste` nasce das migrações. Os dois diferem, e a diferença foi medida
+em 10/11/2026:
+
+- 52 colunas que os modelos exigem preenchidas aceitam nulo em produção
+  (`status` e `operation_type` do lançamento entre elas), e 30 linhas têm
+  `created_at` ou `updated_at` nulo;
+- 25 chaves estrangeiras são imediatas em produção; as que o Django cria são
+  adiáveis, e é assim que a suíte as vê;
+- as chaves mais antigas são `integer` em produção e `bigint` nas migrações;
+- índices e restrições têm nomes diferentes dos que o Django conhece, e a
+  tabela `alembic_version` só existe em produção.
+
+Consequências práticas: suíte verde prova o código contra o banco das
+migrações, não contra o de produção; migração que altere, renomeie ou remova
+índice ou restrição **pelo nome** pode passar na suíte e falhar no `migrate` do
+deploy; código que dependa de chave adiável ou de coluna sempre preenchida
+precisa ser conferido no esquema real. O banco local de desenvolvimento tem o
+esquema de produção e é onde isso se confere antes do deploy: recriá-lo pelas
+migrações apaga essa referência.
+
+`python manage.py conferir_esquema` lista a diferença entre o banco conectado e
+os modelos, só lendo o catálogo (`core/esquema.py` diz o que ele confere e o
+que não). Alinhar a produção é uma decisão em aberto; até lá, a lista só deve
+diminuir.
+
 ## Organização do código
 
 ### Filtro global de moeda

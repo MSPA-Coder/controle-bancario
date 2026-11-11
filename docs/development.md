@@ -109,6 +109,11 @@ ainda registra em `django_migrations` os nomes das migrações antigas, que
 estão no git até 9f7f4cb. Migração nova não pode repetir um desses nomes:
 o Django a daria por aplicada sem rodá-la.
 
+"PostgreSQL vazio" não é o banco de produção, que tem outro esquema
+(`docs/architecture.md`, "O esquema de produção não é o das migrações"). Rode
+toda migração nova também no banco local, que tem o esquema de produção, e
+compare antes e depois com `manage.py conferir_esquema --resumo`.
+
 ## Piloto de navegador (dados descartáveis)
 
 Além do `quality`, `compose.browser.yaml` executa Chromium com PostgreSQL
