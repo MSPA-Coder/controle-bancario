@@ -4,7 +4,8 @@
     python manage.py conferir_esquema --resumo
 
 Só lê o catálogo do PostgreSQL; não altera nada. Sai com código 1 quando há
-diferença. O motivo de existir e o que ele não confere estão em `core/esquema.py`.
+diferença; em produção a resposta esperada é zero diferença. O motivo de existir
+e o que ele não confere estão em `core/esquema.py`.
 """
 
 from __future__ import annotations

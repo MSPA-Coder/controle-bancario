@@ -1,7 +1,7 @@
 """Aproxima o banco de produção do esquema que os modelos declaram.
 
 O banco de produção foi criado antes da conversão para Django
-(`docs/architecture.md`, "O esquema de produção não é o das migrações"). Esta
+(`docs/architecture.md`, "O esquema de produção veio de antes das migrações"). Esta
 migração fecha duas das diferenças medidas em 10/11/2026 pelo
 `manage.py conferir_esquema`:
 

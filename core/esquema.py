@@ -4,9 +4,11 @@ Num banco criado pelas migrações a resposta é "nenhuma diferença", e
 `tests/test_conferir_esquema.py` prova isso. O banco de produção não nasceu das
 migrações: foi criado antes da conversão para Django e adotado depois, com
 colunas anuláveis, chaves `integer`, chaves estrangeiras imediatas e nomes de
-índice que as migrações não produzem (`docs/architecture.md`, "O esquema de
-produção não é o das migrações"). A suíte roda sobre o primeiro banco; este
-módulo mede a distância até o segundo.
+índice que as migrações não produzem. Essas diferenças foram fechadas pelas
+`core/0002` e `core/0004` (`docs/architecture.md`, "O esquema de produção veio
+de antes das migrações"). A suíte roda sobre o banco das migrações; este módulo
+serve de alarme: em produção deve responder zero diferença, e qualquer uma que
+apareça é desvio novo.
 
 O que é conferido: tabelas, colunas (tipo e nulidade), chaves estrangeiras
 (existência e se são adiáveis, como o Django as cria), unicidade de campo e os

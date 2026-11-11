@@ -28,35 +28,36 @@ O `compose.yaml` define estes serviços (a lista completa sai de
 `compose.dev.yaml` altera somente o desenvolvimento: monta o repositório no
 serviço `web`, habilita `DEBUG` e usa `runserver`.
 
-### O esquema de produção não é o das migrações
+### O esquema de produção veio de antes das migrações
 
 O banco de produção foi criado antes da conversão para Django e adotado
-depois: as migrações nunca construíram as tabelas mais antigas dele. O
-`postgres-teste` nasce das migrações. Os dois diferem, e a diferença foi medida
-em 10/11/2026:
+depois: as migrações nunca construíram as tabelas mais antigas dele, e o
+`postgres-teste` nasce das migrações. Por isso os dois esquemas diferiam (tipos,
+nulidade, chaves adiáveis, nomes de índices e restrições, redação de checks).
+As migrações `core/0002` e `core/0004` os igualaram nas tabelas do projeto. Uma
+migração nova que mexa em índice ou restrição **pelo nome** já se comporta em
+produção como na suíte.
 
-- as chaves mais antigas são `integer` em produção e `bigint` nas migrações;
-- índices e restrições têm nomes diferentes dos que o Django conhece;
-- as tabelas `alembic_version` e `django_admin_log` e duas colunas
-  `updated_at` só existem em produção.
+Como se confere: `python manage.py conferir_esquema` lê o catálogo do banco
+conectado e compara com os modelos (`core/esquema.py` diz o que ele cobre); em
+produção deve responder "Nenhuma diferença". A comparação completa do catálogo
+(colunas, índices, restrições, sequências, funções, gatilhos e as views de
+`leitura`) foi feita uma vez, num ensaio da `core/0004` sobre cópia do banco.
 
-Outras duas diferenças foram fechadas pela migração
-`core/0002_alinhar_esquema_de_producao`: 52 colunas que os modelos exigem
-preenchidas aceitavam nulo (`status` e `operation_type` do lançamento entre
-elas) e 25 chaves estrangeiras eram imediatas, quando as que o Django cria são
-adiáveis.
+Regra: toda migração nova do projeto depende, direta ou indiretamente, da
+`core/0004`. Ela confere no fim se o esquema é exatamente o alvo; num banco
+novo, uma migração que rodasse antes deixaria o esquema fora dele e a `0004`
+falharia. `tests/test_nomes_de_migracao.py` cobra a dependência.
 
-Consequências práticas: suíte verde prova o código contra o banco das
-migrações, não contra o de produção; migração que altere, renomeie ou remova
-índice ou restrição **pelo nome** pode passar na suíte e falhar no `migrate` do
-deploy. O banco local de desenvolvimento tem o
-esquema de produção e é onde isso se confere antes do deploy: recriá-lo pelas
-migrações apaga essa referência.
+Ficou de fora, de propósito:
 
-`python manage.py conferir_esquema` lista a diferença entre o banco conectado e
-os modelos, só lendo o catálogo (`core/esquema.py` diz o que ele confere e o
-que não). Alinhar a produção é uma decisão em aberto; até lá, a lista só deve
-diminuir.
+- `financial_account.is_default`: nenhum código a lê, mas 6 contas de produção
+  estão marcadas; apagar é decisão de produto, não de esquema;
+- a ordem das colunas, que difere em 13 tabelas e não se corrige sem recriá-las;
+- as restrições de `statement_rule` com `.{3,}`.
+
+A concessão de leitura ao papel `mcp_leitura` nas views de `leitura` não vem dos
+modelos e a `0004` a preserva; migração que recriar uma view deve repô-la.
 
 ## Organização do código
 

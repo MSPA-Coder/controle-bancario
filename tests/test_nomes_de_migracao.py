@@ -14,6 +14,10 @@ novo.
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from django.apps import apps
+from django.conf import settings
 from django.db.migrations.loader import MigrationLoader
 
 # Base de 03/11/2026: reaproveita, de propósito, nomes já registrados.
@@ -144,6 +148,50 @@ def test_migracao_nova_nao_repete_nome_ja_registrado_em_producao():
         "A produção já registra estes nomes como aplicados e não rodaria as migrações: "
         + ", ".join(repetidas)
         + ". Renomeie o arquivo."
+    )
+
+
+IGUALA_O_ESQUEMA = ("core", "0004_igualar_esquema_ao_das_migracoes")
+
+# Anteriores à `core/0004` por construção: a base e as duas que ela pressupõe.
+ANTERIORES_A_IGUALACAO = BASE | {
+    ("core", "0002_alinhar_esquema_de_producao"),
+    ("core", "0003_trilha_de_auditoria_so_de_insercao"),
+    IGUALA_O_ESQUEMA,
+}
+
+
+def test_migracao_do_projeto_depende_da_que_iguala_o_esquema():
+    """A `core/0004` confere, no fim, se o esquema é exatamente o alvo.
+
+    Num banco novo, uma migração do projeto que rodasse antes dela deixaria o
+    esquema fora do alvo e a `0004` falharia. Por isso toda migração dos apps
+    deste repositório, fora a base e as duas primeiras do `core`, a tem como
+    ancestral.
+    """
+    # Sem conexão: o grafo vem dos arquivos.
+    loader = MigrationLoader(None, ignore_no_migrations=True)
+    raiz = settings.BASE_DIR.resolve()
+    # Apps do projeto: os que moram sob a pasta do repositório (e não em site-packages).
+    apps_do_projeto = {
+        config.label
+        for config in apps.get_app_configs()
+        if Path(config.path).resolve().is_relative_to(raiz)
+        and "site-packages" not in Path(config.path).parts
+    }
+
+    sem_ancestral = sorted(
+        f"{app}/{nome}"
+        for app, nome in loader.disk_migrations
+        if app in apps_do_projeto
+        and (app, nome) not in ANTERIORES_A_IGUALACAO
+        and IGUALA_O_ESQUEMA not in loader.graph.forwards_plan((app, nome))
+    )
+
+    assert not sem_ancestral, (
+        "Estas migrações não dependem da core/0004_igualar_esquema_ao_das_migracoes: "
+        + ", ".join(sem_ancestral)
+        + ". Acrescente essa migração (ou outra que já dependa dela) às `dependencies`."
     )
 
 

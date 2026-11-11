@@ -110,10 +110,13 @@ estão no git até 9f7f4cb. Migração nova não pode repetir um desses nomes:
 o Django a daria por aplicada sem rodá-la
 (`tests/test_nomes_de_migracao.py` reprova).
 
-"PostgreSQL vazio" não é o banco de produção, que tem outro esquema
-(`docs/architecture.md`, "O esquema de produção não é o das migrações"). Rode
-toda migração nova também no banco local, que tem o esquema de produção, e
-compare antes e depois com `manage.py conferir_esquema --resumo`.
+Toda migração nova do projeto depende, direta ou indiretamente, da
+`core/0004_igualar_esquema_ao_das_migracoes`, que confere no fim se o esquema
+é o alvo; sem isso ela falharia num banco novo
+(`tests/test_nomes_de_migracao.py` reprova). O banco local tem o esquema de
+produção (`docs/architecture.md`, "O esquema de produção veio de antes das
+migrações"): rode toda migração nova nele também e confirme com
+`manage.py conferir_esquema --resumo`, que deve continuar sem diferença.
 
 ## Piloto de navegador (dados descartáveis)
 
