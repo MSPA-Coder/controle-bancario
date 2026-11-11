@@ -16,7 +16,7 @@ class ManagementTag(models.Model):
         ordering = ['tag_name']
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(tag_name__regex=r'^\s*.+\s*$'),
+                condition=models.Q(tag_name__regex=r'\S'),
                 name='ck_management_tag_name_not_blank',
             ),
         ]
@@ -47,11 +47,6 @@ class CashFlowEntryTag(models.Model):
                 name='uq_cash_flow_entry_tag_entry_tag',
             ),
         ]
-        indexes = [
-            models.Index(fields=['entry']),
-            models.Index(fields=['tag']),
-        ]
-    
     def __str__(self):
         return f"{self.entry} - {self.tag}"
     
@@ -75,7 +70,7 @@ class ManagementProject(models.Model):
         ordering = ['project_name']
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(project_name__regex=r'^\s*.+\s*$'),
+                condition=models.Q(project_name__regex=r'\S'),
                 name='ck_management_project_name_not_blank',
             ),
         ]
@@ -108,11 +103,6 @@ class CashFlowEntryProject(models.Model):
                 name='uq_cash_flow_entry_project_entry',
             ),
         ]
-        indexes = [
-            models.Index(fields=['entry']),
-            models.Index(fields=['project']),
-        ]
-    
     def __str__(self):
         return f"{self.entry} - {self.project}"
     

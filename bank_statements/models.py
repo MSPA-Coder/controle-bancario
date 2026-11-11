@@ -67,7 +67,7 @@ class BankStatementImport(models.Model):
         ordering = ["-created_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                condition=Q(source_filename__regex=r"^\s*.+\s*$"),
+                condition=Q(source_filename__regex=r"\S"),
                 name="ck_bank_statement_import_filename_not_blank",
             ),
             models.CheckConstraint(
@@ -76,7 +76,6 @@ class BankStatementImport(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=["account"]),
             models.Index(fields=["created_at"]),
         ]
 
@@ -110,14 +109,10 @@ class EntryAttachment(models.Model):
         ordering = ["-created_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                condition=Q(original_filename__regex=r"^\s*.+\s*$"),
+                condition=Q(original_filename__regex=r"\S"),
                 name="ck_entry_attachment_filename_not_blank",
             ),
         ]
-        indexes = [
-            models.Index(fields=["entry"]),
-        ]
-
     def __str__(self):
         return self.original_filename
 
@@ -167,7 +162,7 @@ class PendingStatementUpload(models.Model):
         ordering = ["created_at", "id"]
         constraints = [
             models.CheckConstraint(
-                condition=Q(original_filename__regex=r"^\s*.+\s*$"),
+                condition=Q(original_filename__regex=r"\S"),
                 name="ck_pending_statement_upload_filename_not_blank",
             ),
         ]
@@ -377,8 +372,6 @@ class BankStatementLine(models.Model):
         ]
         indexes = [
             models.Index(fields=["account", "statement_date"]),
-            models.Index(fields=["import_batch"]),
-            models.Index(fields=["matched_entry"]),
             models.Index(fields=["status"]),
         ]
 

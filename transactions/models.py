@@ -49,7 +49,7 @@ class CashFlowCategoryGroup(models.Model):
         ordering = ['position', 'group_name']
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(group_name__regex=r'^\s*.+\s*$'),
+                condition=models.Q(group_name__regex=r'\S'),
                 name='ck_cash_flow_category_group_name_not_blank',
             ),
         ]
@@ -95,7 +95,7 @@ class CashFlowCategory(models.Model):
         ordering = ['category_name']
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(category_name__regex=r'^\s*.+\s*$'),
+                condition=models.Q(category_name__regex=r'\S'),
                 name='ck_cash_flow_category_name_not_blank',
             ),
             models.CheckConstraint(
@@ -176,7 +176,7 @@ class BankOperation(models.Model):
         db_table = 'bank_operation'
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(operation_key__regex=r'^\s*.+\s*$'),
+                condition=models.Q(operation_key__regex=r'\S'),
                 name='ck_bank_operation_key_not_blank',
             ),
             models.CheckConstraint(
@@ -310,9 +310,6 @@ class CashFlowEntry(models.Model):
             models.Index(fields=['category', 'due_date']),
             models.Index(fields=['status', 'due_date']),
             models.Index(fields=['entry_type', 'due_date']),
-            models.Index(fields=['operation_type']),
-            models.Index(fields=['bank_operation']),
-            models.Index(fields=['source_entry']),
         ]
     
     def __str__(self):

@@ -1,0 +1,40 @@
+"""Nome em branco passa a ser recusado de verdade e saem índices repetidos.
+
+O check antigo (expressão regular com `.+` entre espaços opcionais) aceitava
+texto só de espaços, porque o `.+` casa espaço; o novo exige ao menos um
+caractere que não seja espaço (barra invertida e S maiúsculo). Os índices removidos
+repetiam o que o Django já cria para a chave estrangeira (ou `db_index=True`)
+na mesma coluna.
+"""
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('core', '0004_igualar_esquema_ao_das_migracoes'),
+    ]
+
+    operations = [
+        migrations.RemoveConstraint(
+            model_name='auditlog',
+            name='ck_audit_log_entity_name_not_blank',
+        ),
+        migrations.AddConstraint(
+            model_name='auditlog',
+            constraint=models.CheckConstraint(condition=models.Q(('entity_name__regex', '\\S')), name='ck_audit_log_entity_name_not_blank'),
+        ),
+        migrations.RemoveConstraint(
+            model_name='auditlog',
+            name='ck_audit_log_action_not_blank',
+        ),
+        migrations.AddConstraint(
+            model_name='auditlog',
+            constraint=models.CheckConstraint(condition=models.Q(('action__regex', '\\S')), name='ck_audit_log_action_not_blank'),
+        ),
+        migrations.RemoveIndex(
+            model_name='auditlog',
+            name='ix_audit_log_user',
+        ),
+    ]

@@ -102,6 +102,10 @@ class AccountOwner(models.Model):
         ordering = ['name']
         constraints = [
             models.UniqueConstraint(Lower('name'), name='uq_account_owner_name_ci'),
+            models.CheckConstraint(
+                condition=models.Q(name__regex=r'\S'),
+                name='ck_account_owner_owner_name_not_blank',
+            ),
         ]
     
     def __str__(self):
@@ -162,10 +166,6 @@ class UserPermission(models.Model):
                 fields=['user', 'permission'],
                 name='uq_user_permission_user_permission',
             ),
-        ]
-        indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['permission']),
         ]
 
 

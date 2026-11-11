@@ -38,15 +38,14 @@ class AuditLog(models.Model):
         indexes = [
             models.Index(fields=["entity_name", "entity_id"], name="ix_audit_log_entity"),
             models.Index(fields=["created_at"], name="ix_audit_log_created_at"),
-            models.Index(fields=["user"], name="ix_audit_log_user"),
         ]
         constraints = [
             models.CheckConstraint(
-                condition=~models.Q(entity_name=""),
+                condition=models.Q(entity_name__regex=r'\S'),
                 name="ck_audit_log_entity_name_not_blank",
             ),
             models.CheckConstraint(
-                condition=~models.Q(action=""),
+                condition=models.Q(action__regex=r'\S'),
                 name="ck_audit_log_action_not_blank",
             ),
         ]

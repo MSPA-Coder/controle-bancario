@@ -51,7 +51,7 @@ class FinancialInstitution(models.Model):
         constraints = [
             models.UniqueConstraint(Lower('institution_name'), name='uq_financial_institution_name_ci'),
             models.CheckConstraint(
-                condition=models.Q(institution_name__regex=r'^\s*.+\s*$'),
+                condition=models.Q(institution_name__regex=r'\S'),
                 name='ck_financial_institution_name_not_blank',
             ),
             models.CheckConstraint(
@@ -149,7 +149,7 @@ class FinancialAccount(models.Model):
         ordering = ['account_name']
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(account_name__regex=r'^\s*.+\s*$'),
+                condition=models.Q(account_name__regex=r'\S'),
                 name='ck_financial_account_name_not_blank',
             ),
             models.CheckConstraint(
@@ -192,8 +192,6 @@ class FinancialAccount(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=['owner']),
-            models.Index(fields=['institution']),
             models.Index(fields=['is_default']),
         ]
     

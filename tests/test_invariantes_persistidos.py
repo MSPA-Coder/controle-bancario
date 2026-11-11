@@ -418,3 +418,17 @@ def test_saldo_inicial_tem_data(conta):
     conta.refresh_from_db()
 
     assert conta.initial_balance_date is not None
+
+
+@pytest.mark.parametrize("nome", ["", "   ", "\t \n"])
+def test_banco_recusa_nome_em_branco_ou_so_de_espacos(nome):
+    """O check antigo (`.+` entre espaços opcionais) deixava passar texto só de
+    espaços; o piso agora exige ao menos um caractere visível."""
+    with pytest.raises(IntegrityError, match="ck_account_owner_owner_name_not_blank"), transaction.atomic():
+        AccountOwner.objects.create(name=nome)
+
+
+def test_banco_aceita_nome_com_espacos_nas_pontas():
+    titular = AccountOwner.objects.create(name="  Titular com espaços  ")
+
+    assert AccountOwner.objects.filter(pk=titular.pk).exists()
