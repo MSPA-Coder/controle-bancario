@@ -25,7 +25,7 @@ from django.utils.translation import gettext
 
 from accounts.models import AccountOwner
 from accounts.services import accessible_owner_ids
-from core.domain.finance import BASE_CURRENCY, STATUS_REALIZED
+from core.domain.finance import BASE_CURRENCY, STATUS_REALIZED, parse_finite_decimal
 from reports.services import add_months, to_decimal
 from transactions.access import can_access_entry
 from transactions.models import CashFlowCategory, CashFlowEntry
@@ -206,11 +206,8 @@ def save_budget(user, *, owner_id, category_id, year, month, planned_amount) -> 
     if not CashFlowCategory.objects.filter(id=category_id_int).exists():
         raise ValueError(gettext("Categoria não encontrada."))
 
-    try:
-        amount = Decimal(str(planned_amount).strip().replace(",", "."))
-    except Exception as exc:  # noqa: BLE001 - entrada de formulário livre
-        raise ValueError(gettext("Valor orçado inválido.")) from exc
-    if not amount.is_finite():
+    amount = parse_finite_decimal(planned_amount, comma="decimal")
+    if amount is None:
         raise ValueError(gettext("Valor orçado inválido."))
     if amount < 0:
         raise ValueError(gettext("Valor orçado não pode ser negativo."))

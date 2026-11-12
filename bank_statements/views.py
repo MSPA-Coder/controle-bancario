@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -18,7 +17,7 @@ from banking.models import FinancialInstitution
 from banking.services import accessible_account_ids
 from core.account_group_filter import account_group_q
 from core.currency_filter import currency_q
-from core.domain.finance import CATEGORY_KIND_TRANSFER
+from core.domain.finance import CATEGORY_KIND_TRANSFER, parse_finite_decimal
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
 from core.services import audit_action, audit_request_context
@@ -755,11 +754,8 @@ def _valor_opcional(texto):
     texto = (texto or "").strip()
     if not texto:
         return None
-    try:
-        valor = Decimal(texto.replace(",", "."))
-    except InvalidOperation:
-        valor = None
-    if valor is None or not valor.is_finite():
+    valor = parse_finite_decimal(texto, comma="decimal")
+    if valor is None:
         raise ValueError(gettext("Valor monetário inválido: %(valor)s.") % {"valor": texto})
     return valor
 

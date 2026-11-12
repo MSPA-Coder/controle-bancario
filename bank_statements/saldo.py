@@ -44,7 +44,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Max, Q
@@ -59,6 +59,7 @@ from core.domain.finance import (
     STATUS_REALIZED,
     VIEW_REALIZED,
     assert_money_in_range,
+    parse_finite_decimal,
 )
 from fechamento.fontes import fontes_das_contas
 from fechamento.models import (
@@ -188,14 +189,10 @@ def _origem_do_saldo(origem: str) -> str:
 
 
 def _decimal(valor, rotulo: str) -> Decimal:
-    texto = str(valor).strip()
-    if "," in texto:
-        texto = texto.replace(".", "").replace(",", ".")
-    try:
-        valor_decimal = Decimal(texto)
-    except InvalidOperation as exc:
-        raise ValueError(gettext("%(rotulo)s inválido.") % {"rotulo": rotulo}) from exc
-    # "NaN" e "Infinity" convertem sem erro e iriam para SaldoConferido, que não tem trava no banco.
+    valor_decimal = parse_finite_decimal(valor, comma="milhar")
+    if valor_decimal is None:
+        raise ValueError(gettext("%(rotulo)s inválido.") % {"rotulo": rotulo})
+    # "NaN" e "Infinity" iriam para SaldoConferido, que não tem trava no banco.
     assert_money_in_range(valor_decimal)
     return valor_decimal
 

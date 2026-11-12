@@ -24,6 +24,7 @@ from core.domain.finance import (
     VALID_CURRENCIES,
     MixedCurrencyError,
     assert_money_in_range,
+    parse_finite_decimal,
 )
 
 from .models import FinancialAccount, FinancialInstitution
@@ -151,11 +152,8 @@ def list_accounts_for_user(user, owner_id: int | None = None, institution_id: in
 def _parse_initial_balance(raw_value: str | None) -> Decimal:
     if raw_value is None or str(raw_value).strip() == "":
         return Decimal("0.00")
-    try:
-        valor = Decimal(str(raw_value).strip().replace(',', '.'))
-    except InvalidOperation as exc:
-        raise ValueError(gettext("Saldo inicial inválido.")) from exc
-    if not valor.is_finite():
+    valor = parse_finite_decimal(raw_value, comma="decimal")
+    if valor is None:
         raise ValueError(gettext("Saldo inicial inválido."))
     assert_money_in_range(valor)
     return valor
@@ -358,12 +356,14 @@ def _parse_estimated_spend(raw_value: str | None) -> Decimal | None:
     raw_text = (raw_value or "").strip()
     if not raw_text:
         return None
-    if "," in raw_text:
-        raw_text = raw_text.replace(".", "").replace(",", ".")
-    try:
-        valor = Decimal(raw_text).quantize(Decimal("0.01"))
-    except InvalidOperation as exc:
-        raise ValueError(gettext("Gasto mensal estimado do cartão inválido.")) from exc
+    valor = parse_finite_decimal(raw_text, comma="milhar")
+    if valor is not None:
+        try:
+            valor = valor.quantize(Decimal("0.01"))
+        except InvalidOperation:  # não cabe em duas casas (expoente enorme)
+            valor = None
+    if valor is None:
+        raise ValueError(gettext("Gasto mensal estimado do cartão inválido."))
     if valor < 0:
         raise ValueError(gettext("Gasto mensal estimado do cartão não pode ser negativo."))
     assert_money_in_range(valor)

@@ -48,7 +48,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -66,6 +66,7 @@ from core.domain.finance import (
     ENTRY_TYPE_EXPENSE,
     ENTRY_TYPE_INCOME,
     OPERATION_INTERNAL_TRANSFER,
+    parse_finite_decimal,
 )
 from core.texto import sem_acentos
 from transactions.models import AccountMonthClose, BankOperation, CashFlowCategory, CashFlowEntry
@@ -280,10 +281,13 @@ def ler_valores_em_moeda(caminho: Path) -> list[ValorEmMoeda]:
             )
         try:
             dia = date.fromisoformat(partes[0])
-            origem = Decimal(partes[1].replace(".", "").replace(",", "."))
-            destino = Decimal(partes[2].replace(".", "").replace(",", "."))
-        except (ValueError, InvalidOperation) as exc:
+        except ValueError as exc:
             raise CommandError(f"{caminho}:{numero}: valor inválido em {limpa!r}") from exc
+        # Aqui o ponto é sempre milhar (arquivo em formato brasileiro), com ou sem vírgula.
+        origem = parse_finite_decimal(partes[1].replace(".", "").replace(",", "."))
+        destino = parse_finite_decimal(partes[2].replace(".", "").replace(",", "."))
+        if origem is None or destino is None:
+            raise CommandError(f"{caminho}:{numero}: valor inválido em {limpa!r}")
         if origem <= 0 or destino <= 0:
             raise CommandError(f"{caminho}:{numero}: os dois valores têm de ser positivos.")
         valores.append(ValorEmMoeda(dia, origem, destino))

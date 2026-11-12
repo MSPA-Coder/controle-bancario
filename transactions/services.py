@@ -34,6 +34,7 @@ from core.domain.finance import (
     VALID_CATEGORY_KINDS,
     VALID_ENTRY_TYPES,
     assert_money_in_range,
+    parse_finite_decimal,
 )
 from core.texto import sem_acentos
 from transactions.calculations import MONEY_QUANT, _monthly_amount_for
@@ -776,7 +777,9 @@ def counterparty_amount_for_transfer(
 
     amount = req.counterparty_amount
     if not isinstance(amount, Decimal):
-        amount = Decimal(str(amount))
+        amount = parse_finite_decimal(amount)
+        if amount is None:
+            raise ValueError(gettext("Valor monetário inválido."))
     assert_money_in_range(amount)
     amount = amount.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
     if amount <= 0:

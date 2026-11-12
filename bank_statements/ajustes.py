@@ -35,14 +35,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.db import transaction as db_transaction
 
 from accounts.services import can_use_transfer_destination
 from banking.models import FinancialAccount
 from banking.services import can_access_account, update_account
-from core.domain.finance import OPERATION_INTERNAL_TRANSFER, assert_money_in_range
+from core.domain.finance import (
+    OPERATION_INTERNAL_TRANSFER,
+    assert_money_in_range,
+    parse_finite_decimal,
+)
 from transactions.models import CashFlowEntry
 from transactions.services import (
     _account_label,
@@ -66,10 +70,9 @@ class Relatorio:
 
 
 def _decimal(valor, rotulo: str) -> Decimal:
-    try:
-        valor_decimal = Decimal(str(valor))
-    except InvalidOperation as exc:
-        raise ValueError(f"{rotulo} inválido: {valor!r}.") from exc
+    valor_decimal = parse_finite_decimal(valor)
+    if valor_decimal is None:
+        raise ValueError(f"{rotulo} inválido: {valor!r}.")
     assert_money_in_range(valor_decimal)
     return valor_decimal
 

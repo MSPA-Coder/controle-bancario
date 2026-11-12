@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 11:43-0300\n"
+"POT-Creation-Date: 2026-11-11 23:27-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2282,7 +2282,7 @@ msgstr "US dollar (US$)"
 msgid "As contas selecionadas têm moedas diferentes (%(moedas)s), e este sistema não converte moeda. Filtre por uma conta, um titular ou uma instituição de uma moeda só."
 msgstr "The selected accounts have different currencies (%(moedas)s), and this system does not convert currency. Filter by one account, one account holder, or one institution in a single currency."
 
-#: core/domain/finance.py
+#: core/domain/finance.py transactions/services.py
 msgid "Valor monetário inválido."
 msgstr "Invalid monetary amount."
 

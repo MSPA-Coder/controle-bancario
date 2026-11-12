@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from decimal import Decimal
-from typing import Final
+from decimal import Decimal, InvalidOperation
+from typing import Final, Literal
 
 from django.utils.translation import gettext, gettext_lazy
 
@@ -142,6 +142,38 @@ def assert_money_in_range(value: Decimal | None) -> None:
         raise ValueError(gettext("Valor monetário inválido."))
     if abs(value) > MAX_MONEY_VALUE:
         raise ValueError(gettext("Valor acima do limite permitido (9.999.999.999,99)."))
+
+
+def parse_finite_decimal(
+    raw: object, *, comma: Literal["decimal", "milhar"] | None = None
+) -> Decimal | None:
+    """Texto digitado vira `Decimal` finito, ou `None` se não for um.
+
+    Vazio, `None`, lixo, `NaN` e `Infinity` (qualquer grafia que o `Decimal`
+    aceite) dão `None`: a mensagem e a exceção são de quem chama, que também
+    decide o que o vazio significa e se aplica `assert_money_in_range`.
+
+    `comma` diz como ler a vírgula: `None` deixa o texto como está;
+    `"decimal"` troca toda vírgula por ponto (`1,5` vira 1.5); `"milhar"`, se
+    houver vírgula, tira os pontos e troca a vírgula por ponto (`1.234,56`).
+    """
+    if raw is None:
+        return None
+    texto = str(raw).strip()
+    if comma == "decimal":
+        texto = texto.replace(",", ".")
+    elif comma == "milhar":
+        if "," in texto:
+            texto = texto.replace(".", "").replace(",", ".")
+    elif comma is not None:
+        raise ValueError(f"comma inválido: {comma!r}")
+    try:
+        valor = Decimal(texto)
+    except InvalidOperation:
+        return None
+    return valor if valor.is_finite() else None
+
+
 MAX_PROJECTION_RANGE_MONTHS: Final = 120
 
 VIEW_PROJECTED: Final = STATUS_PROJECTED

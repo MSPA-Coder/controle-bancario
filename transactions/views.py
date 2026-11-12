@@ -2,7 +2,6 @@
 import json
 import secrets
 from datetime import date, timedelta
-from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -27,6 +26,7 @@ from core.domain.finance import (
     STATUS_PROJECTED,
     STATUS_REALIZED,
     VALID_OPERATION_SCOPES,
+    parse_finite_decimal,
 )
 from core.htmx import invalid_period_response, quer_fragmento, recusa_moedas_misturadas
 from core.permissions import permission_required
@@ -72,12 +72,9 @@ def _parse_int(value, default=1):
 def _to_decimal(raw, *, default=None):
     if raw in (None, ""):
         return default
-    try:
-        valor = Decimal(str(raw).strip().replace(",", "."))
-    except (InvalidOperation, ValueError) as exc:
-        raise ValueError(gettext("Valor monetário inválido: %(valor)s.") % {"valor": raw}) from exc
-    if not valor.is_finite():
-        # NaN e Infinity são Decimal válidos, e comparar NaN com 0 estoura.
+    # NaN e Infinity são Decimal válidos, e comparar NaN com 0 estoura: a função recusa.
+    valor = parse_finite_decimal(raw, comma="decimal")
+    if valor is None:
         raise ValueError(gettext("Valor monetário inválido: %(valor)s.") % {"valor": raw})
     return valor
 

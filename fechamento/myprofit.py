@@ -32,7 +32,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import date, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils.translation import gettext
@@ -47,6 +47,7 @@ from core.domain.finance import (
     CURRENCY_USD,
     ENTRY_TYPE_INCOME,
     STATUS_REALIZED,
+    parse_finite_decimal,
 )
 from core.templatetags.money_filters import money
 from transactions.models import CashFlowEntry
@@ -186,11 +187,8 @@ def _data(valor, campo: str) -> date:
 def _decimal(valor, campo: str) -> Decimal:
     if valor is None or valor == "":
         return Decimal("0")
-    try:
-        numero = Decimal(str(valor))
-    except InvalidOperation as exc:
-        raise PacoteInvalidoError(gettext("Número inválido em %(campo)s.") % {"campo": campo}) from exc
-    if not numero.is_finite():
+    numero = parse_finite_decimal(valor)
+    if numero is None:
         raise PacoteInvalidoError(gettext("Número inválido em %(campo)s.") % {"campo": campo})
     return numero
 

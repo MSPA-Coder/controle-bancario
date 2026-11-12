@@ -18,7 +18,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
 from django.conf import settings
@@ -26,7 +26,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils.translation import gettext, ngettext
 
 from core import regional
-from core.domain.finance import assert_money_in_range
+from core.domain.finance import assert_money_in_range, parse_finite_decimal
 
 from .contracts import ParsedStatementLine as ParsedStatementLine
 from .document import StatementDocument
@@ -82,10 +82,9 @@ def read_statement_upload(file: UploadedFile, *, label: str) -> bytes:
 
 
 def _to_decimal(value: str) -> Decimal:
-    try:
-        amount = Decimal(value)
-    except InvalidOperation as exc:
-        raise ValueError(gettext("Valor numérico inválido: %(valor)r.") % {"valor": value}) from exc
+    amount = parse_finite_decimal(value)
+    if amount is None:
+        raise ValueError(gettext("Valor numérico inválido: %(valor)r.") % {"valor": value})
     assert_money_in_range(amount)
     return amount
 
