@@ -5,8 +5,8 @@ from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path
-from django.views.decorators.http import require_POST
 from django.utils.translation import gettext
+from django.views.decorators.http import require_POST
 from django.views.generic import RedirectView
 from django_htmx.http import HttpResponseClientRedirect
 
