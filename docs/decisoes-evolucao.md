@@ -1,5 +1,8 @@
 # Evolução incremental — decisões de 18/10/2026
 
+Estado: vigente. Só a seção "Comprovantes e outras abstrações" foi superada em
+11/11/2026 (o backup do VPS passou a incluir o volume de comprovantes).
+
 Manter Django, PostgreSQL e HTML/HTMX. Parsing reutilizado, conferência de saldos
 agrupada, contratos tipados e testes de navegador resolvem custos concretos.
 Não criar Repository genérico, microserviços, cache de saldos ou reescrita.
@@ -30,9 +33,11 @@ para definir uma meta antes de mover o trabalho.
 ## Comprovantes e outras abstrações
 
 O mantenedor informou que nunca usou comprovantes; a consulta local confirmou
-zero anexos. Não implementar backup de mídia nesta rodada. O backup de banco
-continua sem cobrir media_volume, como já documentado em operations.md.
-Reavaliar a cobertura antes de adotar comprovantes importantes.
+zero anexos. Não implementar backup de mídia nesta rodada. Reavaliar a
+cobertura antes de adotar comprovantes importantes.
+
+Superado em 11/11/2026: o serviço `web` declara `mspa.backup.volume` e o backup
+do VPS passou a incluir o volume de comprovantes (ver `operations.md`).
 
 Nenhum banco real foi migrado ou alterado para estas medições. Não se unificam
 os bancos/modelos de CB e CRV; os contratos publicados continuam a integração.
