@@ -5,6 +5,7 @@ from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path
+from django.views.decorators.http import require_POST
 from django.utils.translation import gettext
 from django.views.generic import RedirectView
 from django_htmx.http import HttpResponseClientRedirect
@@ -34,8 +35,13 @@ def health_check(_request):
     return JsonResponse({"servico": "controle-bancario", "status": "ok"})
 
 
+@require_POST
 def logout_and_redirect(request):
     """Encerra sessao e redireciona para a tela de login.
+
+    So por POST: um GET que encerra a sessao deixa qualquer pagina externa
+    derrubar o login com um link ou um redirecionamento. O botao "Sair" e um
+    formulario POST.
 
     Requisicoes HTMX (o botao "Sair" usa hx-post) precisam de um redirect
     client-side explicito: um 302 comum some no meio do swap, deixando a

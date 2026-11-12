@@ -266,6 +266,18 @@ def test_logout_deixa_trilha(client, usuario):
     assert AuditLog.objects.filter(entity_name="auth_login", action="logout").exists()
 
 
+@pytest.mark.parametrize("caminho", ["/logout", "/logout/"])
+def test_logout_por_get_nao_encerra_a_sessao(client, usuario, caminho):
+    """Link ou redirecionamento de outra página não derruba o login."""
+    client.force_login(usuario)
+
+    resposta = client.get(caminho)
+
+    assert resposta.status_code == 405
+    assert not AuditLog.objects.filter(entity_name="auth_login", action="logout").exists()
+    assert "_auth_user_id" in client.session
+
+
 def test_cadastro_de_categoria_deixa_trilha(client, usuario):
     client.force_login(usuario)
 
