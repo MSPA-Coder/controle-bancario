@@ -19,7 +19,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Literal, Protocol, runtime_checkable
+from typing import Final, Literal, Protocol, runtime_checkable
 
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
@@ -396,6 +396,23 @@ _OFX_MIMETYPES = ("application/x-ofx", "application/ofx", "text/x-ofx")
 # adapter de PDF registrado, e o adapter é escolhido pelo nome da instituição.
 
 
+# Extrato de banco tem dezenas de páginas, não centenas. O limite de bytes (5 MiB)
+# não basta: um PDF pequeno pode ter milhares de páginas e prender um worker.
+MAX_PDF_PAGES: Final = 200
+
+
+class PdfGrandeDemaisError(ValueError):
+    """PDF com mais páginas que o teto; passa pelo `except Exception` dos leitores."""
+
+
+def _assert_pdf_pages(pdf) -> None:
+    if len(pdf.pages) > MAX_PDF_PAGES:
+        raise PdfGrandeDemaisError(
+            gettext("O PDF tem páginas demais para um extrato (máximo %(limite)s).")
+            % {"limite": MAX_PDF_PAGES}
+        )
+
+
 def extract_pdf_text(raw: bytes) -> str:
     """Texto de todas as páginas do PDF, uma string só separada por `\\n`.
 
@@ -411,7 +428,10 @@ def extract_pdf_text(raw: bytes) -> str:
 
     try:
         with pdfplumber.open(io.BytesIO(raw)) as pdf:
+            _assert_pdf_pages(pdf)
             return "\n".join(page.extract_text() or "" for page in pdf.pages)
+    except PdfGrandeDemaisError:
+        raise
     except Exception as exc:
         raise ValueError(gettext("Não foi possível ler o PDF do extrato.")) from exc
 
@@ -1379,7 +1399,15 @@ def _xp_abrir(raw: bytes):
             gettext("Suporte a extrato em PDF indisponível no momento (dependência não instalada).")
         ) from exc
     try:
-        return pdfplumber.open(io.BytesIO(raw))
+        pdf = pdfplumber.open(io.BytesIO(raw))
+        try:
+            _assert_pdf_pages(pdf)
+        except PdfGrandeDemaisError:
+            pdf.close()
+            raise
+        return pdf
+    except PdfGrandeDemaisError:
+        raise
     except Exception as exc:
         raise ValueError(gettext("Não foi possível ler o PDF do extrato.")) from exc
 

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 23:27-0300\n"
+"POT-Creation-Date: 2026-11-12 04:09-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -511,6 +511,11 @@ msgstr[1] "OFX exceeds the limit of %(n)s transactions."
 #: bank_statements/adapters.py
 msgid "Arquivo OFX não contém transações válidas."
 msgstr "OFX file contains no valid transactions."
+
+#: bank_statements/adapters.py
+#, python-format
+msgid "O PDF tem páginas demais para um extrato (máximo %(limite)s)."
+msgstr "The PDF has too many pages for a statement (maximum %(limite)s)."
 
 #: bank_statements/adapters.py bank_statements/pdf_senha.py
 msgid "Suporte a extrato em PDF indisponível no momento (dependência não instalada)."
