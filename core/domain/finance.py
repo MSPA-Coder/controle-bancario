@@ -1,6 +1,7 @@
 """Vocabulário e normalizadores do domínio financeiro."""
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
 from typing import Final, Literal
@@ -144,6 +145,9 @@ def assert_money_in_range(value: Decimal | None) -> None:
         raise ValueError(gettext("Valor acima do limite permitido (9.999.999.999,99)."))
 
 
+_MILHAR_BRASILEIRO: Final = re.compile(r"[+-]?\d{1,3}(\.\d{3})+")
+
+
 def parse_finite_decimal(
     raw: object, *, comma: Literal["decimal", "milhar"] | None = None
 ) -> Decimal | None:
@@ -164,7 +168,13 @@ def parse_finite_decimal(
         texto = texto.replace(",", ".")
     elif comma == "milhar":
         if "," in texto:
-            texto = texto.replace(".", "").replace(",", ".")
+            inteiro, _virgula, fracao = texto.partition(",")
+            # Formato inglês (`1,234.56`) leria 1.23456 em silêncio, porque os
+            # pontos de antes da vírgula sumiam: só ponto de milhar (`1.234`) some;
+            # o resto é recusado, como em `comma="decimal"`, não adivinhado.
+            if "." in inteiro and not _MILHAR_BRASILEIRO.fullmatch(inteiro):
+                return None
+            texto = inteiro.replace(".", "") + "." + fracao
     elif comma is not None:
         raise ValueError(f"comma inválido: {comma!r}")
     try:

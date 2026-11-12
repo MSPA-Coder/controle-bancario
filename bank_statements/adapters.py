@@ -19,7 +19,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Protocol, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
@@ -81,8 +81,8 @@ def read_statement_upload(file: UploadedFile, *, label: str) -> bytes:
     return raw
 
 
-def _to_decimal(value: str) -> Decimal:
-    amount = parse_finite_decimal(value)
+def _to_decimal(value: str, *, comma: Literal["decimal", "milhar"] | None = None) -> Decimal:
+    amount = parse_finite_decimal(value, comma=comma)
     if amount is None:
         raise ValueError(gettext("Valor numérico inválido: %(valor)r.") % {"valor": value})
     assert_money_in_range(amount)
@@ -131,11 +131,8 @@ def _parse_amount(raw: str) -> Decimal:
     value = (raw or "").strip().replace("R$", "").replace(" ", "")
     if not value:
         raise ValueError(gettext("Valor vazio no extrato."))
-    if "," in value and "." in value:
-        value = value.replace(".", "").replace(",", ".")
-    elif "," in value:
-        value = value.replace(",", ".")
-    amount = _to_decimal(value)
+    # `1.234,56` e `1234,56` valem; `1,234.56` (inglês) é recusado, não lido como 1.23456.
+    amount = _to_decimal(value, comma="milhar")
     if amount == 0:
         raise ValorZeradoError(gettext("Valor zerado no extrato não é aceito."))
     return amount

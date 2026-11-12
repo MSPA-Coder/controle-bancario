@@ -153,6 +153,23 @@ def test_saldo_informado_aceita_formato_brasileiro_e_recusa_fora_da_faixa():
         saldo._decimal("99999999999,00", "Saldo")
 
 
+@pytest.mark.parametrize("bruto", ["1,234.56", "1,234.5", "12.34,56", "1.23,56", "1234.567,89", "1,5.0"])
+def test_formato_ingles_ou_milhar_torto_e_recusado_nao_lido_errado(bruto):
+    """`1,234.56` lia 1.23456 em silêncio; o sistema inteiro lê pt-BR, e o que não é, recusa."""
+    assert parse_finite_decimal(bruto, comma="milhar") is None
+    with pytest.raises(ValueError, match="Saldo inválido"):
+        saldo._decimal(bruto, "Saldo")
+    with pytest.raises(ValueError, match="Valor numérico inválido"):
+        adapters._parse_amount(bruto)
+
+
+def test_milhar_brasileiro_segue_valendo_no_saldo_e_no_extrato():
+    assert saldo._decimal("1.234.567,89", "Saldo") == Decimal("1234567.89")
+    assert adapters._parse_amount("R$ 1.234,56") == Decimal("1234.56")
+    assert adapters._parse_amount("-1234,56") == Decimal("-1234.56")
+    assert adapters._parse_amount("1234.56") == Decimal("1234.56")
+
+
 @pytest.mark.parametrize("valor", [*NAO_FINITOS, "abc"])
 def test_numero_do_pacote_myprofit(valor):
     with pytest.raises(PacoteInvalidoError, match="Número inválido em quantidade"):
