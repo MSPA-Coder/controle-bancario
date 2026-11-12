@@ -617,9 +617,9 @@ def processar(user, batch_id, escolhas: dict, audit_context=None, *, autorizar_m
             raise ValueError(gettext("Esta fatura não tem linhas pendentes."))
         # A atualização das faturas projetadas também toca a conta pagadora.
         # Tome as contas na ordem comum antes das operações e fechamentos.
-        from transactions.services import _lock_accounts
+        from transactions.services import lock_accounts
 
-        _lock_accounts(FinancialAccount.objects.values_list("id", flat=True))
+        lock_accounts(FinancialAccount.objects.values_list("id", flat=True))
         planos = planejar(conta, linhas)
         fechamentos = meses_fechados(conta, planos)
         if fechamentos:

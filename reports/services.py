@@ -1295,7 +1295,7 @@ def decimal_period_start_balances_by_account(account_ids: Iterable[int], start_d
 # Matriz de listagem ("listing mode") usada pelo motor de projeções
 # ---------------------------------------------------------------------------
 
-def _listing_status_q(view_mode: str, today: date) -> Q:
+def listing_status_q(view_mode: str, today: date) -> Q:
     projected_future = Q(status=STATUS_PROJECTED, due_date__gte=today)
     projected_overdue = Q(status=STATUS_PROJECTED, due_date__lt=today)
     pending_overdue = Q(status=STATUS_PENDING, due_date__lt=today)
@@ -1308,7 +1308,7 @@ def _listing_status_q(view_mode: str, today: date) -> Q:
     return Q(status=view_mode)
 
 
-def _listing_date_expr(view_mode: str):
+def listing_date_expr(view_mode: str):
     if view_mode == VIEW_ALL:
         return _balance_date_case()
     if view_mode == VIEW_REALIZED:
@@ -1327,9 +1327,9 @@ def entries_for_period(account_ids: list[int], start: date, end_exclusive: date,
         return []
     qs = (
         CashFlowEntry.objects.select_related("category__group")
-        .annotate(proj_date=_listing_date_expr(view_mode))
+        .annotate(proj_date=listing_date_expr(view_mode))
         .filter(account_id__in=ids, proj_date__gte=floor_start, proj_date__lt=end_exclusive)
-        .filter(_listing_status_q(view_mode, date.today()))
+        .filter(listing_status_q(view_mode, date.today()))
         # A tabela de lançamentos usa esta mesma ordenação. Manter o saldo
         # acumulado na sequência visível evita associar o fechamento do dia à
         # linha errada quando existem vários lançamentos na mesma data.
@@ -1750,9 +1750,9 @@ def _list_upcoming_movement_entries(account_ids: list[int], start_date: date, en
         return []
     qs = (
         CashFlowEntry.objects.select_related("account", "account__owner", "account__institution", "category")
-        .annotate(proj_date=_listing_date_expr(view_mode))
+        .annotate(proj_date=listing_date_expr(view_mode))
         .filter(account_id__in=ids, proj_date__gte=floor_start, proj_date__lt=end_date_exclusive)
-        .filter(_listing_status_q(view_mode, date.today()))
+        .filter(listing_status_q(view_mode, date.today()))
         .order_by("proj_date", "-entry_type", "category__category_name", "id")
     )
     return _limited_list(

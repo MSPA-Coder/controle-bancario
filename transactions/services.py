@@ -37,6 +37,15 @@ from core.domain.finance import (
     parse_finite_decimal,
 )
 from core.texto import sem_acentos
+from reports import services as report_services
+from reports.services import (
+    add_months,
+    decimal_balance_before,
+    listing_date_expr,
+    listing_status_q,
+    month_bounds,
+    parse_iso_date,
+)
 from transactions.calculations import MONEY_QUANT, _monthly_amount_for
 from transactions.calculations import installment_amount_for as installment_amount_for
 from transactions.contracts import TransactionRequest as TransactionRequest
@@ -117,7 +126,7 @@ def assert_transfer_entries_authorized(user, entries: list[CashFlowEntry], actio
             assert_transfer_destination_authorized(user, entry, action)
 
 
-def _lock_accounts(account_ids) -> dict[int, FinancialAccount]:
+def lock_accounts(account_ids) -> dict[int, FinancialAccount]:
     """Tranca contas em ordem canônica e devolve as instâncias atuais.
 
     A conta é o recurso de coordenação entre lançamentos e fechamento mensal:
@@ -179,7 +188,7 @@ def _lock_entry_graph(
     """
     entry_ids, account_ids = _entry_graph_ids(entry)
     account_ids.extend(extra_account_ids)
-    _lock_accounts(account_ids)
+    lock_accounts(account_ids)
 
     operation_ids = sorted({entry.bank_operation_id} - {None})
     if operation_ids:
@@ -289,7 +298,7 @@ def realize_transaction(
         counterpart.save(update_fields=['status', 'realized_date', 'realized_amount', 'updated_at'])
 
     # A operação resume todas as ocorrências, não só a que foi realizada.
-    _sync_bank_operation_status(entry.bank_operation_id)
+    sync_bank_operation_status(entry.bank_operation_id)
 
     if audit_context is not None:
         from core.services import log_audit_event
@@ -349,7 +358,7 @@ def unrealize_transaction(entry: CashFlowEntry, audit_context=None, user=None) -
         counterpart.realized_amount = None
         counterpart.save(update_fields=['status', 'realized_date', 'realized_amount', 'updated_at'])
 
-    _sync_bank_operation_status(entry.bank_operation_id)
+    sync_bank_operation_status(entry.bank_operation_id)
 
     if audit_context is not None:
         from core.services import log_audit_event
@@ -388,8 +397,7 @@ def close_month(
     # O registro é único mesmo depois de uma reabertura. Trancar a conta
     # serializa dois fechamentos concorrentes do mesmo período e permite
     # reativar o registro existente em vez de tentar um novo INSERT.
-    account = _lock_accounts([account.pk])[account.pk]
-    from reports.services import month_bounds
+    account = lock_accounts([account.pk])[account.pk]
 
     _inicio, fim_exclusivo = month_bounds(year, month)
     if fim_exclusivo - timedelta(days=1) < account.initial_balance_date:
@@ -398,7 +406,6 @@ def close_month(
         ))
     if closing_balance is None:
         from core.domain.finance import VIEW_REALIZED
-        from reports.services import decimal_balance_before
 
         closing_balance = decimal_balance_before([account.id], fim_exclusivo, VIEW_REALIZED)
     try:
@@ -455,7 +462,7 @@ def reopen_month(
     reason = (reason or "").strip()
     if not reason:
         raise ValueError(gettext("O motivo da reabertura é obrigatório."))
-    account = _lock_accounts([account.pk])[account.pk]
+    account = lock_accounts([account.pk])[account.pk]
     try:
         month_close = AccountMonthClose.objects.select_for_update().get(
             account=account,
@@ -981,7 +988,7 @@ def renumber_remaining_installments(operation_type: str, entries: list[CashFlowE
             counterparty.save(update_fields=["current_installment", "installments", "updated_at"])
 
 
-def _sync_bank_operation_status(bank_operation_id: int | None) -> None:
+def sync_bank_operation_status(bank_operation_id: int | None) -> None:
     if not bank_operation_id:
         return
     statuses = set(
@@ -1108,7 +1115,6 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
     Parâmetros (`recurring_projection_horizon_end`).
     """
     from core.services import log_audit_event
-    from reports.services import add_months
     from transactions.recurring_projection import recurring_projection_horizon_end
 
     try:
@@ -1141,7 +1147,7 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
     if not can_access_account(user, account.id, "create"):
         raise ValueError(gettext("Acesso negado: você não tem permissão para usar esta conta."))
 
-    locked_accounts = _lock_accounts(
+    locked_accounts = lock_accounts(
         [account.id, counterparty_account.id if counterparty_account is not None else None]
     )
     account = locked_accounts[account.id]
@@ -1250,7 +1256,7 @@ def create_transaction_batch(req: TransactionRequest, audit_context=None, user=N
     if bank_operation is not None and entries:
         # Nasceu com o status pedido, mas só a primeira ocorrência o recebe
         # quando ele é "realizado": a operação passa a refletir as ocorrências.
-        _sync_bank_operation_status(bank_operation.id)
+        sync_bank_operation_status(bank_operation.id)
 
     for entry in entries:
         log_audit_event(
@@ -1405,7 +1411,6 @@ def _group_due_date_shift(old_due_date: date, new_due_date: date):
     adiantado ou adiado a mão continua onde está; e uma ocorrência removida no
     meio da série continua ausente, em vez de ser preenchida pela seguinte.
     """
-    from reports.services import add_months
 
     months = (new_due_date.year - old_due_date.year) * 12 + new_due_date.month - old_due_date.month
     # Só quando o dia é mexido de propósito ele vale para o grupo: o dia de
@@ -1818,7 +1823,7 @@ def update_transaction_operation(
         )
 
     for bank_operation_id in {entry.bank_operation_id for entry in updated if entry.bank_operation_id}:
-        _sync_bank_operation_status(bank_operation_id)
+        sync_bank_operation_status(bank_operation_id)
 
     for entry in updated:
         log_audit_event(
@@ -1928,7 +1933,7 @@ def delete_transaction_or_operation(
                 # anual classifica por ele. Ver docs/domain.md.
                 campos["recurrence_ended_on"] = tx.due_date
             BankOperation.objects.filter(id=bank_operation_id).update(**campos)
-            _sync_bank_operation_status(bank_operation_id)
+            sync_bank_operation_status(bank_operation_id)
 
     return count
 
@@ -1950,7 +1955,6 @@ def list_transactions_for_view(
     propósito: se as duas divergirem, a listagem e o relatório passam a
     discordar sobre quais lançamentos compõem o mesmo período."""
     from core.services import system_start_date
-    from reports.services import _listing_date_expr, _listing_status_q
 
     if not account_ids:
         return []
@@ -1960,7 +1964,7 @@ def list_transactions_for_view(
 
     qs = (
         CashFlowEntry.objects.select_related("account__owner", "account__institution", "category", "bank_operation")
-        .annotate(proj_date=_listing_date_expr(view_mode))
+        .annotate(proj_date=listing_date_expr(view_mode))
         .filter(account_id__in=account_ids)
     )
     if filter_type:
@@ -1982,7 +1986,7 @@ def list_transactions_for_view(
     if not operation_key and not entry_id:
         qs = qs.filter(
             proj_date__gte=max(start_selected, minimum_date), proj_date__lte=end_selected,
-        ).filter(_listing_status_q(view_mode, today))
+        ).filter(listing_status_q(view_mode, today))
 
     return list(qs.order_by("proj_date", "-entry_type", "category__category_name", "id"))
 
@@ -2162,7 +2166,6 @@ def _mark_last_of_day(current_txs: list[CashFlowEntry], filters_active: bool) ->
 
 def _new_entry_defaults(get_params, today: date) -> dict[str, str]:
     from core.services import system_start_date
-    from reports.services import parse_iso_date
 
     floor_date = system_start_date()
     default_due_date = today.isoformat()
@@ -2231,7 +2234,6 @@ def resolve_statement_request(user, get_params, session, *, request=None) -> Sta
     """
     from core.domain.finance import normalize_view_mode
     from core.services import system_start_date
-    from reports import services as report_services
 
     today = date.today()
     year_param = get_params.get("year")
@@ -2318,7 +2320,6 @@ def _saldos_correntes(ids, inicio, fim_exclusivo, view_mode, saldo_inicial, anch
     não muda o saldo da conta. Antes da data-base de alguma conta do bloco, o
     saldo é desconhecido e sai como None.
     """
-    from reports import services as report_services
 
     corrente = saldo_inicial
     saldos: dict[int, Decimal | None] = {}
@@ -2346,7 +2347,6 @@ def compute_statement(scope: StatementScope, view_mode: str) -> tuple[list[CashF
     (contraparte, anexos, token) fica em `_decorate_rows_for_editing`.
     """
     from core.domain.finance import VIEW_REALIZED
-    from reports import services as report_services
 
     # As linhas saem só das contas dos blocos. Listar todas e repartir depois
     # fazia a conta em dólar aparecer com o filtro em real, e -- sem bloco
@@ -2489,7 +2489,6 @@ def build_transactions_view_context(user, get_params, session, *, request=None) 
     acrescenta: a edição inline de cada linha e as opções dos seletores de
     filtro e formulário.
     """
-    from reports import services as report_services
 
     resolved = resolve_statement_request(user, get_params, session, request=request)
     scope = resolved.scope

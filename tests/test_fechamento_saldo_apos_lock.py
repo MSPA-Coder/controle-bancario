@@ -70,7 +70,7 @@ def test_sem_valor_o_fechamento_calcula_o_saldo_realizado(cenario):
 def test_realizacao_que_chega_antes_do_lock_entra_no_saldo(cenario, monkeypatch):
     """Simula a concorrência: a realização comita enquanto o fechamento espera o lock."""
     usuario, conta, categoria = cenario
-    trancar = services._lock_accounts
+    trancar = services.lock_accounts
     pendente = [True]
 
     def trancar_depois_de_uma_realizacao(ids):
@@ -80,7 +80,7 @@ def test_realizacao_que_chega_antes_do_lock_entra_no_saldo(cenario, monkeypatch)
             _receita(usuario, conta, categoria, "70.00")
         return trancar(ids)
 
-    monkeypatch.setattr(services, "_lock_accounts", trancar_depois_de_uma_realizacao)
+    monkeypatch.setattr(services, "lock_accounts", trancar_depois_de_uma_realizacao)
     fechado = services.close_month(conta, 2026, 8, None, usuario)
 
     assert fechado.closing_balance == Decimal("170.00")

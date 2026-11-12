@@ -327,10 +327,10 @@ def _apagar_projecao_anterior(conta: FinancialAccount, fechados: set[tuple[int, 
 def atualizar(conta: FinancialAccount, *, hoje: date | None = None, fim: date | None = None) -> list[FaturaProjetada]:
     """Refaz os lançamentos da fatura projetada do cartão."""
     from transactions.models import AccountMonthClose
-    from transactions.services import _account_label, _lock_accounts
+    from transactions.services import _account_label, lock_accounts
 
     ids_contas = set(FinancialAccount.objects.values_list("id", flat=True))
-    _lock_accounts(ids_contas)
+    lock_accounts(ids_contas)
 
     conta = FinancialAccount.objects.select_for_update(of=("self",)).select_related(
         "card_payment_account__owner", "card_payment_account__institution", "owner", "institution"

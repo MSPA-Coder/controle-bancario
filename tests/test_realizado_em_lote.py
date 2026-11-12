@@ -236,7 +236,7 @@ def test_operacao_criada_como_realizada_reflete_as_ocorrencias(cenario, extras):
     """A operação nascia com o status pedido; agora ela resume as ocorrências.
 
     Com a primeira realizada, parcelas vencidas e parcelas a vencer, é a regra
-    de `_sync_bank_operation_status`: havendo vencida, a operação é vencida.
+    de `sync_bank_operation_status`: havendo vencida, a operação é vencida.
     """
     entries = _criar(cenario, _requisicao(cenario, **extras))
 

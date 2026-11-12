@@ -373,10 +373,10 @@ def ensure_recurring_projection_horizon(
     # mantém essa ordem antes das projeções dos cartões feitas mais abaixo.
     from banking.models import FinancialAccount
     from transactions.models import AccountMonthClose
-    from transactions.services import _lock_accounts
+    from transactions.services import lock_accounts
 
     contas = set(FinancialAccount.objects.values_list("id", flat=True))
-    _lock_accounts(contas)
+    lock_accounts(contas)
     meses_fechados = set(AccountMonthClose.objects.filter(
         account_id__in=contas, active=True
     ).values_list("account_id", "year", "month"))
@@ -500,7 +500,7 @@ def recolher_alem_do_horizonte(
     """
     from core.services import log_audit_event
     from transactions.models import AccountMonthClose, BankOperation
-    from transactions.services import _lock_accounts, _sync_bank_operation_status
+    from transactions.services import lock_accounts, sync_bank_operation_status
 
     horizon_end = recurring_projection_horizon_end(today or date.today(), horizon_months)
     if connection.vendor == "postgresql":
@@ -516,7 +516,7 @@ def recolher_alem_do_horizonte(
         .exclude(status=STATUS_REALIZED)
     )
     contas = set(consulta.values_list("account_id", flat=True))
-    _lock_accounts(contas)
+    lock_accounts(contas)
     operacoes = set(consulta.values_list("bank_operation_id", flat=True))
     list(BankOperation.objects.select_for_update().filter(id__in=operacoes).order_by("id"))
     candidatas = list(consulta.select_for_update(of=("self",)).order_by("bank_operation_id", "due_date", "id"))
@@ -565,6 +565,6 @@ def recolher_alem_do_horizonte(
             BankOperation.objects.filter(id=operacao_id).delete()
             continue
         BankOperation.objects.filter(id=operacao_id).update(updated_at=timezone.now())
-        _sync_bank_operation_status(operacao_id)
+        sync_bank_operation_status(operacao_id)
 
     return RecolhimentoResult(horizon_end, len(remover), len(operacoes))

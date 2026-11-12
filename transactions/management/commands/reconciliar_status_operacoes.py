@@ -10,7 +10,7 @@ from django.utils import timezone
 from core.domain.finance import STATUS_PENDING, STATUS_PROJECTED, STATUS_REALIZED
 from core.services import log_audit_event
 from transactions.models import BankOperation, CashFlowEntry
-from transactions.services import _lock_accounts
+from transactions.services import lock_accounts
 
 
 class Command(BaseCommand):
@@ -30,7 +30,7 @@ class Command(BaseCommand):
             raise CommandError("Informe um administrador ativo para a auditoria.")
         with transaction.atomic():
             contas = set(CashFlowEntry.objects.filter(bank_operation__isnull=False).values_list("account_id", flat=True))
-            _lock_accounts(contas)
+            lock_accounts(contas)
             operacoes = list(BankOperation.objects.select_for_update().order_by("id"))
             estados = defaultdict(set)
             for operation_id, account_id, status in CashFlowEntry.objects.filter(
