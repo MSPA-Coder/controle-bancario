@@ -61,7 +61,7 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_tag' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact" for="mgc-tag-entry">{% trans "ID do lançamento" %}<input type="number" name="entry_id" id="mgc-tag-entry" min="1" required></label>
+            {% include "management/partials/_seletor_lancamento.html" with campo_id="mgc-tag-entry" lancamentos=entry_choices selecionado=selected_entry_id %}
             <label class="top-filter-field" for="mgc-tag-select">{% trans "Tag" %}
                 <select name="tag_id" id="mgc-tag-select" required>
                     <option value="">{% trans "Selecione…" %}</option>
@@ -78,7 +78,7 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_project' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact" for="mgc-project-entry">{% trans "ID do lançamento" %}<input type="number" name="entry_id" id="mgc-project-entry" min="1" required></label>
+            {% include "management/partials/_seletor_lancamento.html" with campo_id="mgc-project-entry" lancamentos=entry_choices selecionado=selected_entry_id %}
             <label class="top-filter-field" for="mgc-project-select">{% trans "Projeto" %}
                 <select name="project_id" id="mgc-project-select" required>
                     <option value="">{% trans "Selecione…" %}</option>

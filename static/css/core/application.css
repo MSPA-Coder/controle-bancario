@@ -32,6 +32,7 @@
     --primary-hover:  #1e3a8a;
     --primary-light:  rgba(30,64,175,0.08);
     --success:        #15803d;
+    --success-text:   #157d3c;
     --warning:        #b45309;
     --danger:         #b91c1c;
     --card:           #ffffff;
@@ -60,6 +61,7 @@ html[data-theme="corporate_blue"] {
     --primary-hover:  #1e40af;
     --primary-light:  rgba(29,78,216,0.08);
     --success:        #15803d;
+    --success-text:   #147c3b;
     --warning:        #b45309;
     --danger:         #b91c1c;
     --card:           #ffffff;
@@ -74,8 +76,10 @@ html[data-theme="soft_light"] {
     --primary-hover:  #2563eb;
     --primary-light:  rgba(59,130,246,0.08);
     --success:        #16a34a;
+    --success-text:   #11823b;
     --warning:        #d97706;
     --danger:         #dc2626;
+    --danger-text:    #db2323;
     --card:           #ffffff;
     --text:           #1f2937;
     --muted:          #6b7280;
@@ -102,8 +106,10 @@ html[data-theme="solarized_light"] {
     --primary-hover:  #1a6fa8;
     --primary-light:  rgba(38,139,210,0.10);
     --success:        #859900;
+    --success-text:   #5e6c00;
     --warning:        #b58900;
     --danger:         #dc322f;
+    --danger-text:    #c42421;
     --card:           #fdf6e3;
     --text:           #586e75;
     --muted:          #839496;
@@ -116,8 +122,10 @@ html[data-theme="solarized_dark"] {
     --primary-hover:  #50a8e8;
     --primary-light:  rgba(38,139,210,0.14);
     --success:        #859900;
+    --success-text:   #90a600;
     --warning:        #b58900;
     --danger:         #dc322f;
+    --danger-text:    #e97c7a;
     --card:           #073642;
     --text:           #eee8d5;
     --muted:          #93a1a1;
@@ -132,6 +140,7 @@ html[data-theme="nord"] {
     --success:        #a3be8c;
     --warning:        #ebcb8b;
     --danger:         #bf616a;
+    --danger-text:    #f0a0a8;
     --card:           #3b4252;
     --text:           #eceff4;
     --muted:          #d8dee9;
@@ -144,6 +153,7 @@ html[data-theme="gray"] {
     --primary-hover:  #1f2937;
     --primary-light:  rgba(55,65,81,0.08);
     --success:        #15803d;
+    --success-text:   #157d3c;
     --warning:        #b45309;
     --danger:         #b91c1c;
     --card:           #f9fafb;
@@ -160,6 +170,7 @@ html[data-theme="dracula"] {
     --success:        #50fa7b;
     --warning:        #f1fa8c;
     --danger:         #ff5555;
+    --danger-text:    #ff5c5c;
     --card:           #282a36;
     --text:           #f8f8f2;
     --muted:          #6272a4;
@@ -174,6 +185,7 @@ html[data-theme="monokai"] {
     --success:        #a6e22e;
     --warning:        #fd971f;
     --danger:         #f92672;
+    --danger-text:    #fa528e;
     --card:           #272822;
     --text:           #f8f8f2;
     --muted:          #75715e;
@@ -186,8 +198,10 @@ html[data-theme="emerald"] {
     --primary-hover:  #047857;
     --primary-light:  rgba(5,150,105,0.10);
     --success:        #16a34a;
+    --success-text:   #11813b;
     --warning:        #d97706;
     --danger:         #dc2626;
+    --danger-text:    #d92323;
     --card:           #ffffff;
     --text:           #064e3b;
     --muted:          #5f7d70;
@@ -197,7 +211,13 @@ html[data-theme="emerald"] {
 }
 
 /* --- SEMANTICA FINANCEIRA --- */
+/* Cor de TEXTO de valor positivo/negativo (>= 4,5:1 sobre --card e --bg-page).
+   --success/--danger seguem para borda, botao e grafico. O tema que precisa de
+   outro tom para texto redefine estas duas no seu bloco acima (vence por
+   especificidade); os demais usam --success/--danger. */
 :root {
+    --success-text: var(--success);
+    --danger-text:  var(--danger);
     --semantic-positive:    #15803d;
     --semantic-negative:    #b91c1c;
     --semantic-neutral:     var(--muted);
@@ -220,8 +240,8 @@ html[data-theme="emerald"] {
 .edit-row { display: none; }
 .edit-row.is-editing { display: table-row; }
 
-.amount-positive { color: var(--semantic-positive) !important; font-weight: 700; }
-.amount-negative { color: var(--semantic-negative) !important; font-weight: 700; }
+.amount-positive { color: var(--success-text) !important; font-weight: 700; }
+.amount-negative { color: var(--danger-text) !important; font-weight: 700; }
 .amount-neutral,  .neutral  { color: var(--semantic-neutral)  !important; font-weight: 600; }
 
 .financial-card {

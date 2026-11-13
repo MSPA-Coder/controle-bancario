@@ -15,6 +15,7 @@ import logging
 import os
 import re
 from contextlib import suppress
+from datetime import date
 from pathlib import Path
 from uuid import uuid4
 
@@ -25,6 +26,8 @@ from django.utils.translation import gettext
 
 from banking.services import accessible_account_ids, can_access_account
 from core.texto import sem_acentos
+from management.services import entries_for_selector
+from reports.services import parse_month_input
 from transactions.models import CashFlowEntry
 
 from .models import EntryAttachment
@@ -226,6 +229,21 @@ def delete_entry_attachment(user, *, attachment_id) -> None:
     # pelo `post_delete` (`remover_arquivo_do_anexo`).
     _attachment_removal_path(attachment)
     attachment.delete()
+
+
+def entry_choices_for_attachment(user, month_value: str | None, selected_id=None):
+    """Lançamentos do mês para o seletor do formulário de anexo.
+
+    Devolve (lançamentos, primeiro dia do mês). Mês ausente ou inválido vale o
+    mês atual. A lista só traz o que o usuário pode alterar, o mesmo teste que
+    `save_entry_attachment` aplica ao receber o POST.
+    """
+    hoje = date.today()
+    mes = parse_month_input(month_value) or date(hoje.year, hoje.month, 1)
+    escolhas = entries_for_selector(
+        user, accessible_account_ids(user, "update"), mes, selected_id=selected_id
+    )
+    return escolhas, mes
 
 
 def recent_attachments_for_user(user, target_attachment_id: int | None = None, limit: int = 50):

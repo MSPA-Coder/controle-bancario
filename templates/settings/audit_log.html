@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static navegacao regional_filters i18n %}
+{% load static navegacao regional_filters rotulos_auditoria i18n %}
 
 {% block title %}{% trans "Segurança • Trilha de auditoria" %}{% endblock %}
 
@@ -45,26 +45,21 @@
                             <label class="audit-filter-label" for="audit-filter-entity-name">{% trans "Entidade" %}</label>
                             <select id="audit-filter-entity-name" class="audit-filter-select" name="entity_name">
                                 <option value="">{% trans "Todos" %}</option>
-                                {% for option in audit_filter_options.entity_name %}
-                                <option value="{{ option }}" {% if audit_filters.entity_name == option %}selected{% endif %}>{{ option }}</option>
+                                {% for codigo, rotulo in audit_filter_options.entity_name %}
+                                <option value="{{ codigo }}" title="{{ codigo }}" {% if audit_filters.entity_name == codigo %}selected{% endif %}>{{ rotulo }}</option>
                                 {% endfor %}
                             </select>
                         </th>
                         <th>
                             <label class="audit-filter-label" for="audit-filter-entity-id">{% trans "ID" %}</label>
-                            <select id="audit-filter-entity-id" class="audit-filter-select" name="entity_id">
-                                <option value="">{% trans "Todos" %}</option>
-                                {% for option in audit_filter_options.entity_id %}
-                                <option value="{{ option }}" {% if audit_filters.entity_id == option %}selected{% endif %}>{{ option }}</option>
-                                {% endfor %}
-                            </select>
+                            <input id="audit-filter-entity-id" class="audit-filter-select" type="text" name="entity_id" value="{{ audit_filters.entity_id }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="{% trans 'Todos' %}">
                         </th>
                         <th>
                             <label class="audit-filter-label" for="audit-filter-action">{% trans "Ação" %}</label>
                             <select id="audit-filter-action" class="audit-filter-select" name="action">
                                 <option value="">{% trans "Todos" %}</option>
-                                {% for option in audit_filter_options.action %}
-                                <option value="{{ option }}" {% if audit_filters.action == option %}selected{% endif %}>{{ option }}</option>
+                                {% for codigo, rotulo in audit_filter_options.action %}
+                                <option value="{{ codigo }}" title="{{ codigo }}" {% if audit_filters.action == codigo %}selected{% endif %}>{{ rotulo }}</option>
                                 {% endfor %}
                             </select>
                         </th>
@@ -79,12 +74,12 @@
                     <tr>
                         <td class="date-time">{{ log.created_at|udatetime_s }}</td>
                         <td>{% if log.actor_name %}{{ log.actor_name }}{% elif log.user %}{{ log.user.username }}{% else %}-{% endif %}{% if log.actor_id %} (#{{ log.actor_id }}){% endif %}</td>
-                        <td>{{ log.entity_name }}</td>
+                        <td title="{{ log.entity_name }}">{{ log.entity_name|rotulo_entidade }}</td>
                         <td>{{ log.entity_id|default:"-" }}</td>
-                        <td>{{ log.action }}</td>
-                        <td>{{ log.result }}</td>
+                        <td title="{{ log.action }}">{{ log.action|rotulo_acao }}</td>
+                        <td title="{{ log.result }}">{{ log.result|rotulo_resultado }}</td>
                         <td title="{% blocktrans trimmed with rid=log.request_id|default:'-' %}Request ID: {{ rid }}{% endblocktrans %}">{{ log.client_ip|default:"-" }}{% if log.proxy_ip %} {% blocktrans trimmed with proxy=log.proxy_ip %}via {{ proxy }}{% endblocktrans %}{% endif %}</td>
-                        <td>{{ log.summary|default:"-" }}</td>
+                        <td>{{ log.summary|rotulo_resumo|default:"-" }}</td>
                     </tr>
                     {% endfor %}
                     {% else %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load icons navegacao i18n %}
+{% load icons navegacao rotulos_auditoria i18n %}
 
 {% block title %}{% trans "Configurações • Banco de dados" %}{% endblock %}
 
@@ -38,7 +38,7 @@
         <select name="table_name" class="form-control form-control-fit" aria-label="{% trans 'Tabela para inspeção' %}">
             <option value="">{% trans "Selecione uma tabela…" %}</option>
             {% for t in available_tables %}
-            <option value="{{ t }}" {% if t == selected_table %}selected{% endif %}>{{ t }}</option>
+            <option value="{{ t }}" title="{{ t }}" {% if t == selected_table %}selected{% endif %}>{{ t|rotulo_entidade }}</option>
             {% endfor %}
         </select>
     </form>

@@ -25,6 +25,7 @@ from django.utils.translation import gettext
 
 from accounts.models import AccountOwner
 from accounts.services import accessible_owner_ids
+from banking.services import accessible_account_ids
 from core.domain.finance import BASE_CURRENCY, STATUS_REALIZED, parse_finite_decimal
 from reports.services import add_months, to_decimal
 from transactions.access import can_access_entry
@@ -137,7 +138,7 @@ def _resolve_owned_entry(user, entry_id) -> CashFlowEntry:
     try:
         entry_id_int = int(entry_id)
     except (TypeError, ValueError):
-        raise ValueError(gettext("Informe o ID do lançamento.")) from None
+        raise ValueError(gettext("Escolha o lançamento.")) from None
     entry = CashFlowEntry.objects.filter(id=entry_id_int).select_related("account").first()
     if entry is None:
         raise ValueError(gettext("Lançamento não encontrado."))
@@ -379,6 +380,41 @@ def budget_rows_for_period(owner_ids: Iterable[int], year: int, month: int) -> l
 # ---------------------------------------------------------------------------
 # Movimentos recentes classificados (tags/projeto)
 # ---------------------------------------------------------------------------
+
+def entries_for_selector(
+    user, account_ids: Iterable[int], month_start: date, selected_id=None, limit: int = 500,
+) -> list[CashFlowEntry]:
+    """Lançamentos que o usuário pode escolher num seletor, do mês, mais recentes primeiro.
+
+    O recorte da tela (`account_ids`) é cruzado com as contas em que o usuário
+    pode ALTERAR: o POST que recebe a escolha exige "update", e a lista não
+    oferece o que o servidor vai recusar. `selected_id` (vindo de `?entry_id=`)
+    entra no topo mesmo fora do mês ou do filtro, desde que o usuário possa
+    alterá-lo; id inválido ou de outro titular é ignorado.
+    """
+    permitidas = set(accessible_account_ids(user, "update"))
+    ids = {int(a) for a in account_ids if a} & permitidas
+    if not ids:
+        return []
+    entries = list(
+        CashFlowEntry.objects.select_related("account", "account__owner")
+        .filter(account_id__in=ids, due_date__gte=month_start, due_date__lt=add_months(month_start, 1))
+        .order_by("-due_date", "-id")[:limit]
+    )
+    try:
+        selecionado = int(selected_id)
+    except (TypeError, ValueError):
+        return entries
+    if all(e.id != selecionado for e in entries):
+        extra = (
+            CashFlowEntry.objects.select_related("account", "account__owner")
+            .filter(id=selecionado, account_id__in=permitidas)
+            .first()
+        )
+        if extra is not None:
+            entries.insert(0, extra)
+    return entries
+
 
 def recent_classified_entries(account_ids: Iterable[int], limit: int = 50):
     """Lançamentos recentes com tag(s)/projeto vinculados anexados como atributos.

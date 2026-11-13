@@ -124,3 +124,97 @@ th {
     .tx-form .span-2, .tx-form .span-4 { grid-column:1 / -1; }
     .card-invoices-heading { align-items:stretch; flex-direction:column; }
 }
+
+/* === CELULAR: cada lancamento vira um cartao (so a tabela de lancamentos) ===
+   O HTML e o mesmo da tabela; o cabecalho de titulos continua no DOM, so
+   escondido do olho (sr-only). Cada <td> traz data-label, usado so onde o
+   rotulo ajuda (parcelas, valor realizado, saldo do dia). */
+@media (max-width:768px) {
+    .tx-table, .tx-table thead, .tx-table tbody { display:block; min-width:0; width:100%; }
+    .table-container .auto-table-scroll-wrapper { max-height:none !important; overflow:visible; }
+
+    /* titulos das colunas: fora da vista, dentro da arvore de acessibilidade */
+    .tx-table thead tr:not(.filter-header-row) {
+        position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+        overflow:hidden; clip:rect(0, 0, 0, 0); white-space:nowrap; border:0;
+    }
+
+    /* filtros por coluna: grade acima da lista */
+    .tx-table .filter-header-row {
+        display:grid; grid-template-columns:1fr 1fr; gap:0.55rem;
+        margin-bottom:0.85rem; padding-bottom:0.85rem; border-bottom:2px solid var(--border);
+    }
+    .tx-table .filter-header-row th {
+        display:block; position:static; padding:0; border:0; background:transparent; min-width:0;
+    }
+    .tx-table .filter-header-row th[data-label]::before {
+        content:attr(data-label); display:block; margin-bottom:0.15rem;
+        color:var(--muted); font-size:0.72rem; font-weight:700; letter-spacing:0.03em;
+    }
+    .tx-table .filter-header-row .filter-category,
+    .tx-table .filter-header-row th[data-ui="filter-clear-header"] { grid-column:1 / -1; }
+    .tx-table .filter-header-row select { min-height:2.5rem; min-width:0; }
+    .tx-table .filter-header-row th[data-ui="filter-clear-header"] { text-align:right; }
+    .tx-table .filter-header-row th[data-ui="filter-clear-header"] .btn { min-height:2.5rem; padding:0 1rem; }
+
+    /* o cartao */
+    .tx-table tbody tr:not(.edit-row) {
+        display:flex; flex-wrap:wrap; column-gap:0.6rem; row-gap:0.25rem; align-items:baseline;
+        margin-bottom:0.65rem; padding:0.7rem 0.8rem;
+        border:1px solid var(--border); border-radius:var(--radius-sm);
+        background:var(--card);
+    }
+    .tx-table tbody td { display:block; padding:0; border:0; min-width:0; }
+    #transactions-table-container .tx-table tbody td.tx-c-description {
+        order:1; flex:1 1 0; min-width:0; max-width:none; width:auto; font-size:0.95rem; font-weight:600;
+        color:var(--text); overflow-wrap:anywhere;
+    }
+    /* quebra de linha entre descricao/valor e o resto */
+    .tx-table tbody tr:not(.edit-row)::before { content:""; order:3; flex:0 0 100%; height:0; }
+    .tx-table tbody .card-cycle-tag { white-space:normal; font-weight:400; }
+    .tx-table tbody td.tx-c-value {
+        order:2; flex:0 0 auto; font-size:1.05rem; font-weight:800;
+        text-align:right; white-space:nowrap;
+    }
+    .tx-table tbody td.tx-c-date,
+    .tx-table tbody td.tx-c-type,
+    .tx-table tbody td.tx-c-category { order:4; flex:0 1 auto; font-size:0.78rem; color:var(--muted); }
+    .tx-table tbody td.tx-c-category { overflow-wrap:anywhere; }
+
+    /* linhas com rotulo: parcelas, valor realizado, saldo do dia */
+    .tx-table tbody td.tx-c-installments,
+    .tx-table tbody td.tx-c-realized,
+    .tx-table tbody td.tx-c-balance {
+        order:5; flex:0 0 100%; display:flex; justify-content:space-between; gap:0.6rem;
+        font-size:0.8rem; text-align:right;
+    }
+    .tx-table tbody td.tx-c-installments::before,
+    .tx-table tbody td.tx-c-realized::before,
+    .tx-table tbody td.tx-c-balance::before {
+        content:attr(data-label); color:var(--muted); font-weight:600; text-align:left;
+    }
+    .tx-table tbody td.tx-c-empty, .tx-table tbody td.tx-c-balance:empty { display:none; }
+
+    /* acoes: linha propria no rodape; Excluir isolado na ponta oposta */
+    .tx-table tbody td.actions {
+        order:6; flex:0 0 100%; display:flex; flex-wrap:wrap; align-items:center;
+        justify-content:flex-end; gap:0.75rem; margin-top:0.35rem; padding-top:0.6rem;
+        border-top:1px solid var(--border); white-space:normal;
+    }
+    .tx-table tbody td.actions .btn-icon {
+        width:2.5rem; height:2.5rem; min-width:2.5rem; min-height:2.5rem;
+    }
+    .tx-table tbody td.actions .btn-icon svg { width:16px; height:16px; }
+    .tx-table tbody td.actions .btn-action-delete { order:-1; margin-right:auto; }
+
+    /* edicao em linha: bloco unico, na largura do cartao */
+    .tx-table tr.edit-row { display:none; margin-bottom:0.65rem; border:1px solid var(--primary); border-radius:var(--radius-sm); }
+    .tx-table tr.edit-row.is-editing { display:block; }
+    .tx-table .edit-row td { display:block; padding:0.7rem; }
+    .tx-table tbody td[data-ui="empty-2"] { flex:0 0 100%; padding:0.8rem; text-align:center; color:var(--muted); }
+}
+@media (max-width:520px) {
+    .tx-form { grid-template-columns:1fr; }
+    .tx-form .form-actions { flex-wrap:wrap; }
+    .tx-form .form-actions .btn { min-height:2.5rem; }
+}

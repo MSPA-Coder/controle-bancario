@@ -159,7 +159,8 @@ Projeções. O painel calcula em `dashboard/views.py` o que é só dele: o saldo
 diário (`_saldo_diario`, que refaz o saldo corrente do extrato sobre os
 lançamentos do mês e começa do saldo de abertura do período), os indicadores
 de saúde financeira (`_saude`: cobertura, média móvel de três meses e
-tendência, com limiar de 5%), os totais por categoria ou grupo e a janela de
+tendência, com limiar de 5%; mês sem receita nem despesa é mês sem dado e
+fica fora das três contas), os totais por categoria ou grupo e a janela de
 13 meses (`_shift_month`). O saldo diário e o do extrato têm de coincidir:
 `tests/test_painel_calculos.py` compara os dois. Só categorias gerenciais
 entram em receita e despesa; o saldo é o real. Assim a fatia ou a barra

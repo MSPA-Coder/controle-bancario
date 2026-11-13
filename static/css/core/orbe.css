@@ -100,7 +100,7 @@ th { background: var(--bg-header); font-size: .72rem; letter-spacing: .04em; tex
 td { padding: .7rem .65rem; } tbody tr { transition: background .14s ease; } tbody tr:hover { background: var(--primary-light); }
 .filter-header-row th { padding: .48rem; background: var(--card); }
 .filter-header-row select { min-height: 2rem; }
-.amount-positive { color: var(--success) !important; }.amount-negative { color: var(--danger) !important; }
+.amount-positive { color: var(--success-text) !important; }.amount-negative { color: var(--danger-text) !important; }
 
 .orbe-overview { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .9fr); gap: 1.5rem; overflow: hidden; margin-bottom: 1.15rem; border-radius: 17px; background: var(--orbe-forest); color: #fff; }
 .orbe-overview-main { padding: 1.15rem 1.4rem; background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary) 45%, transparent), transparent 44%); }

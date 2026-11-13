@@ -41,6 +41,10 @@ def management_view(request):
         [o.id for o in options.owners], period_month.year, period_month.month
     )
     recent_entries = services.recent_classified_entries(options.account_ids, limit=50)
+    selected_entry_id = request.GET.get("entry_id", "")
+    entry_choices = services.entries_for_selector(
+        request.user, options.account_ids, period_month, selected_id=selected_entry_id
+    )
 
     context = {
         "title": "Gestão",
@@ -59,6 +63,8 @@ def management_view(request):
         "active_projects": services.list_projects(active_only=True),
         "budget_rows": budget_rows,
         "recent_entries": recent_entries,
+        "entry_choices": entry_choices,
+        "selected_entry_id": int(selected_entry_id) if selected_entry_id.isdigit() else None,
         "can_manage": request.user.has_perm("management.manage"),
     }
     if quer_fragmento(request):

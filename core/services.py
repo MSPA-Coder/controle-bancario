@@ -111,7 +111,14 @@ def update_user_table_scroll_rows(user, rows: object) -> int:
 
 # --- Auditoria ---
 
-def audit_filter_options() -> dict[str, list[str]]:
+def audit_filter_options() -> dict[str, list]:
+    """Opções dos filtros da trilha.
+
+    Entidade e ação voltam como pares (código, rótulo), ordenados pelo rótulo:
+    o `value` do filtro é o código gravado. O ID não tem lista (passa de mil
+    valores): a tela usa um campo numérico.
+    """
+    from core.audit_labels import opcoes_de_filtro, rotulo_acao, rotulo_entidade
     from core.models import AuditLog
 
     def distinct(field):
@@ -140,9 +147,8 @@ def audit_filter_options() -> dict[str, list[str]]:
     return {
         "created_on": dates,
         "user_name": user_names,
-        "entity_name": distinct("entity_name"),
-        "entity_id": distinct("entity_id"),
-        "action": distinct("action"),
+        "entity_name": opcoes_de_filtro(distinct("entity_name"), rotulo_entidade),
+        "action": opcoes_de_filtro(distinct("action"), rotulo_acao),
     }
 
 

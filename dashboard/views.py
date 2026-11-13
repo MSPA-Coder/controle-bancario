@@ -172,35 +172,43 @@ def _saude(months: list[dict], selected_index: int) -> dict:
 	generation = [(i - e).quantize(MONEY_QUANT) for i, e in zip(income, expense, strict=True)]
 	coverage = [None if e <= 0 else (i / e).quantize(MONEY_QUANT) for i, e in zip(income, expense, strict=True)]
 
+	# Mês sem receita nem despesa é mês sem dado (antes do primeiro lançamento
+	# ou além do que já foi projetado), não mês de geração zero: fica fora da
+	# média móvel e da tendência, senão as duas apontam uma queda que não houve.
+	with_movement = [idx for idx in range(len(months)) if income[idx] or expense[idx]]
+	with_movement_set = set(with_movement)
+
+	def _media_dos_meses_com_movimento(inicio: int, fim: int) -> Decimal | None:
+		valores = [generation[idx] for idx in range(max(0, inicio), fim) if idx in with_movement_set]
+		if not valores:
+			return None
+		return sum(valores, Decimal("0.00")) / len(valores)
+
 	moving_average: list[Decimal | None] = []
 	for idx in range(len(generation)):
-		if idx < 2:
-			moving_average.append(None)
-			continue
-		moving_average.append((sum(generation[idx - 2 : idx + 1], Decimal("0.00")) / 3).quantize(MONEY_QUANT))
+		media = _media_dos_meses_com_movimento(idx - 2, idx + 1) if idx >= 2 and idx in with_movement_set else None
+		moving_average.append(media.quantize(MONEY_QUANT) if media is not None else None)
 
 	valid_coverage = [v for v in coverage if v is not None]
 	avg_coverage = (sum(valid_coverage, Decimal("0.00")) / len(valid_coverage)) if valid_coverage else Decimal("0.00")
 
 	# Mês sem movimento nenhum não entra na conta, e mês que empatou não
 	# "fechou com sobra": o cartão diz sobra, então só conta geração positiva.
-	with_movement = [idx for idx in range(len(months)) if income[idx] or expense[idx]]
-	with_movement_set = set(with_movement)
 	positive_months = len([idx for idx in with_movement if generation[idx] > 0])
 
 	# Os 3 meses que terminam no escolhido contra os 3 anteriores. Era o fim da
 	# janela contra o meio dela -- dois trimestres futuros, que o rótulo
-	# "últimos 3m" não descrevia.
-	last3 = generation[max(0, selected_index - 2) : selected_index + 1]
-	prev3 = generation[max(0, selected_index - 5) : max(0, selected_index - 2)]
-	prev_sum = sum(prev3, Decimal("0.00"))
-	last_sum = sum(last3, Decimal("0.00"))
-	if prev3 and prev_sum != 0:
-		trend_percent = ((last_sum - prev_sum) / abs(prev_sum)) * 100
-	elif prev3:
-		trend_percent = Decimal("100.0") if last_sum > 0 else Decimal("0.0")
-	else:
+	# "últimos 3m" não descrevia. Compara a geração média por mês com movimento
+	# de cada trimestre: com os três meses preenchidos dá o mesmo que comparar
+	# as somas, e trimestre incompleto não vira queda.
+	last_avg = _media_dos_meses_com_movimento(selected_index - 2, selected_index + 1)
+	prev_avg = _media_dos_meses_com_movimento(selected_index - 5, max(0, selected_index - 2))
+	if last_avg is None or prev_avg is None:
 		trend_percent = Decimal("0.0")
+	elif prev_avg != 0:
+		trend_percent = ((last_avg - prev_avg) / abs(prev_avg)) * 100
+	else:
+		trend_percent = Decimal("100.0") if last_avg > 0 else Decimal("0.0")
 
 	if trend_percent > Decimal("5"):
 		trend = ("amount-positive", "↑", gettext("Melhora consistente"))
@@ -224,8 +232,7 @@ def _saude(months: list[dict], selected_index: int) -> dict:
 			"trend_caption": trend[2],
 			"coverage": [_to_float(v) if v is not None else None for v in coverage],
 			# Mês sem receita nem despesa fica sem ponto (lacuna), como na cobertura:
-			# zero desenharia uma queda que não aconteceu. A conta (média, tendência)
-			# segue usando a geração zerada.
+			# zero desenharia uma queda que não aconteceu.
 			"generation": [
 				_to_float(v) if idx in with_movement_set else None for idx, v in enumerate(generation)
 			],

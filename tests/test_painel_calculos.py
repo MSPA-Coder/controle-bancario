@@ -209,6 +209,51 @@ def test_tendencia_compara_os_tres_meses_ate_o_escolhido_com_os_tres_anteriores(
     assert (saude["positive_months"], saude["total_months"]) == (2, 2)
 
 
+def _meses(*pares):
+    return [{"receita": Decimal(receita), "despesa": Decimal(despesa)} for receita, despesa in pares]
+
+
+def test_mes_sem_movimento_nao_puxa_a_media_movel_nem_a_tendencia():
+    """Os meses além do que já foi projetado vinham como geração zero: a média
+    móvel despencava e a tendência anunciava queda sem nada ter piorado."""
+    from dashboard.views import _saude
+
+    cheio = ("1000.00", "400.00")  # gera 600
+    vazio = ("0.00", "0.00")
+    meses = _meses(cheio, cheio, cheio, cheio, vazio, vazio)
+
+    saude = _saude(meses, selected_index=5)["summary"]
+
+    # Mês sem movimento fica sem ponto, na geração e na média.
+    assert saude["generation"][4:] == [None, None]
+    assert saude["moving_average"] == [None, None, 600.0, 600.0, None, None]
+    # O trimestre que termina no mês escolhido só tem um mês com dado, e ele
+    # gerou o mesmo que os anteriores.
+    assert saude["trend_percent"] == "+0,0%"
+    assert saude["trend_class"] == "amount-neutral"
+
+
+def test_media_movel_ignora_o_mes_vazio_no_meio_da_janela():
+    from dashboard.views import _saude
+
+    meses = _meses(("900.00", "0.00"), ("0.00", "0.00"), ("300.00", "0.00"))
+
+    saude = _saude(meses, selected_index=2)["summary"]
+
+    # (900 + 300) / 2 meses com movimento, e não / 3.
+    assert saude["moving_average"] == [None, None, 600.0]
+
+
+def test_mes_de_geracao_zero_com_movimento_continua_na_media():
+    from dashboard.views import _saude
+
+    meses = _meses(("900.00", "0.00"), ("500.00", "500.00"), ("300.00", "0.00"))
+
+    saude = _saude(meses, selected_index=2)["summary"]
+
+    assert saude["moving_average"] == [None, None, 400.0]
+
+
 def test_mes_que_empatou_nao_fechou_com_sobra(usuario, painel):
     titular = AccountOwner.objects.create(name="Titular do empate")
     banco = FinancialInstitution.objects.create(institution_name="Banco E", institution_type="Banco")

@@ -20,7 +20,7 @@ from core.currency_filter import currency_q
 from core.domain.finance import CATEGORY_KIND_TRANSFER, parse_finite_decimal
 from core.htmx import quer_fragmento
 from core.permissions import permission_required
-from core.services import audit_action, audit_request_context
+from core.services import audit_action, audit_request_context, system_start_date
 from core.templatetags.money_filters import balance_signed
 from transactions.models import AccountMonthClose, CashFlowCategory
 
@@ -40,6 +40,7 @@ from .attachments import (
     attachment_download_path,
     attachment_for_download,
     delete_entry_attachment,
+    entry_choices_for_attachment,
     recent_attachments_for_user,
     save_entry_attachment,
 )
@@ -923,7 +924,17 @@ def attachments_view(request):
     """Lista de comprovantes recentes e formulário de anexação."""
     target_attachment_id = request.GET.get('attachment_id')
     target_attachment_id = int(target_attachment_id) if target_attachment_id and target_attachment_id.isdigit() else None
-    context = _attachments_context(request, target_attachment_id=target_attachment_id)
+    selected_entry_id = request.GET.get('entry_id', '')
+    entry_choices, mes = entry_choices_for_attachment(
+        request.user, request.GET.get('month'), selected_id=selected_entry_id
+    )
+    context = {
+        **_attachments_context(request, target_attachment_id=target_attachment_id),
+        "entry_choices": entry_choices,
+        "selected_entry_id": int(selected_entry_id) if selected_entry_id.isdigit() else None,
+        "period_value": mes.strftime('%Y-%m'),
+        "system_start_date": system_start_date(),
+    }
     return render(request, 'banking/attachments.html', context)
 
 

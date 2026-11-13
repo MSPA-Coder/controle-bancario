@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n navegacao %}
 
 {% block title %}{% trans "Movimentação • Comprovantes" %}{% endblock %}
 
@@ -8,6 +8,14 @@
     <div>
         <h1>📎 {% trans "Comprovantes" %}</h1>
     </div>
+</div>
+<div class="top-filter-card">
+    <form method="get" class="top-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
+        <label class="top-filter-field compact" for="att-month">
+            {% trans "Mês" %}
+            <input type="month" name="month" id="att-month" value="{{ period_value }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}>
+        </label>
+    </form>
 </div>
 {% endblock %}
 
@@ -20,10 +28,7 @@
           hx-target="#attachment-results"
           hx-swap="innerHTML">
         {% csrf_token %}
-        <label class="top-filter-field compact">
-            {% trans "ID do lançamento" %}
-            <input type="number" name="entry_id" min="1" required>
-        </label>
+        {% include "management/partials/_seletor_lancamento.html" with campo_id="att-entry" lancamentos=entry_choices selecionado=selected_entry_id %}
         <label class="top-filter-field" data-ui="min-w-18">
             {% trans "Arquivo" %}
             <input type="file" name="attachment_file" accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.txt" required>
@@ -34,7 +39,7 @@
                 data-sa-severidade="info"
                 data-sa-ok="{% trans 'Salvar' %}">{% trans "Anexar" %}</button></div>
     </form>
-    <p class="help-text">{% trans "O número do lançamento aparece na coluna ID dos lançamentos mais recentes, em Controle gerencial." %}</p>
+    <p class="help-text">{% trans "A lista mostra os lançamentos do mês escolhido no filtro acima." %}</p>
 </div>
 
 <div class="chart-card">

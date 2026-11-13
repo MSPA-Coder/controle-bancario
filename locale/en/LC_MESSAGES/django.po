@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 10:41-0300\n"
+"POT-Creation-Date: 2026-11-13 12:22-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -436,16 +436,16 @@ msgstr "Account holder updated."
 msgid "Titular excluído."
 msgstr "Account holder deleted."
 
-#: accounts/views.py
+#: accounts/views.py core/audit_labels.py
 msgid "Entrada no sistema."
 msgstr "Signed in."
 
-#: accounts/views.py
+#: accounts/views.py core/audit_labels.py
 #, python-format
 msgid "Usuário ou senha inválidos. Usuário informado: %(nome)s."
 msgstr "Invalid username or password. Username entered: %(nome)s."
 
-#: accounts/views.py
+#: accounts/views.py core/audit_labels.py
 #, python-format
 msgid "Bloqueio de login acionado. Usuário informado: %(nome)s."
 msgstr "Login lockout triggered. Username entered: %(nome)s."
@@ -1617,7 +1617,7 @@ msgid_plural "Outras faturas aguardando processamento: %(outras)s."
 msgstr[0] "Another card statement awaiting processing: %(outras)s."
 msgstr[1] "Other card statements awaiting processing: %(outras)s."
 
-#: bank_statements/views.py
+#: bank_statements/views.py core/audit_labels.py
 #, python-format
 msgid "Importação desfeita: %(linhas)s linhas removidas, %(conciliadas)s conciliações revertidas."
 msgstr "Import undone: %(linhas)s lines removed, %(conciliadas)s reconciliations reverted."
@@ -1803,7 +1803,7 @@ msgid_plural "%(n)s linhas não puderam ser processadas: %(erro)s"
 msgstr[0] "%(n)s line could not be processed: %(erro)s"
 msgstr[1] "%(n)s lines could not be processed: %(erro)s"
 
-#: bank_statements/views.py
+#: bank_statements/views.py core/audit_labels.py
 #, python-format
 msgid "%(n)s linhas ignoradas em lote."
 msgstr "%(n)s lines skipped in bulk."
@@ -2088,6 +2088,322 @@ msgstr "Managed"
 msgid "Filtro de grupos de conta inválido."
 msgstr "Invalid account group filter."
 
+#: core/audit_labels.py core/context_processors.py
+#: templates/settings/monthly_close.html
+msgid "Fechamento mensal"
+msgstr "Monthly close"
+
+#: core/audit_labels.py templates/dashboard/index.html
+#: templates/management/index.html
+#: templates/management/partials/management_content.html
+#: templates/permissions/index.html templates/reports/account_position.html
+#: templates/reports/partials/account_position_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/reports/projections.html templates/reports/upcoming_movements.html
+#: templates/tables/_accounts_table.html templates/tables/accounts.html
+#: templates/transactions/index.html
+msgid "Titular"
+msgstr "Account holder"
+
+#: core/audit_labels.py
+msgid "Fonte do saldo da conta"
+msgstr "Account balance source"
+
+#: core/audit_labels.py templates/permissions/index.html
+#: templates/registration/login.html templates/settings/audit_log.html
+msgid "Usuário"
+msgstr "User"
+
+#: core/audit_labels.py
+msgid "Acesso do usuário a titulares"
+msgstr "User access to account holders"
+
+#: core/audit_labels.py
+msgid "Permissões do usuário"
+msgstr "User permissions"
+
+#: core/audit_labels.py
+msgid "Destinos de transferência do usuário"
+msgstr "User transfer destinations"
+
+#: core/audit_labels.py core/context_processors.py
+#: templates/settings/audit_log.html
+msgid "Trilha de auditoria"
+msgstr "Audit trail"
+
+#: core/audit_labels.py
+msgid "Acesso ao sistema"
+msgstr "System access"
+
+#: core/audit_labels.py
+msgid "Operação"
+msgstr "Operation"
+
+#: core/audit_labels.py
+msgid "Importação de extrato"
+msgstr "Statement import"
+
+#: core/audit_labels.py
+msgid "Linha de extrato"
+msgstr "Statement line"
+
+#: core/audit_labels.py templates/banking/_fatura_cabecalho.html
+#: templates/banking/_fatura_linha.html templates/banking/account_detail.html
+#: templates/banking/reclassificacao.html templates/components/filter_type.html
+#: templates/management/partials/management_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/transactions/_fields.html
+#: templates/transactions/_operations_table.html
+#: templates/transactions/_table_body.html
+msgid "Categoria"
+msgstr "Category"
+
+#: core/audit_labels.py
+msgid "Grupo de categorias"
+msgstr "Category group"
+
+#: core/audit_labels.py templates/banking/_attachments_table.html
+#: templates/banking/_reconciliation_tables.html
+#: templates/management/partials/_seletor_lancamento.html
+msgid "Lançamento"
+msgstr "Entry"
+
+#: core/audit_labels.py
+msgid "Comprovante"
+msgstr "Receipt"
+
+#: core/audit_labels.py core/domain/finance.py
+#: templates/banking/_attachments_table.html
+#: templates/banking/_import_table.html
+#: templates/banking/_reconciliation_tables.html
+#: templates/banking/atualizar_saldo.html
+#: templates/banking/pending_imports_confirm.html
+#: templates/banking/reclassificacao.html
+#: templates/banking/situacao_das_contas.html templates/dashboard/index.html
+#: templates/fechamento/fontes.html templates/fechamento/painel.html
+#: templates/management/index.html
+#: templates/management/partials/management_content.html
+#: templates/reports/partials/account_position_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/reports/projections.html templates/reports/upcoming_movements.html
+#: templates/settings/monthly_close.html templates/transactions/_fields.html
+#: templates/transactions/_operations_table.html
+#: templates/transactions/_table_body.html templates/transactions/index.html
+msgid "Conta"
+msgstr "Account"
+
+#: core/audit_labels.py templates/banking/regras.html
+#: templates/dashboard/index.html templates/management/index.html
+#: templates/reports/account_position.html
+#: templates/reports/partials/account_position_content.html
+#: templates/reports/partials/upcoming_movements_content.html
+#: templates/reports/projections.html templates/reports/upcoming_movements.html
+#: templates/tables/_accounts_table.html templates/tables/accounts.html
+#: templates/transactions/index.html
+msgid "Instituição"
+msgstr "Institution"
+
+#: core/audit_labels.py templates/management/partials/management_content.html
+msgid "Orçamento mensal"
+msgstr "Monthly budget"
+
+#: core/audit_labels.py
+msgid "Regra de extrato"
+msgstr "Statement rule"
+
+#: core/audit_labels.py
+msgid "Arquivou"
+msgstr "Archived"
+
+#: core/audit_labels.py
+msgid "Atribuiu responsável"
+msgstr "Assigned a responsible user"
+
+#: core/audit_labels.py
+msgid "Fechou o mês"
+msgstr "Closed the month"
+
+#: core/audit_labels.py
+msgid "Criou"
+msgstr "Created"
+
+#: core/audit_labels.py
+msgid "Excluiu"
+msgstr "Deleted"
+
+#: core/audit_labels.py
+msgid "Removeu"
+msgstr "Removed"
+
+#: core/audit_labels.py
+msgid "Tentativa de login recusada"
+msgstr "Sign-in attempt rejected"
+
+#: core/audit_labels.py
+msgid "Ignorou"
+msgstr "Ignored"
+
+#: core/audit_labels.py
+msgid "Entrou no sistema"
+msgstr "Signed in"
+
+#: core/audit_labels.py
+msgid "Saiu do sistema"
+msgstr "Signed out"
+
+#: core/audit_labels.py
+msgid "Redefiniu a senha"
+msgstr "Reset the password"
+
+#: core/audit_labels.py
+msgid "Aplicou perfil de permissões"
+msgstr "Applied a permission profile"
+
+#: core/audit_labels.py
+msgid "Realizou"
+msgstr "Settled"
+
+#: core/audit_labels.py
+msgid "Conciliou"
+msgstr "Reconciled"
+
+#: core/audit_labels.py
+msgid "Reabriu o mês"
+msgstr "Reopened the month"
+
+#: core/audit_labels.py
+msgid "Login bloqueado por tentativas"
+msgstr "Sign-in blocked after repeated attempts"
+
+#: core/audit_labels.py
+msgid "Desfez"
+msgstr "Undid"
+
+#: core/audit_labels.py
+msgid "Desfez a conciliação"
+msgstr "Undid the reconciliation"
+
+#: core/audit_labels.py
+msgid "Desfez a realização"
+msgstr "Undid the settlement"
+
+#: core/audit_labels.py
+msgid "Alterou"
+msgstr "Updated"
+
+#: core/audit_labels.py
+msgid "Falha"
+msgstr "Failure"
+
+#: core/audit_labels.py
+msgid "Sucesso"
+msgstr "Success"
+
+#: core/audit_labels.py financeiro/urls.py
+msgid "Saída do sistema."
+msgstr "Signed out."
+
+#: core/audit_labels.py
+msgid "Operação recusada pela validação do servidor."
+msgstr "Operation rejected by server validation."
+
+#: core/audit_labels.py
+msgid "Fechamento mensal recusado pela validação do servidor."
+msgstr "Monthly close rejected by server validation."
+
+#: core/audit_labels.py
+msgid "Reabertura mensal recusada pela validação do servidor."
+msgstr "Monthly reopening rejected by server validation."
+
+#: core/audit_labels.py
+#, python-format
+msgid "Fechamento mensal %(mes)s da conta #%(conta)s."
+msgstr "Monthly close %(mes)s for account #%(conta)s."
+
+#: core/audit_labels.py
+#, python-format
+msgid "Fechamento mensal %(mes)s da conta #%(conta)s reaberto."
+msgstr "Monthly close %(mes)s for account #%(conta)s reopened."
+
+#: core/audit_labels.py
+msgid "Lançamento criado."
+msgstr "Entry created."
+
+#: core/audit_labels.py
+#, python-format
+msgid "Lançamento editado (escopo: %(escopo)s)."
+msgstr "Entry edited (scope: %(escopo)s)."
+
+#: core/audit_labels.py
+#, python-format
+msgid "Lançamento excluído (escopo: %(escopo)s)."
+msgstr "Entry deleted (scope: %(escopo)s)."
+
+#: core/audit_labels.py transactions/views.py
+msgid "Lançamento marcado como realizado."
+msgstr "Entry marked as settled."
+
+#: core/audit_labels.py
+msgid "Lançamento retornado para vencidos."
+msgstr "Entry returned to overdue."
+
+#: core/audit_labels.py
+#, python-format
+msgid "Ocorrência recorrente além do horizonte de projeção (%(fim)s) removida."
+msgstr "Recurring occurrence beyond the projection horizon (%(fim)s) removed."
+
+#: core/audit_labels.py
+msgid "Lançamento movido de conta por ajuste de dados."
+msgstr "Entry moved to another account by data adjustment."
+
+#: core/audit_labels.py
+msgid "Lançamento convertido em ponta de transferência por ajuste de dados."
+msgstr "Entry converted into a transfer leg by data adjustment."
+
+#: core/audit_labels.py
+msgid "Ponta de transferência criada por ajuste de dados."
+msgstr "Transfer leg created by data adjustment."
+
+#: core/audit_labels.py
+msgid "Lançamento transformado em ponta de transferência a partir do extrato."
+msgstr "Entry turned into a transfer leg from the statement."
+
+#: core/audit_labels.py
+msgid "Ponta de transferência criada a partir do extrato."
+msgstr "Transfer leg created from the statement."
+
+#: core/audit_labels.py
+msgid "Par de lançamentos próprios convertido em transferência."
+msgstr "Pair of own entries converted into a transfer."
+
+#: core/audit_labels.py
+msgid "Marcação a mercado reclassificada como variação de mercado."
+msgstr "Mark-to-market reclassified as market variation."
+
+#: core/audit_labels.py
+msgid "Categoria reclassificada em lote."
+msgstr "Category reclassified in bulk."
+
+#: core/audit_labels.py
+msgid "Fonte do saldo da conta alterada."
+msgstr "Account balance source changed."
+
+#: core/audit_labels.py
+msgid "Matriz de destinos completada a partir do histórico de transferências."
+msgstr "Destination matrix completed from transfer history."
+
+#: core/audit_labels.py
+msgid "Status da operação recalculado a partir das ocorrências."
+msgstr "Operation status recalculated from its occurrences."
+
+#: core/audit_labels.py
+msgid "Rótulo de transferência refeito pelo nome atual da conta."
+msgstr "Transfer label rebuilt from the current account name."
+
+#: core/audit_labels.py
+msgid "Conciliação: realização corrigida pela data e valor do extrato."
+msgstr "Reconciliation: settlement corrected using the statement date and amount."
+
 #: core/context_processors.py templates/tables/_categories_table.html
 #: templates/tables/categories.html
 msgid "Movimentação"
@@ -2140,10 +2456,6 @@ msgstr "Closing checklist"
 #: core/context_processors.py templates/banking/reclassificacao.html
 msgid "Reclassificação"
 msgstr "Reclassification"
-
-#: core/context_processors.py templates/settings/monthly_close.html
-msgid "Fechamento mensal"
-msgstr "Monthly close"
 
 #: core/context_processors.py templates/transactions/operations.html
 msgid "Parcelas e recorrências"
@@ -2233,10 +2545,6 @@ msgstr "Change password"
 msgid "Permissões"
 msgstr "Permissions"
 
-#: core/context_processors.py templates/settings/audit_log.html
-msgid "Trilha de auditoria"
-msgstr "Audit trail"
-
 #: core/currency_filter.py
 msgid "Filtro de moeda inválido."
 msgstr "Invalid currency filter."
@@ -2300,25 +2608,6 @@ msgstr "Amount above the allowed limit (9,999,999,999.99)."
 #: core/domain/finance.py templates/transactions/index.html
 msgid "Todos os modos"
 msgstr "All modes"
-
-#: core/domain/finance.py templates/banking/_attachments_table.html
-#: templates/banking/_import_table.html
-#: templates/banking/_reconciliation_tables.html
-#: templates/banking/atualizar_saldo.html
-#: templates/banking/pending_imports_confirm.html
-#: templates/banking/reclassificacao.html
-#: templates/banking/situacao_das_contas.html templates/dashboard/index.html
-#: templates/fechamento/fontes.html templates/fechamento/painel.html
-#: templates/management/index.html
-#: templates/management/partials/management_content.html
-#: templates/reports/partials/account_position_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/reports/projections.html templates/reports/upcoming_movements.html
-#: templates/settings/monthly_close.html templates/transactions/_fields.html
-#: templates/transactions/_operations_table.html
-#: templates/transactions/_table_body.html templates/transactions/index.html
-msgid "Conta"
-msgstr "Account"
 
 #: core/domain/finance.py
 msgid "Cartão de crédito"
@@ -3513,10 +3802,6 @@ msgstr[1] "Collection through %(dia)s applied: %(n)s balances posted or checked.
 msgid "Anotado: o par não é duplicata e não volta a aparecer."
 msgstr "Noted: the pair is not a duplicate and will not show up again."
 
-#: financeiro/urls.py
-msgid "Saída do sistema."
-msgstr "Signed out."
-
 #: management/services.py
 msgid "Nome da tag é obrigatório."
 msgstr "Tag name is required."
@@ -3546,8 +3831,8 @@ msgid "Já existe um projeto com esse nome."
 msgstr "A project with this name already exists."
 
 #: management/services.py
-msgid "Informe o ID do lançamento."
-msgstr "Enter the entry ID."
+msgid "Escolha o lançamento."
+msgstr "Choose the entry."
 
 #: management/services.py
 msgid "Acesso negado: você não tem permissão para vincular este lançamento."
@@ -3864,11 +4149,6 @@ msgid "Salvar nova senha"
 msgstr "Save new password"
 
 #: templates/banking/_attachments_table.html
-#: templates/banking/_reconciliation_tables.html
-msgid "Lançamento"
-msgstr "Entry"
-
-#: templates/banking/_attachments_table.html
 #: templates/banking/_import_table.html templates/banking/attachments.html
 #: templates/banking/extratos.html templates/banking/faturas.html
 #: templates/banking/pending_imports_confirm.html
@@ -3962,17 +4242,6 @@ msgstr "Amount"
 #: templates/banking/_fatura_cabecalho.html templates/fechamento/painel.html
 msgid "O que acontece"
 msgstr "What happens"
-
-#: templates/banking/_fatura_cabecalho.html
-#: templates/banking/_fatura_linha.html templates/banking/account_detail.html
-#: templates/banking/reclassificacao.html templates/components/filter_type.html
-#: templates/management/partials/management_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/transactions/_fields.html
-#: templates/transactions/_operations_table.html
-#: templates/transactions/_table_body.html
-msgid "Categoria"
-msgstr "Category"
 
 #: templates/banking/_fatura_linha.html
 #, python-format
@@ -4236,6 +4505,7 @@ msgstr "Select line"
 
 #: templates/banking/_reconciliation_tables.html
 #: templates/banking/atualizar_saldo.html templates/banking/regras.html
+#: templates/management/partials/_seletor_lancamento.html
 #: templates/management/partials/management_content.html
 #: templates/settings/monthly_close.html templates/transactions/_fields.html
 msgid "Selecione…"
@@ -4452,14 +4722,16 @@ msgstr "No settled entries for this period."
 msgid "Movimentação • Comprovantes"
 msgstr "Activity • Receipts"
 
+#: templates/banking/attachments.html templates/management/index.html
+#: templates/management/partials/management_content.html
+#: templates/reports/partials/projections_content.html
+#: templates/settings/monthly_close.html
+msgid "Mês"
+msgstr "Month"
+
 #: templates/banking/attachments.html
 msgid "Anexar comprovante a lançamento"
 msgstr "Attach receipt to entry"
-
-#: templates/banking/attachments.html
-#: templates/management/partials/management_content.html
-msgid "ID do lançamento"
-msgstr "Entry ID"
 
 #: templates/banking/attachments.html
 msgid "Salvar este comprovante no banco e no armazenamento?"
@@ -4486,8 +4758,8 @@ msgid "Anexar"
 msgstr "Attach"
 
 #: templates/banking/attachments.html
-msgid "O número do lançamento aparece na coluna ID dos lançamentos mais recentes, em Controle gerencial."
-msgstr "The entry number appears in the ID column of the latest entries, under Management."
+msgid "A lista mostra os lançamentos do mês escolhido no filtro acima."
+msgstr "The list shows the entries for the month chosen in the filter above."
 
 #: templates/banking/attachments.html
 msgid "Comprovantes recentes"
@@ -5182,16 +5454,6 @@ msgstr "The line contains"
 msgid "Trecho do texto do extrato"
 msgstr "Fragment of the statement text"
 
-#: templates/banking/regras.html templates/dashboard/index.html
-#: templates/management/index.html templates/reports/account_position.html
-#: templates/reports/partials/account_position_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/reports/projections.html templates/reports/upcoming_movements.html
-#: templates/tables/_accounts_table.html templates/tables/accounts.html
-#: templates/transactions/index.html
-msgid "Instituição"
-msgstr "Institution"
-
 #: templates/banking/regras.html
 msgid "Qualquer"
 msgstr "Any"
@@ -5520,17 +5782,6 @@ msgstr "Dashboard • Cash flow"
 msgid "Modo"
 msgstr "Mode"
 
-#: templates/dashboard/index.html templates/management/index.html
-#: templates/management/partials/management_content.html
-#: templates/permissions/index.html templates/reports/account_position.html
-#: templates/reports/partials/account_position_content.html
-#: templates/reports/partials/upcoming_movements_content.html
-#: templates/reports/projections.html templates/reports/upcoming_movements.html
-#: templates/tables/_accounts_table.html templates/tables/accounts.html
-#: templates/transactions/index.html
-msgid "Titular"
-msgstr "Account holder"
-
 #: templates/dashboard/index.html templates/settings/audit_log.html
 #: templates/settings/monthly_close.html
 #: templates/transactions/_table_body.html
@@ -5857,12 +6108,9 @@ msgstr "All institutions"
 msgid "Todas as contas"
 msgstr "All accounts"
 
-#: templates/management/index.html
-#: templates/management/partials/management_content.html
-#: templates/reports/partials/projections_content.html
-#: templates/settings/monthly_close.html
-msgid "Mês"
-msgstr "Month"
+#: templates/management/partials/_seletor_lancamento.html
+msgid "Nenhum lançamento neste recorte. Escolha outro mês no filtro."
+msgstr "No entries in this selection. Pick another month in the filter."
 
 #: templates/management/partials/management_content.html
 msgid "Criar tag"
@@ -5911,10 +6159,6 @@ msgstr "Confirm project"
 #: templates/management/partials/management_content.html
 msgid "Salvar projeto"
 msgstr "Save project"
-
-#: templates/management/partials/management_content.html
-msgid "Orçamento mensal"
-msgstr "Monthly budget"
 
 #: templates/management/partials/management_content.html
 msgid "Valor orçado"
@@ -6053,11 +6297,6 @@ msgstr "Security • Permissions"
 #: templates/permissions/index.html
 msgid "Administração de permissões"
 msgstr "Permission administration"
-
-#: templates/permissions/index.html templates/registration/login.html
-#: templates/settings/audit_log.html
-msgid "Usuário"
-msgstr "User"
 
 #: templates/permissions/index.html
 #, python-format
@@ -7924,10 +8163,6 @@ msgstr "Access denied: you do not have permission to settle this entry."
 #: transactions/views.py
 msgid "Data de realização inválida."
 msgstr "Invalid settlement date."
-
-#: transactions/views.py
-msgid "Lançamento marcado como realizado."
-msgstr "Entry marked as settled."
 
 #: transactions/views.py
 msgid "Acesso negado: você não tem permissão para alterar este lançamento."

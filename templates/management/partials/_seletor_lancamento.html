@@ -1,0 +1,14 @@
+{% load i18n money_filters regional_filters %}
+{# Seletor de lançamento (campo entry_id). Entram: campo_id, lancamentos, selecionado. #}
+<label class="top-filter-field" data-ui="min-w-18" for="{{ campo_id }}">{% trans "Lançamento" %}
+    <select name="entry_id" id="{{ campo_id }}" required{% if not lancamentos %} disabled{% endif %}>
+        {% if lancamentos %}
+        <option value="">{% trans "Selecione…" %}</option>
+        {% for entry in lancamentos %}
+        <option value="{{ entry.id }}"{% if entry.id == selecionado %} selected{% endif %}>{{ entry.due_date|udate }} · {{ entry.description|default:"-" }} · {% if entry.entry_type == 'despesa' %}{{ entry.entry_amount|neg|money_signed:entry.account.currency }}{% else %}{{ entry.entry_amount|money_signed:entry.account.currency }}{% endif %} · {{ entry.account.owner.name }} / {{ entry.account.account_name }}</option>
+        {% endfor %}
+        {% else %}
+        <option value="">{% trans "Nenhum lançamento neste recorte. Escolha outro mês no filtro." %}</option>
+        {% endif %}
+    </select>
+</label>
