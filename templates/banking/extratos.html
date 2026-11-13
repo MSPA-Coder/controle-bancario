@@ -11,7 +11,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>📄 {% trans "Extratos importados" %}</h1>
+        <h1>🧾{% trans "Extratos importados" %}</h1>
     </div>
 </div>
 {% endblock %}
@@ -44,10 +44,13 @@
                 </td>
                 <td>
                     {% if extrato.conferencia %}
+                        {# `money` esconde o zero; saldo zero é informação, então cai em `balance_signed`. #}
+                        {% firstof extrato.conferencia.saldo_do_extrato|money:conta.currency extrato.conferencia.saldo_do_extrato|balance_signed:conta.currency as saldo_do_extrato_txt %}
+                        {% firstof extrato.conferencia.saldo_no_cb|money:conta.currency extrato.conferencia.saldo_no_cb|balance_signed:conta.currency as saldo_no_cb_txt %}
                         {% if extrato.conferencia.bate %}
-                        <span class="amount amount-positive">{% blocktrans trimmed with data=extrato.conferencia.data|udate saldo=extrato.conferencia.saldo_do_extrato|money:conta.currency %}Bate em {{ data }}: {{ saldo }}{% endblocktrans %}</span>
+                        <span class="amount amount-positive">{% blocktrans trimmed with data=extrato.conferencia.data|udate saldo=saldo_do_extrato_txt %}Bate em {{ data }}: {{ saldo }}{% endblocktrans %}</span>
                         {% else %}
-                        <span class="amount amount-negative">{% blocktrans trimmed with saldo=extrato.conferencia.saldo_do_extrato|money:conta.currency cb=extrato.conferencia.saldo_no_cb|money:conta.currency data=extrato.conferencia.data|udate diferenca=extrato.conferencia.diferenca|money:conta.currency %}Extrato {{ saldo }} · CB {{ cb }} em {{ data }} · diferença {{ diferenca }}{% endblocktrans %}</span>
+                        <span class="amount amount-negative">{% blocktrans trimmed with saldo=saldo_do_extrato_txt cb=saldo_no_cb_txt data=extrato.conferencia.data|udate diferenca=extrato.conferencia.diferenca|money:conta.currency %}Extrato {{ saldo }} · CB {{ cb }} em {{ data }} · diferença {{ diferenca }}{% endblocktrans %}</span>
                         {% endif %}
                     {% else %}
                     <span class="empty-state">{% trans "O arquivo não informa saldo." %}</span>

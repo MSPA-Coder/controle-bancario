@@ -108,8 +108,8 @@ th {
 .tx-form input:focus, .tx-form select:focus {
     border-color:var(--primary) !important;
     box-shadow:0 0 0 2.5px var(--primary-light);
-    outline:none;
 }
+.tx-form input:focus-visible, .tx-form select:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
 .tx-form .check-line { display:flex; align-items:center; gap:0.3rem; padding-bottom:0.28rem; }
 .tx-form .check-line input { width:auto; }
 .tx-form .form-actions { display:flex; gap:0.45rem; justify-content:flex-end; }

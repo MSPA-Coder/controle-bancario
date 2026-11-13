@@ -50,7 +50,7 @@
 .fech-anel-fundo { fill: none; stroke: var(--border); stroke-width: 8; }
 .fech-anel-valor { fill: none; stroke: var(--success); stroke-width: 8; stroke-linecap: round; }
 .fech-anel-texto { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.fech-anel-texto small { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 600; }
+.fech-anel-texto small { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 600; }
 .fech-numeros { display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; margin: 0; }
 .fech-numeros div { display: flex; flex-direction: column-reverse; }
 .fech-numeros dd { margin: 0; font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }

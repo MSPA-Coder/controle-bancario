@@ -7,6 +7,8 @@ continua entrando: o login não revalida o tamanho. O valor gravado em
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -57,7 +59,11 @@ def test_tela_de_parametros_anuncia_o_piso(client):
 
     html = client.get(reverse("core:settings_home")).content.decode()
 
-    assert 'name="min_length" class="form-control" min="10"' in html
+    # O que importa é o campo do tamanho mínimo anunciar o piso, não a ordem
+    # dos atributos da tag.
+    campo = re.search(r'<input[^>]*name="min_length"[^>]*>', html)
+    assert campo is not None
+    assert ' min="10"' in campo.group(0)
 
 
 def test_senha_nova_de_9_caracteres_e_recusada_e_de_10_passa():

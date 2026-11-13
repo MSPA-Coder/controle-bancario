@@ -2,7 +2,7 @@
 {% load icons %}
 <div class="page-header-title" data-ui="mb-1">
     <div>
-        <h1>{% trans "Painel gerencial" %}</h1>
+        <h1>{% trans "Controle gerencial" %}</h1>
     </div>
 </div>
 
@@ -13,7 +13,7 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:create_tag' %}" class="stack-form">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label>{% trans "Nome da tag" %}<input type="text" name="tag_name" maxlength="80" required placeholder="{% trans 'Ex.: reembolsável' %}"></label>
+            <label for="mgc-tag-name">{% trans "Nome da tag" %}<input type="text" name="tag_name" id="mgc-tag-name" maxlength="80" required placeholder="{% trans 'Ex.: reembolsável' %}"></label>
             <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar esta tag?' %}" data-sa-titulo="{% trans 'Confirmar tag' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar tag" %}</button>
         </form>
     </div>
@@ -22,8 +22,8 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:create_project' %}" class="stack-form">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label>{% trans "Nome" %}<input type="text" name="project_name" maxlength="120" required placeholder="{% trans 'Ex.: Reforma Apto' %}"></label>
-            <label>{% trans "Descrição" %}<input type="text" name="description" maxlength="255" placeholder="{% trans 'Opcional' %}"></label>
+            <label for="mgc-project-name">{% trans "Nome" %}<input type="text" name="project_name" id="mgc-project-name" maxlength="120" required placeholder="{% trans 'Ex.: Reforma Apto' %}"></label>
+            <label for="mgc-project-description">{% trans "Descrição" %}<input type="text" name="description" id="mgc-project-description" maxlength="255" placeholder="{% trans 'Opcional' %}"></label>
             <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar este projeto ou centro de custo?' %}" data-sa-titulo="{% trans 'Confirmar projeto' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar projeto" %}</button>
         </form>
     </div>
@@ -32,24 +32,24 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:save_budget' %}" class="stack-form">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label>{% trans "Titular" %}
-                <select name="owner_id" required>
+            <label for="mgc-budget-owner">{% trans "Titular" %}
+                <select name="owner_id" id="mgc-budget-owner" required>
                     <option value="">{% trans "Selecione…" %}</option>
                     {% for owner in owners %}
                     <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <label>{% trans "Categoria" %}
-                <select name="category_id" required>
+            <label for="mgc-budget-category">{% trans "Categoria" %}
+                <select name="category_id" id="mgc-budget-category" required>
                     <option value="">{% trans "Selecione…" %}</option>
                     {% for category in categories %}
                     <option value="{{ category.id }}">{{ category.category_name }}</option>
                     {% endfor %}
                 </select>
             </label>
-            <label>{% trans "Mês" %}<input type="month" name="budget_month" value="{{ period_value }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %} required></label>
-            <label>{% trans "Valor orçado" %}<input type="number" name="planned_amount" min="0" step="0.01" required></label>
+            <label for="mgc-budget-month">{% trans "Mês" %}<input type="month" name="budget_month" id="mgc-budget-month" value="{{ period_value }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %} required></label>
+            <label for="mgc-budget-amount">{% trans "Valor orçado" %}<input type="number" name="planned_amount" id="mgc-budget-amount" min="0" step="0.01" required></label>
             <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar este orçamento mensal?' %}" data-sa-titulo="{% trans 'Confirmar orçamento' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% trans "Salvar orçamento" %}</button>
         </form>
     </div>
@@ -61,9 +61,9 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_tag' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact">{% trans "ID do lançamento" %}<input type="number" name="entry_id" min="1" required></label>
-            <label class="top-filter-field">{% trans "Tag" %}
-                <select name="tag_id" required>
+            <label class="top-filter-field compact" for="mgc-tag-entry">{% trans "ID do lançamento" %}<input type="number" name="entry_id" id="mgc-tag-entry" min="1" required></label>
+            <label class="top-filter-field" for="mgc-tag-select">{% trans "Tag" %}
+                <select name="tag_id" id="mgc-tag-select" required>
                     <option value="">{% trans "Selecione…" %}</option>
                     {% for tag in active_tags %}
                     <option value="{{ tag.id }}">{{ tag.tag_name }}</option>
@@ -78,9 +78,9 @@
         <form method="post" {% nav_escrita %} action="{% url 'management:assign_project' %}" class="top-filter-row">
             {% csrf_token %}
             <input type="hidden" name="redirect_qs" value="{{ request.GET.urlencode }}">
-            <label class="top-filter-field compact">{% trans "ID do lançamento" %}<input type="number" name="entry_id" min="1" required></label>
-            <label class="top-filter-field">{% trans "Projeto" %}
-                <select name="project_id" required>
+            <label class="top-filter-field compact" for="mgc-project-entry">{% trans "ID do lançamento" %}<input type="number" name="entry_id" id="mgc-project-entry" min="1" required></label>
+            <label class="top-filter-field" for="mgc-project-select">{% trans "Projeto" %}
+                <select name="project_id" id="mgc-project-select" required>
                     <option value="">{% trans "Selecione…" %}</option>
                     {% for project in active_projects %}
                     <option value="{{ project.id }}">{{ project.project_name }}</option>

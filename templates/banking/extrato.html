@@ -11,7 +11,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>📄 {% trans "Extrato da conta" %}</h1>
+        <h1>🧾{% trans "Extrato da conta" %}</h1>
         <p>{{ conta.owner.name }} / {{ conta.institution.institution_name }} / {{ conta.account_name }} · {{ lote.source_filename }}</p>
     </div>
 </div>
@@ -26,10 +26,13 @@
             <tr><td>{% trans "Linhas" %}</td><td>{{ importado.total }}: {% blocktrans trimmed count n=importado.conciliadas %}{{ n }} conciliada{% plural %}{{ n }} conciliadas{% endblocktrans %}, {% blocktrans trimmed count n=importado.ignoradas %}{{ n }} ignorada{% plural %}{{ n }} ignoradas{% endblocktrans %}, {% blocktrans trimmed count n=importado.novas %}{{ n }} pendente{% plural %}{{ n }} pendentes{% endblocktrans %}</td></tr>
             <tr><td>{% trans "Saldo do extrato × CB" %}</td><td>
                 {% if importado.conferencia %}
+                    {# `money` esconde o zero; saldo zero é informação, então cai em `balance_signed`. #}
+                    {% firstof importado.conferencia.saldo_do_extrato|money:conta.currency importado.conferencia.saldo_do_extrato|balance_signed:conta.currency as saldo_do_extrato_txt %}
+                    {% firstof importado.conferencia.saldo_no_cb|money:conta.currency importado.conferencia.saldo_no_cb|balance_signed:conta.currency as saldo_no_cb_txt %}
                     {% if importado.conferencia.bate %}
-                    <strong class="amount amount-positive">{% blocktrans trimmed with data=importado.conferencia.data|udate saldo=importado.conferencia.saldo_do_extrato|money:conta.currency %}Bate em {{ data }}: {{ saldo }}{% endblocktrans %}</strong>
+                    <strong class="amount amount-positive">{% blocktrans trimmed with data=importado.conferencia.data|udate saldo=saldo_do_extrato_txt %}Bate em {{ data }}: {{ saldo }}{% endblocktrans %}</strong>
                     {% else %}
-                    <strong class="amount amount-negative">{% blocktrans trimmed with saldo=importado.conferencia.saldo_do_extrato|money:conta.currency cb=importado.conferencia.saldo_no_cb|money:conta.currency data=importado.conferencia.data|udate diferenca=importado.conferencia.diferenca|money:conta.currency %}Extrato {{ saldo }} · CB {{ cb }} em {{ data }} · diferença {{ diferenca }}{% endblocktrans %}</strong>
+                    <strong class="amount amount-negative">{% blocktrans trimmed with saldo=saldo_do_extrato_txt cb=saldo_no_cb_txt data=importado.conferencia.data|udate diferenca=importado.conferencia.diferenca|money:conta.currency %}Extrato {{ saldo }} · CB {{ cb }} em {{ data }} · diferença {{ diferenca }}{% endblocktrans %}</strong>
                     {% endif %}
                 {% else %}
                 <span class="empty-state">{% trans "O arquivo não informa saldo." %}</span>

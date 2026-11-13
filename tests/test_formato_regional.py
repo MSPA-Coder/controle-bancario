@@ -96,6 +96,16 @@ def test_filtros_de_data_seguem_o_formato_ativo(eua):
     assert saida == "12/31/2026|12/31/2026 23:59|12/31/2026 23:59:58|12/2026"
 
 
+def test_filtros_de_data_aceitam_o_texto_iso_das_telas():
+    # O período das telas ("2026-12") e as datas dos filtros chegam como texto.
+    saida = _renderizar("{{ m|umonth }}|{{ d|udate }}", m="2026-12", d="2026-12-31")
+    assert saida == "12/2026|31/12/2026"
+
+
+def test_filtros_de_data_devolvem_o_texto_que_nao_e_data():
+    assert _renderizar("{{ m|umonth }}|{{ d|udate }}", m="dezembro", d="ontem") == "dezembro|ontem"
+
+
 def test_filtro_de_data_aceita_vazio():
     assert _renderizar("[{{ d|udate }}]", d=None) == "[]"
 

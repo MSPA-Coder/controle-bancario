@@ -12,7 +12,7 @@
 {% block page_header %}
 <div class="page-header-title">
     <div>
-        <h1>{% trans "Fechamento mensal" %}</h1>
+        <h1>🔒 {% trans "Fechamento mensal" %}</h1>
     </div>
 </div>
 <div class="top-filter-card">
@@ -73,8 +73,8 @@
         <input type="hidden" name="filter_month" value="{{ monthly_close_filters.month|default:'' }}">
         <input type="hidden" name="filter_status" value="{{ monthly_close_filters.status }}">
         <div class="form-group" data-ui="field-260">
-            <label>{% trans "Conta" %}</label>
-            <select name="account_id" class="form-control" required>
+            <label for="mc-conta">{% trans "Conta" %}</label>
+            <select id="mc-conta" name="account_id" class="form-control" required>
                 <option value="">{% trans "Selecione…" %}</option>
                 {% for titular, contas in monthly_close_form_accounts|por_titular %}
                 <optgroup label="{{ titular }}">
@@ -86,12 +86,12 @@
             </select>
         </div>
         <div class="form-group" data-ui="field-180">
-            <label>{% trans "Mês" %}</label>
-            <input type="number" name="month" class="form-control" min="1" max="12" value="{{ monthly_close_default_month }}" placeholder="{% trans 'Mês' %}" required>
+            <label for="mc-mes">{% trans "Mês" %}</label>
+            <input type="number" id="mc-mes" name="month" class="form-control" min="1" max="12" value="{{ monthly_close_default_month }}" placeholder="{% trans 'Mês' %}" required>
         </div>
         <div class="form-group" data-ui="field-180">
-            <label>{% trans "Ano" %}</label>
-            <input type="number" name="year" class="form-control" min="2000" max="2100" value="{{ monthly_close_default_year }}" placeholder="{% trans 'Ano' %}" required>
+            <label for="mc-ano">{% trans "Ano" %}</label>
+            <input type="number" id="mc-ano" name="year" class="form-control" min="2000" max="2100" value="{{ monthly_close_default_year }}" placeholder="{% trans 'Ano' %}" required>
         </div>
         <button type="submit" class="btn btn-primary"
                 data-sa-confirmar="{% trans 'Fechar este mês para a conta selecionada? As alterações no período ficarão bloqueadas até uma reabertura explícita.' %}"
@@ -127,7 +127,7 @@
                             <input type="hidden" name="account_id" value="{{ close.account_id }}">
                             <input type="hidden" name="year" value="{{ close.year }}">
                             <input type="hidden" name="month" value="{{ close.month }}">
-                            <input type="text" name="reason" class="form-control" placeholder="{% trans 'Motivo' %}" maxlength="255" required>
+                            <input type="text" name="reason" class="form-control" placeholder="{% trans 'Motivo' %}" aria-label="{% trans 'Motivo' %}" maxlength="255" required>
                             <button type="submit" class="btn btn-warning btn-sm"
                                     data-sa-confirmar="{% trans 'Reabrir este mês? Informe um motivo auditável para liberar novas alterações no período.' %}"
                                     data-sa-titulo="{% trans 'Confirmar reabertura mensal' %}"

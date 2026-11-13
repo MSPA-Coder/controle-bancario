@@ -16,9 +16,9 @@
             <tr>
                 <td>{{ fp.fechamento|udate }}</td>
                 <td>{{ fp.vencimento|udate }}</td>
-                <td class="amount">{{ fp.lancado|money:conta.currency }}</td>
-                <td class="amount">{{ fp.estimativa.valor|money:conta.currency }}</td>
-                <td class="amount"><strong>{{ fp.total|money:conta.currency }}</strong></td>
+                <td class="amount">{{ fp.lancado|money:conta.currency|default:"—" }}</td>
+                <td class="amount">{{ fp.estimativa.valor|money:conta.currency|default:"—" }}</td>
+                <td class="amount"><strong>{{ fp.total|money:conta.currency|default:"—" }}</strong></td>
                 <td>{% if fp.agendado %}{% blocktrans trimmed with valor=fp.agendado|money:conta.currency %}já agendado: {{ valor }}{% endblocktrans %}
                     {% elif fp.pagamento %}{% blocktrans trimmed with conta_nome=fp.conta_de_pagamento.account_name %}de {{ conta_nome }}{% endblocktrans %}
                     {% elif not fp.conta_de_pagamento %}{% trans "sem conta de pagamento" %}

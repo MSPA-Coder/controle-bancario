@@ -30,8 +30,7 @@
                         <span class="badge {% if op.operation_type == 'installment' %}badge-installment{% elif op.operation_type == 'recurring' %}badge-recurring{% else %}badge-internal{% endif %}">{{ op.operation_label }}</span>
                     </td>
                     <td>
-                        {{ op.description }}
-                        <div class="operation-id">{{ op.operation_id }}</div>
+                        <span data-operation-id="{{ op.operation_id }}">{{ op.description }}</span>
                     </td>
                     <td>{{ op.origin_account }}</td>
                     <td>{{ op.destination_account }}</td>

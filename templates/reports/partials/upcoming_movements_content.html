@@ -21,7 +21,7 @@ sempre foi.
     </div>
     <div class="decision-card">
         <strong>{% trans "Movimento líquido" %}</strong>
-        <div class="decision-value card-value {{ bloco.report.summary.net_movement|amount_class }}">{{ bloco.report.summary.net_movement|money_signed:bloco.currency }}</div>
+        <div class="decision-value card-value {{ bloco.report.summary.net_movement|amount_class }}">{{ bloco.report.summary.net_movement|balance_signed:bloco.currency }}</div>
     </div>
     <div class="decision-card">
         <strong>{% trans "Menor saldo" %}</strong>

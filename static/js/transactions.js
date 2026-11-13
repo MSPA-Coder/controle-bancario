@@ -2,12 +2,39 @@
    TRANSACTIONS - funcoes de UI e re-init apos AJAX
    ============================================================ */
 
+/* O botão do cabeçalho ("Incluir") é o que está fora do painel; o "Cancelar"
+   de dentro também alterna, mas quem anuncia o estado é o primeiro. */
+function _entryFormOpener() {
+    return document.querySelector(
+        '[data-transaction-action="toggle-entry-form"][aria-controls="newTransactionCard"]'
+    );
+}
+
 function toggleEntryForm(force) {
     var card = document.getElementById('newTransactionCard');
     if (!card) return;
     var show = force === undefined ? !card.classList.contains('is-open') : force;
     card.classList.toggle('is-open', show);
+    var opener = _entryFormOpener();
+    if (opener) opener.setAttribute('aria-expanded', show ? 'true' : 'false');
+    if (show) {
+        var first = card.querySelector('select, input:not([type="hidden"]), textarea');
+        if (first) first.focus();
+    } else if (opener && card.contains(document.activeElement)) {
+        opener.focus();
+    }
 }
+
+/* Esc com o foco dentro do painel fecha e devolve o foco ao "Incluir". Não age
+   se um modal da tela (ou um diálogo) está aberto por cima. */
+document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape' || event.defaultPrevented) return;
+    var card = document.getElementById('newTransactionCard');
+    if (!card || !card.classList.contains('is-open')) return;
+    if (!card.contains(document.activeElement)) return;
+    if (document.querySelector('.app-modal.is-open, dialog[open]')) return;
+    toggleEntryForm(false);
+});
 
 /* A data so e obrigatoria enquanto o campo aparece: campo oculto e
    obrigatorio travaria o envio sem dizer por que. O servidor recusa o

@@ -5,6 +5,7 @@
         type="button"
         class="sidebar-link sidebar-toggle level-{{ item.level }}{% if item.active %} active{% endif %}"
         data-sidebar-toggle
+        aria-controls="submenu-{{ item.level }}-{{ item.label|slugify }}"
         title="{{ item.label }}"
         aria-expanded="{% if item.active %}true{% else %}false{% endif %}"
     >
@@ -14,7 +15,7 @@
         </span>
         <span class="sidebar-chevron" aria-hidden="true">⌄</span>
     </button>
-    <div class="sidebar-submenu">
+    <div class="sidebar-submenu" id="submenu-{{ item.level }}-{{ item.label|slugify }}">
         {% for child in item.children %}
             {% include "components/_nav_item.html" with item=child %}
         {% endfor %}

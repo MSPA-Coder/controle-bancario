@@ -204,7 +204,7 @@ def test_tendencia_compara_os_tres_meses_ate_o_escolhido_com_os_tres_anteriores(
     saude = painel()["financial_health"]
 
     # jan-mar geraram 100; abr-jun, 300.
-    assert saude["trend_percent"] == "+200.0%"
+    assert saude["trend_percent"] == "+200,0%"
     # Só os dois meses com movimento contam, e os dois fecharam com sobra.
     assert (saude["positive_months"], saude["total_months"]) == (2, 2)
 

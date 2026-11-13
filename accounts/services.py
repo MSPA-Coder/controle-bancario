@@ -376,6 +376,11 @@ def permission_summary(user: AppUser | None) -> dict:
         "critical_allowed_count": len(allowed_keys & CRITICAL_PERMISSION_KEYS),
         "critical_total_count": len(CRITICAL_PERMISSION_KEYS),
         "missing_recommended_permissions": sorted(recommended_keys - allowed_keys),
+        # O que a tela mostra: a descrição da permissão, não a chave técnica.
+        "missing_recommended_labels": [
+            gettext(PERMISSION_DEFINITIONS[key]) if key in PERMISSION_DEFINITIONS else key
+            for key in sorted(recommended_keys - allowed_keys)
+        ],
     }
 
 

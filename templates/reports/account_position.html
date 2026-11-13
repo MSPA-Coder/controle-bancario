@@ -8,33 +8,34 @@
 {% endblock %}
 
 {% block page_header %}
+<h1 class="sr-only">{% trans "Posição por conta" %}</h1>
 <div class="top-filter-card">
     <form method="get" class="top-filter-row projection-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
         {% if current_account_id %}<input type="hidden" name="account_id" value="{{ current_account_id }}">{% endif %}
-        <label class="top-filter-field compact">
+        <label class="top-filter-field compact" for="apf-period">
             {% trans "Período" %}
-            <input type="month" name="period" value="{{ selected_period }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}>
+            <input type="month" name="period" id="apf-period" value="{{ selected_period }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}>
         </label>
-        <label class="top-filter-field compact">
+        <label class="top-filter-field compact" for="apf-mode">
             {% trans "Status" %}
-            <select name="mode">
+            <select name="mode" id="apf-mode">
                 {% for mode_value, mode_label in view_mode_options %}
                 <option value="{{ mode_value }}" {% if mode_value == view_mode %}selected{% endif %}>{{ mode_label }}</option>
                 {% endfor %}
             </select>
         </label>
-        <label class="top-filter-field">
+        <label class="top-filter-field" for="apf-owner">
             {% trans "Titular" %}
-            <select name="owner_id">
+            <select name="owner_id" id="apf-owner">
                 <option value="">{% trans "Todos os titulares" %}</option>
                 {% for owner in owners %}
                 <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                 {% endfor %}
             </select>
         </label>
-        <label class="top-filter-field">
+        <label class="top-filter-field" for="apf-institution">
             {% trans "Instituição" %}
-            <select name="institution_id">
+            <select name="institution_id" id="apf-institution">
                 <option value="">{% trans "Todas as instituições" %}</option>
                 {% for bank in banks %}
                 <option value="{{ bank.id }}" {% if bank.id == current_institution_id %}selected{% endif %}>{{ bank.institution_name }}</option>

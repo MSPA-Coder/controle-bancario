@@ -7,8 +7,8 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
 `system_start_date`, `today`, `new_entry_defaults` (herdados da view).
 {% endcomment %}
 <div>
-    <label>{% trans "Conta" %}</label>
-    <select name="account_id" aria-label="{% trans 'Conta' %}" required>
+    <label for="campo-{{ form_id }}-account_id">{% trans "Conta" %} <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+    <select id="campo-{{ form_id }}-account_id" name="account_id" aria-label="{% trans 'Conta' %}" required>
         <option value="">{% trans "Selecione…" %}</option>
         {% if t %}
         {% for titular, contas in update_accounts|por_titular %}
@@ -30,15 +30,15 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
     </select>
 </div>
 <div>
-    <label>{% trans "Tipo" %}</label>
-    <select name="entry_type" aria-label="{% trans 'Tipo' %}" required>
+    <label for="campo-{{ form_id }}-entry_type">{% trans "Tipo" %} <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+    <select id="campo-{{ form_id }}-entry_type" name="entry_type" aria-label="{% trans 'Tipo' %}" required>
         <option value="receita" {% if t and t.entry_type == 'receita' %}selected{% elif not t and new_entry_defaults.entry_type == 'receita' %}selected{% endif %}>{% trans "Receita" %}</option>
         <option value="despesa" {% if t and t.entry_type == 'despesa' %}selected{% elif not t and new_entry_defaults.entry_type != 'receita' %}selected{% endif %}>{% trans "Despesa" %}</option>
     </select>
 </div>
 <div>
-    <label>{% trans "Categoria" %}</label>
-    <select name="category_id" aria-label="{% trans 'Categoria' %}" required class="category-select">
+    <label for="campo-{{ form_id }}-category_id">{% trans "Categoria" %} <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+    <select id="campo-{{ form_id }}-category_id" name="category_id" aria-label="{% trans 'Categoria' %}" required class="category-select">
         <option value="" data-internal="0">{% trans "Selecione…" %}</option>
         {% for cat in categories %}
         {% comment %}
@@ -50,20 +50,20 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
     </select>
 </div>
 <div>
-    <label>{% trans "Status" %}</label>
-    <select name="status" class="status-select" aria-label="{% trans 'Status' %}">
+    <label for="campo-{{ form_id }}-status">{% trans "Status" %}</label>
+    <select id="campo-{{ form_id }}-status" name="status" class="status-select" aria-label="{% trans 'Status' %}">
         {% for status_value, status_label in status_options %}
         <option value="{{ status_value }}" {% if t and t.status == status_value %}selected{% elif not t and new_entry_defaults.status == status_value %}selected{% endif %}>{{ status_label }}</option>
         {% endfor %}
     </select>
 </div>
 <div class="span-2">
-    <label>{% trans "Descrição" %}</label>
-    <input type="text" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="{% trans 'Descrição' %}" placeholder="{% trans 'Ex: Supermercado, salário…' %}" data-transfer-description-prefix="{% trans 'Conta destino' %}" required>
+    <label for="campo-{{ form_id }}-description">{% trans "Descrição" %} <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+    <input type="text" id="campo-{{ form_id }}-description" name="description" maxlength="255" value="{% if t %}{{ t.description }}{% endif %}" aria-label="{% trans 'Descrição' %}" placeholder="{% trans 'Ex: Supermercado, salário…' %}" data-transfer-description-prefix="{% trans 'Conta destino' %}" required>
 </div>
 <div class="counterparty-field" data-ui="hidden">
-    <label>{% if t %}{% trans "Conta contraparte" %}{% else %}{% trans "Conta destino" %}{% endif %}</label>
-    <select name="counterparty_account_id" aria-label="{% trans 'Conta contraparte' %}">
+    <label for="campo-{{ form_id }}-counterparty_account_id">{% if t %}{% trans "Conta contraparte" %}{% else %}{% trans "Conta destino" %}{% endif %}</label>
+    <select id="campo-{{ form_id }}-counterparty_account_id" name="counterparty_account_id" aria-label="{% trans 'Conta contraparte' %}">
         <option value="">{% trans "Selecione…" %}</option>
         {% for titular, contas in counterparty_accounts|por_titular %}
         <optgroup label="{{ titular }}">
@@ -75,8 +75,8 @@ edição inline da tabela. Espera no contexto: `t` (CashFlowEntry ou None),
     </select>
 </div>
 <div>
-    <label>{% trans "Valor total" %} (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
-    <input type="number" step="0.01" name="entry_amount" value="{% if t %}{{ t.entry_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor total' %}" required>
+    <label for="campo-{{ form_id }}-entry_amount">{% trans "Valor total" %} (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>) <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+    <input type="number" step="0.01" id="campo-{{ form_id }}-entry_amount" name="entry_amount" value="{% if t %}{{ t.entry_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor total' %}" required>
 </div>
 {% comment %}
 Só aparece quando a conta de origem e a conta destino estão em moedas
@@ -86,20 +86,20 @@ desabilitado não é enviado -- e o serviço recusa este valor quando as moedas
 são iguais (`counterparty_amount_for_transfer`).
 {% endcomment %}
 <div class="counterparty-amount-field" data-ui="hidden">
-    <label>{% trans "Valor creditado no destino" %} (<span data-currency-for="counterparty">US$</span>)</label>
-    <input type="number" step="0.01" name="counterparty_amount" value="{% if t and t.counterparty_entry_amount != None %}{{ t.counterparty_entry_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor creditado no destino' %}" disabled>
+    <label for="campo-{{ form_id }}-counterparty_amount">{% trans "Valor creditado no destino" %} (<span data-currency-for="counterparty">US$</span>)</label>
+    <input type="number" step="0.01" id="campo-{{ form_id }}-counterparty_amount" name="counterparty_amount" value="{% if t and t.counterparty_entry_amount != None %}{{ t.counterparty_entry_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor creditado no destino' %}" disabled>
 </div>
 <div>
-    <label>{% trans "Vencimento" %}</label>
-    <input type="date" name="due_date" value="{% if t and t.due_date %}{{ t.due_date|date:'Y-m-d' }}{% else %}{{ new_entry_defaults.due_date }}{% endif %}" aria-label="{% trans 'Vencimento' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
+    <label for="campo-{{ form_id }}-due_date">{% trans "Vencimento" %} <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+    <input type="date" id="campo-{{ form_id }}-due_date" name="due_date" value="{% if t and t.due_date %}{{ t.due_date|date:'Y-m-d' }}{% else %}{{ new_entry_defaults.due_date }}{% endif %}" aria-label="{% trans 'Vencimento' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
 </div>
 <div>
-    <label>{% trans "Parcelas" %}</label>
-    <input type="number" name="installments" min="1" max="48" value="{% if t %}{{ t.installments }}{% else %}1{% endif %}" aria-label="{% trans 'Parcelas' %}">
+    <label for="campo-{{ form_id }}-installments">{% trans "Parcelas" %}</label>
+    <input type="number" id="campo-{{ form_id }}-installments" name="installments" min="1" max="48" value="{% if t %}{{ t.installments }}{% else %}1{% endif %}" aria-label="{% trans 'Parcelas' %}">
 </div>
 <div>
-    <label>{% trans "Modo de cálculo" %}</label>
-    <select name="calc_mode" aria-label="{% trans 'Modo de cálculo' %}">
+    <label for="campo-{{ form_id }}-calc_mode">{% trans "Modo de cálculo" %}</label>
+    <select id="campo-{{ form_id }}-calc_mode" name="calc_mode" aria-label="{% trans 'Modo de cálculo' %}">
         <option value="repeat" selected>{% trans "Repetir valor" %}</option>
         <option value="divide">{% trans "Dividir valor" %}</option>
     </select>
@@ -109,17 +109,17 @@ são iguais (`counterparty_amount_for_transfer`).
     <label for="recurring-{{ form_id }}" data-ui="m-0">{% trans "Recorrente mensal" %}</label>
 </div>
 <div class="realized-field" data-ui="hidden">
-    <label>{% trans "Data de realização" %}</label>
-    <input type="date" name="realized_date" value="{% if t and t.realized_date %}{{ t.realized_date|date:'Y-m-d' }}{% endif %}" aria-label="{% trans 'Data de realização' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
+    <label for="campo-{{ form_id }}-realized_date">{% trans "Data de realização" %}</label>
+    <input type="date" id="campo-{{ form_id }}-realized_date" name="realized_date" value="{% if t and t.realized_date %}{{ t.realized_date|date:'Y-m-d' }}{% endif %}" aria-label="{% trans 'Data de realização' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %}>
 </div>
 <div class="realized-field" data-ui="hidden">
-    <label>{% trans "Valor realizado" %} (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
-    <input type="number" step="0.01" name="realized_amount" value="{% if t and t.realized_amount != None %}{{ t.realized_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor realizado' %}">
+    <label for="campo-{{ form_id }}-realized_amount">{% trans "Valor realizado" %} (<span data-currency-for="account">{% if t %}{{ t.account.currency|currency_symbol }}{% else %}R${% endif %}</span>)</label>
+    <input type="number" step="0.01" id="campo-{{ form_id }}-realized_amount" name="realized_amount" value="{% if t and t.realized_amount != None %}{{ t.realized_amount|unlocalize }}{% endif %}" aria-label="{% trans 'Valor realizado' %}">
 </div>
 {% if t and t.supports_scope %}
 <div class="span-2">
-    <label>{% trans "Aplicar alteração" %}</label>
-    <select name="operation_scope" aria-label="{% trans 'Aplicar alteração' %}" required
+    <label for="campo-{{ form_id }}-operation_scope">{% trans "Aplicar alteração" %} <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+    <select id="campo-{{ form_id }}-operation_scope" name="operation_scope" aria-label="{% trans 'Aplicar alteração' %}" required
         data-current-future-token="{{ t.current_future_confirmation_token }}"
         {% if t.current_future_attachment_count %}data-current-future-confirm="{% blocktrans trimmed count counter=t.current_future_attachment_count %}Este registro e as parcelas seguintes serão recriados ao salvar com esse escopo, o que apaga {{ counter }} comprovante anexado a eles. Deseja continuar?{% plural %}Este registro e as parcelas seguintes serão recriados ao salvar com esse escopo, o que apaga {{ counter }} comprovantes anexados a eles. Deseja continuar?{% endblocktrans %}"{% endif %}>
         <option value="all">{% trans "Todos os registros do grupo" %}</option>

@@ -24,20 +24,20 @@
         <form method="post" action="{% url 'core:settings_update_password_policy' %}" class="settings-password-grid">
             {% csrf_token %}
             <div class="form-group">
-                <label>{% trans "Quantidade mínima de caracteres" %}</label>
-                <input type="number" name="min_length" class="form-control" min="{{ password_min_length_floor }}" max="256" value="{{ password_policy_settings.min_length }}" required>
+                <label for="st-min-length">{% trans "Quantidade mínima de caracteres" %}</label>
+                <input type="number" name="min_length" id="st-min-length" class="form-control" min="{{ password_min_length_floor }}" max="256" value="{{ password_policy_settings.min_length }}" required>
             </div>
             <div class="form-group">
-                <label>{% trans "Quantidade de maiúsculas" %}</label>
-                <input type="number" name="min_uppercase" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_uppercase }}" required>
+                <label for="st-min-uppercase">{% trans "Quantidade de maiúsculas" %}</label>
+                <input type="number" name="min_uppercase" id="st-min-uppercase" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_uppercase }}" required>
             </div>
             <div class="form-group">
-                <label>{% trans "Quantidade de números" %}</label>
-                <input type="number" name="min_numbers" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_numbers }}" required>
+                <label for="st-min-numbers">{% trans "Quantidade de números" %}</label>
+                <input type="number" name="min_numbers" id="st-min-numbers" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_numbers }}" required>
             </div>
             <div class="form-group">
-                <label>{% trans "Quantidade de caracteres especiais" %}</label>
-                <input type="number" name="min_special" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_special }}" required>
+                <label for="st-min-special">{% trans "Quantidade de caracteres especiais" %}</label>
+                <input type="number" name="min_special" id="st-min-special" class="form-control" min="0" max="128" value="{{ password_policy_settings.min_special }}" required>
             </div>
             <div class="btn-group" data-ui="settings-actions">
                 <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar a política de senhas?' %}" data-sa-titulo="{% trans 'Confirmar política' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
@@ -50,12 +50,12 @@
         <form method="post" action="{% url 'core:settings_update_login_lockout' %}" class="settings-password-grid">
             {% csrf_token %}
             <div class="form-group">
-                <label>{% trans "Tentativas inválidas até bloquear" %}</label>
-                <input type="number" name="max_failures" class="form-control" min="1" max="1000" value="{{ login_lockout_policy_settings.max_failures }}" required>
+                <label for="st-max-failures">{% trans "Tentativas inválidas até bloquear" %}</label>
+                <input type="number" name="max_failures" id="st-max-failures" class="form-control" min="1" max="1000" value="{{ login_lockout_policy_settings.max_failures }}" required>
             </div>
             <div class="form-group">
-                <label>{% trans "Tempo de bloqueio (minutos)" %}</label>
-                <input type="number" name="lock_minutes" class="form-control" min="1" max="525600" value="{{ login_lockout_policy_settings.lock_minutes }}" required>
+                <label for="st-lock-minutes">{% trans "Tempo de bloqueio (minutos)" %}</label>
+                <input type="number" name="lock_minutes" id="st-lock-minutes" class="form-control" min="1" max="525600" value="{{ login_lockout_policy_settings.lock_minutes }}" required>
             </div>
             <div class="btn-group" data-ui="settings-actions">
                 <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar a política de bloqueio de login?' %}" data-sa-titulo="{% trans 'Confirmar política' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
@@ -71,19 +71,19 @@
         <form method="post" action="{% url 'core:settings_update_recurring_projection' %}" class="btn-group" data-ui="items-end">
             {% csrf_token %}
             <div class="form-group" data-ui="field-220">
-                <label>{% trans "Horizonte de projeção (meses)" %}</label>
-                <input type="number" name="horizon_months" class="form-control" min="1" max="36" value="{{ projection_settings.horizon_months }}" required>
+                <label for="st-horizon-months">{% trans "Horizonte de projeção (meses)" %}</label>
+                <input type="number" name="horizon_months" id="st-horizon-months" class="form-control" min="1" max="36" value="{{ projection_settings.horizon_months }}" required>
             </div>
             <div class="form-group" data-ui="field-220">
-                <label>{% trans "Dia de execução automática" %}</label>
-                <input type="number" name="run_day" class="form-control" min="1" max="31" value="{{ projection_settings.run_day }}" required>
+                <label for="st-run-day">{% trans "Dia de execução automática" %}</label>
+                <input type="number" name="run_day" id="st-run-day" class="form-control" min="1" max="31" value="{{ projection_settings.run_day }}" required>
             </div>
             <input type="hidden" name="system_start_date" value="{{ current_system_start_date|date:'Y-m-d' }}">
             <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar as configurações de projeção?' %}" data-sa-titulo="{% trans 'Confirmar projeção' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
         </form>
         <div class="form-group" data-ui="mt-1">
-            <label>{% trans "Última execução" %}</label>
-            <input type="text" class="form-control" value="{{ last_projection_run }}" readonly>
+            <label for="st-last-run">{% trans "Última execução" %}</label>
+            <input type="text" id="st-last-run" class="form-control" value="{{ last_projection_run }}" readonly>
         </div>
         <form method="post" action="{% url 'core:settings_run_recurring_projection' %}" data-ui="inline">
             {% csrf_token %}
@@ -102,8 +102,8 @@
             <input type="hidden" name="horizon_months" value="{{ projection_settings.horizon_months }}">
             <input type="hidden" name="run_day" value="{{ projection_settings.run_day }}">
             <div class="form-group" data-ui="field-220">
-                <label>{% trans "Data inicial do sistema" %}</label>
-                <input type="date" name="system_start_date" class="form-control" value="{{ current_system_start_date|date:'Y-m-d' }}">
+                <label for="st-system-start-date">{% trans "Data inicial do sistema" %}</label>
+                <input type="date" name="system_start_date" id="st-system-start-date" class="form-control" value="{{ current_system_start_date|date:'Y-m-d' }}">
             </div>
             <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Salvar a data inicial do sistema?' %}" data-sa-titulo="{% trans 'Confirmar configuração' %}" data-sa-severidade="warning" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>
         </form>

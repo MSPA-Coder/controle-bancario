@@ -19,7 +19,15 @@ register = template.Library()
 
 @register.filter
 def udate(value) -> str:
-    """31/12/2026 no Brasil, 12/31/2026 nos EUA. Vazio se não há data."""
+    """31/12/2026 no Brasil, 12/31/2026 nos EUA. Vazio se não há data.
+
+    Aceita data ou texto ISO (2026-12-31); texto que não é data sai como veio.
+    """
+    if isinstance(value, str):
+        try:
+            value = date.fromisoformat(value)
+        except ValueError:
+            return value
     return regional.formatar_data(value)
 
 
@@ -61,5 +69,14 @@ def udaymonth(value) -> str:
 
 @register.filter
 def umonth(value) -> str:
-    """12/2026 nos dois formatos (mês antes do ano em ambos)."""
+    """12/2026 nos dois formatos (mês antes do ano em ambos).
+
+    Aceita data ou o texto de período das telas (2026-12); texto que não é
+    período sai como veio.
+    """
+    if isinstance(value, str):
+        try:
+            value = date.fromisoformat(f"{value}-01")
+        except ValueError:
+            return value
     return regional.formatar_mes(value)

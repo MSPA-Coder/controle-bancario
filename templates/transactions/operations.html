@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block page_header %}
+<h1 class="sr-only">{% trans "Parcelas e recorrências" %}</h1>
 <div class="top-filter-card">
     <form method="get" class="top-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
         <input type="hidden" name="page_size" value="{{ page_size }}">
@@ -39,7 +40,7 @@
         </label>
         <div class="top-filter-actions">
             <a href="{% url 'transactions:operations_view' %}" class="btn btn-ghost btn-sm" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>{% trans "Limpar" %}</span></a>
-            <a href="{% url 'transactions:transactions_view' %}" class="btn btn-primary btn-sm">{% icon 'back' %}<span>{% trans "Voltar" %}</span></a>
+            <a href="{% url 'transactions:transactions_view' %}" class="btn btn-ghost btn-sm">{% icon 'back' %}<span>{% trans "Voltar" %}</span></a>
         </div>
     </form>
 </div>

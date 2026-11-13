@@ -7,6 +7,7 @@
 {% endblock %}
 
 {% block page_header %}
+<h1 class="sr-only">{% trans "Lançamentos" %}</h1>
 <div class="top-filter-card">
     {% comment %}
     Os filtros da tabela (`[data-table-filter]`, em _table_body.html) ficam fora
@@ -81,7 +82,7 @@
         </label>
         <div class="top-filter-actions">
             <a href="{% url 'transactions:transactions_view' %}?period={{ current_period }}&amp;mode=a_vencer" class="btn btn-ghost btn-sm" title="{% trans 'Limpar filtros' %}" hx-boost="true" {% nav_filtro %}>{% icon 'x' %}<span>{% trans "Limpar" %}</span></a>
-            {% if can_create_transactions %}<button type="button" class="btn btn-primary btn-sm" data-transaction-action="toggle-entry-form" title="{% trans 'Novo lançamento' %}">{% icon 'plus' %}<span>{% trans "Incluir" %}</span></button>{% endif %}
+            {% if can_create_transactions %}<button type="button" class="btn btn-primary btn-sm" data-transaction-action="toggle-entry-form" aria-controls="newTransactionCard" aria-expanded="{% if new_entry_open %}true{% else %}false{% endif %}" title="{% trans 'Novo lançamento' %}">{% icon 'plus' %}<span>{% trans "Incluir" %}</span></button>{% endif %}
         </div>
     </form>
 </div>
@@ -98,7 +99,7 @@
         {% include "transactions/_fields.html" with t=None form_id="new" %}
         <div class="span-4 form-actions">
             {# Fecha o cartão sem navegar: a lista atrás continua como estava, filtros inclusos. #}
-            <button type="button" class="btn btn-ghost" data-transaction-action="toggle-entry-form">{% icon 'back' %}<span>{% trans "Voltar" %}</span></button>
+            <button type="button" class="btn btn-ghost" data-transaction-action="toggle-entry-form">{% icon 'x' %}<span>{% trans "Cancelar" %}</span></button>
             <button type="submit" class="btn btn-primary"
                     data-sa-confirmar="{% trans 'Criar este lançamento financeiro?' %}"
                     data-sa-titulo="{% trans 'Confirmar lançamento' %}"
@@ -133,12 +134,12 @@
             {% csrf_token %}
             <input type="hidden" id="modal_tx_id" name="tx_id">
             <div class="form-group" data-ui="mt-075">
-                <label>{% trans "Data de realização" %}</label>
-                <input type="date" name="realized_date" aria-label="{% trans 'Data de realização' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
+                <label for="realizeDate">{% trans "Data de realização" %} <span aria-hidden="true">*</span><span class="sr-only">{% trans "(obrigatório)" %}</span></label>
+                <input type="date" id="realizeDate" name="realized_date" aria-label="{% trans 'Data de realização' %}" {% if system_start_date %}min="{{ system_start_date }}"{% endif %} required>
             </div>
             <div class="form-group" data-ui="mt-055-mb-085">
-                <label>{% trans "Valor realizado" %} (<span data-realize-currency-symbol>R$</span>)</label>
-                <input type="number" step="0.01" name="realized_amount" aria-label="{% trans 'Valor realizado' %}">
+                <label for="realizeAmount">{% trans "Valor realizado" %} (<span data-realize-currency-symbol>R$</span>)</label>
+                <input type="number" step="0.01" id="realizeAmount" name="realized_amount" aria-label="{% trans 'Valor realizado' %}">
             </div>
             <div class="modal-actions">
                 <button type="button" data-transaction-action="close-realize" class="modal-btn modal-btn-cancel">{% trans "Cancelar" %}</button>
@@ -170,7 +171,7 @@
             {% csrf_token %}
             <input type="hidden" name="current_future_confirmation_token" id="deleteCurrentFutureConfirmationToken" value="">
             <div id="deleteScopeOptions" data-ui="delete-scope-hidden">
-                <label data-ui="delete-scope-label">{% trans "Excluir" %}</label>
+                <label for="deleteScopeSelect" data-ui="delete-scope-label">{% trans "Excluir" %}</label>
                 <select id="deleteScopeSelect" name="operation_scope" class="form-control" aria-label="{% trans 'Escopo de exclusão' %}" required disabled>
                     <option value="single" selected>{% trans "Somente este registro" %}</option>
                     <option value="all">{% trans "Todos os registros do grupo" %}</option>

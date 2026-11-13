@@ -62,7 +62,7 @@
             </button>
         </div>
     </form>
-    <table class="tx-table">
+    <table class="tx-table reconciliation-table">
         <thead>
             <tr>
                 <th><input type="checkbox" data-select-all="line_ids" aria-label="{% trans 'Selecionar todas' %}"></th>
@@ -104,7 +104,7 @@
                               class="edit-form u-d-flex u-gap-05 u-items-center">
                             {% csrf_token %}
                             <input type="hidden" name="line_id" value="{{ line.id }}">
-                            <select name="entry_id" required>
+                            <select name="entry_id" required aria-label="{% trans 'Conciliar com lançamento' %}">
                                 {% if line.reconcile_candidates|length > 1 %}
                                 <option value="">{% trans "Selecione…" %}</option>
                                 {% endif %}

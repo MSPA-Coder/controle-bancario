@@ -28,7 +28,7 @@
     .action-pill.neutral { color:var(--muted); background:var(--bg-header); }
     .action-message { display:block; color:var(--muted); font-size:0.72rem; margin-top:0.18rem; line-height:1.25; }
     .line-description { color:var(--muted); font-size:0.72rem; margin-top:0.12rem; overflow-wrap:anywhere; }
-    .internal-badge { display:inline-flex; align-items:center; border:1px solid var(--border); border-radius:999px; padding:0.05rem 0.35rem; font-size:0.68rem; color:var(--muted); margin-left:0.25rem; white-space:nowrap; }
+    .internal-badge { display:inline-flex; align-items:center; border:1px solid var(--border); border-radius:999px; padding:0.05rem 0.35rem; font-size:0.72rem; color:var(--muted); margin-left:0.25rem; white-space:nowrap; }
     @media (max-width: 1100px) {
         .upcoming-filter-row { flex-wrap:wrap; }
         .decision-strip { grid-template-columns:repeat(2, minmax(0, 1fr)); }

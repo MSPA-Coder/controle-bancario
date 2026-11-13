@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 04:09-0300\n"
+"POT-Creation-Date: 2026-11-13 10:41-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2094,6 +2094,7 @@ msgid "Movimentação"
 msgstr "Activity"
 
 #: core/context_processors.py templates/banking/reclassificacao.html
+#: templates/transactions/index.html
 msgid "Lançamentos"
 msgstr "Entries"
 
@@ -2144,11 +2145,11 @@ msgstr "Reclassification"
 msgid "Fechamento mensal"
 msgstr "Monthly close"
 
-#: core/context_processors.py
+#: core/context_processors.py templates/transactions/operations.html
 msgid "Parcelas e recorrências"
 msgstr "Installments and recurrences"
 
-#: core/context_processors.py
+#: core/context_processors.py templates/banking/attachments.html
 msgid "Comprovantes"
 msgstr "Receipts"
 
@@ -2156,15 +2157,15 @@ msgstr "Receipts"
 msgid "Relatórios"
 msgstr "Reports"
 
-#: core/context_processors.py
+#: core/context_processors.py templates/reports/upcoming_movements.html
 msgid "Próximos movimentos"
 msgstr "Upcoming movements"
 
-#: core/context_processors.py
+#: core/context_processors.py templates/reports/projections.html
 msgid "Projeções"
 msgstr "Projections"
 
-#: core/context_processors.py
+#: core/context_processors.py templates/reports/account_position.html
 msgid "Posição por conta"
 msgstr "Position by account"
 
@@ -2174,6 +2175,7 @@ msgid "Planejamento anual"
 msgstr "Annual planning"
 
 #: core/context_processors.py
+#: templates/management/partials/management_content.html
 msgid "Controle gerencial"
 msgstr "Management"
 
@@ -4451,10 +4453,6 @@ msgid "Movimentação • Comprovantes"
 msgstr "Activity • Receipts"
 
 #: templates/banking/attachments.html
-msgid "Anexar comprovantes"
-msgstr "Attach receipts"
-
-#: templates/banking/attachments.html
 msgid "Anexar comprovante a lançamento"
 msgstr "Attach receipt to entry"
 
@@ -4486,6 +4484,10 @@ msgstr "Save"
 #: templates/banking/attachments.html
 msgid "Anexar"
 msgstr "Attach"
+
+#: templates/banking/attachments.html
+msgid "O número do lançamento aparece na coluna ID dos lançamentos mais recentes, em Controle gerencial."
+msgstr "The entry number appears in the ID column of the latest entries, under Management."
 
 #: templates/banking/attachments.html
 msgid "Comprovantes recentes"
@@ -5330,6 +5332,10 @@ msgstr "card"
 msgid "Nenhuma conta ao seu alcance."
 msgstr "No accounts available to you."
 
+#: templates/base.html
+msgid "Pular para o conteúdo"
+msgstr "Skip to content"
+
 #: templates/components/_global_filters_banner.html
 msgid "Mostrando só"
 msgstr "Showing only"
@@ -5857,10 +5863,6 @@ msgstr "All accounts"
 #: templates/settings/monthly_close.html
 msgid "Mês"
 msgstr "Month"
-
-#: templates/management/partials/management_content.html
-msgid "Painel gerencial"
-msgstr "Management dashboard"
 
 #: templates/management/partials/management_content.html
 msgid "Criar tag"
@@ -6674,7 +6676,7 @@ msgid "Última otimização"
 msgstr "Last optimization"
 
 #: templates/settings/database.html
-msgid "Executar o health check do banco?"
+msgid "Executar a verificação de saúde do banco?"
 msgstr "Run the database health check?"
 
 #: templates/settings/database.html
@@ -6686,8 +6688,8 @@ msgid "Executar"
 msgstr "Run"
 
 #: templates/settings/database.html
-msgid "Health Check"
-msgstr "Health check"
+msgid "Verificar saúde do banco"
+msgstr "Check database health"
 
 #: templates/settings/database.html
 msgid "Executar VACUUM ANALYZE no banco?"
@@ -7375,6 +7377,10 @@ msgstr "View projection"
 msgid "Nenhuma fatura com vencimento no período selecionado."
 msgstr "No card statement is due in the selected period."
 
+#: templates/transactions/_fields.html templates/transactions/index.html
+msgid "(obrigatório)"
+msgstr "(required)"
+
 #: templates/transactions/_fields.html
 msgid "Ex: Supermercado, salário…"
 msgstr "E.g., Supermarket, salary…"
@@ -7575,10 +7581,6 @@ msgstr "Detailed entries"
 msgid "Novo lançamento"
 msgstr "New entry"
 
-#: templates/transactions/index.html templates/transactions/operations.html
-msgid "Voltar"
-msgstr "Back"
-
 #: templates/transactions/index.html
 msgid "Criar este lançamento financeiro?"
 msgstr "Create this financial entry?"
@@ -7643,6 +7645,10 @@ msgstr "End by"
 #: templates/transactions/operations.html
 msgid "Tipo da operação"
 msgstr "Operation type"
+
+#: templates/transactions/operations.html
+msgid "Voltar"
+msgstr "Back"
 
 #: templates/transactions/operations.html
 msgid "Exibindo a operação relacionada ao lançamento selecionado."

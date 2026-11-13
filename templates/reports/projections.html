@@ -9,45 +9,46 @@
 {% endblock %}
 
 {% block page_header %}
+<h1 class="sr-only">{% trans "Projeções" %}</h1>
 <div class="top-filter-card">
     <form method="get" class="top-filter-row projection-filter-row" hx-get="{{ request.path }}" hx-trigger="change" {% nav_filtro %}>
-        <label class="top-filter-field compact top-filter-month-range">
+        <label class="top-filter-field compact top-filter-month-range" for="pjf-start">
             {% trans "Mês inicial" %}
-            <input type="month" name="start_month" value="{{ start_month }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}>
+            <input type="month" name="start_month" id="pjf-start" value="{{ start_month }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}>
         </label>
-        <label class="top-filter-field compact top-filter-month-range">
+        <label class="top-filter-field compact top-filter-month-range" for="pjf-end">
             {% trans "Mês final" %}
-            <input type="month" name="end_month" value="{{ end_month }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}>
+            <input type="month" name="end_month" id="pjf-end" value="{{ end_month }}" {% if system_start_date %}min="{{ system_start_date|date:'Y-m' }}"{% endif %}>
         </label>
-        <label class="top-filter-field compact">
+        <label class="top-filter-field compact" for="pjf-mode">
             {% trans "Status" %}
-            <select name="mode">
+            <select name="mode" id="pjf-mode">
                 {% for mode_value, mode_label in view_mode_options %}
                 <option value="{{ mode_value }}" {% if mode_value == view_mode %}selected{% endif %}>{{ mode_label }}</option>
                 {% endfor %}
             </select>
         </label>
-        <label class="top-filter-field">
+        <label class="top-filter-field" for="pjf-owner">
             {% trans "Titular" %}
-            <select name="owner_id">
+            <select name="owner_id" id="pjf-owner">
                 <option value="">{% trans "Todos os titulares" %}</option>
                 {% for owner in owners %}
                 <option value="{{ owner.id }}" {% if owner.id == current_owner_id %}selected{% endif %}>{{ owner.name }}</option>
                 {% endfor %}
             </select>
         </label>
-        <label class="top-filter-field">
+        <label class="top-filter-field" for="pjf-institution">
             {% trans "Instituição" %}
-            <select name="institution_id">
+            <select name="institution_id" id="pjf-institution">
                 <option value="">{% trans "Todas as instituições" %}</option>
                 {% for bank in banks %}
                 <option value="{{ bank.id }}" {% if bank.id == current_institution_id %}selected{% endif %}>{{ bank.institution_name }}</option>
                 {% endfor %}
             </select>
         </label>
-        <label class="top-filter-field">
+        <label class="top-filter-field" for="pjf-account">
             {% trans "Conta" %}
-            <select name="account_id">
+            <select name="account_id" id="pjf-account">
                 <option value="">{% trans "Todas as contas" %}</option>
                 {% for titular, contas in accounts|por_titular %}
                 <optgroup label="{{ titular }}">

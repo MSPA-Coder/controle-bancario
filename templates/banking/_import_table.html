@@ -23,10 +23,13 @@
                 <td>{{ batch.row_count }}</td>
                 <td>
                     {% if batch.conferencia %}
+                        {# `money` esconde o zero; saldo zero é informação, então cai em `balance_signed`. #}
+                        {% firstof batch.conferencia.saldo_do_extrato|money:batch.account.currency batch.conferencia.saldo_do_extrato|balance_signed:batch.account.currency as saldo_do_extrato_txt %}
+                        {% firstof batch.conferencia.saldo_no_cb|money:batch.account.currency batch.conferencia.saldo_no_cb|balance_signed:batch.account.currency as saldo_no_cb_txt %}
                         {% if batch.conferencia.bate %}
-                        <span class="amount amount-positive">{% blocktrans trimmed with data_ref=batch.conferencia.data|udate saldo=batch.conferencia.saldo_do_extrato|money:batch.account.currency %}Bate em {{ data_ref }}: {{ saldo }}{% endblocktrans %}</span>
+                        <span class="amount amount-positive">{% blocktrans trimmed with data_ref=batch.conferencia.data|udate saldo=saldo_do_extrato_txt %}Bate em {{ data_ref }}: {{ saldo }}{% endblocktrans %}</span>
                         {% else %}
-                        <span class="amount amount-negative">{% blocktrans trimmed with saldo_extrato=batch.conferencia.saldo_do_extrato|money:batch.account.currency saldo_cb=batch.conferencia.saldo_no_cb|money:batch.account.currency data_ref=batch.conferencia.data|udate diferenca=batch.conferencia.diferenca|money:batch.account.currency %}Extrato {{ saldo_extrato }} · CB {{ saldo_cb }} em {{ data_ref }} · diferença {{ diferenca }}{% endblocktrans %}</span>
+                        <span class="amount amount-negative">{% blocktrans trimmed with saldo_extrato=saldo_do_extrato_txt saldo_cb=saldo_no_cb_txt data_ref=batch.conferencia.data|udate diferenca=batch.conferencia.diferenca|money:batch.account.currency %}Extrato {{ saldo_extrato }} · CB {{ saldo_cb }} em {{ data_ref }} · diferença {{ diferenca }}{% endblocktrans %}</span>
                         {% endif %}
                     {% else %}
                     <span class="empty-state">{% trans "O arquivo não informa saldo." %}</span>
@@ -42,7 +45,7 @@
                           hx-target="#import-results"
                           hx-swap="innerHTML" class="u-d-inline">
                         {% csrf_token %}
-                        <button type="submit" class="btn-sm btn-action-edit"
+                        <button type="submit" class="btn-sm btn-action-delete"
                                 data-sa-confirmar="{% trans 'Desfazer esta importação inteira? Os lançamentos conciliados voltam a ficar em aberto, conforme o vencimento (sem serem apagados) e o lote é removido. Se a conta estiver errada, é melhor reimportar na conta certa depois.' %}"
                                 data-sa-titulo="{% trans 'Desfazer importação' %}"
                                 data-sa-severidade="warning"

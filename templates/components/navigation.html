@@ -31,8 +31,8 @@
                             <fieldset class="sidebar-global-groups" data-global-choice="currency">
                                 <legend>{% trans "Moeda" %}</legend>
                                 {% for option in global_currency_options %}
-                                <label class="sidebar-global-group">
-                                    <input type="checkbox" value="{{ option.code }}" data-global-choice-box {% if option.selected %}checked{% endif %}>
+                                <label class="sidebar-global-group" for="gf-moeda-{{ forloop.counter }}">
+                                    <input type="checkbox" id="gf-moeda-{{ forloop.counter }}" value="{{ option.code }}" data-global-choice-box {% if option.selected %}checked{% endif %}>
                                     <span>{{ option.label }}</span>
                                 </label>
                                 {% endfor %}
@@ -43,8 +43,8 @@
                             <fieldset class="sidebar-global-groups" data-global-choice="grupos">
                                 <legend>{% trans "Contas" %}</legend>
                                 {% for group in global_account_group_options %}
-                                <label class="sidebar-global-group">
-                                    <input type="checkbox" value="{{ group.code }}" data-global-choice-box {% if group.selected %}checked{% endif %}>
+                                <label class="sidebar-global-group" for="gf-grupo-{{ forloop.counter }}">
+                                    <input type="checkbox" id="gf-grupo-{{ forloop.counter }}" value="{{ group.code }}" data-global-choice-box {% if group.selected %}checked{% endif %}>
                                     <span>{{ group.label }}</span>
                                     <small>{{ group.count }}</small>
                                 </label>

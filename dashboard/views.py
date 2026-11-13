@@ -156,6 +156,16 @@ def _categorias(
 	return sorted(totais.items(), key=lambda item: (-item[1], item[0]))
 
 
+def _numero_regional(valor: Decimal, casas: int, *, com_sinal: bool = False) -> str:
+	"""Decimal no formato regional do usuário (3,03 no Brasil, 3.03 nos EUA).
+
+	`regional.adaptar_numero` parte do texto brasileiro, então a conta é feita
+	em vírgula decimal e o separador final é trocado pela região ativa.
+	"""
+	texto = f"{valor:{'+' if com_sinal else ''}.{casas}f}".replace(".", ",")
+	return regional.adaptar_numero(texto)
+
+
 def _saude(months: list[dict], selected_index: int) -> dict:
 	income = [m["receita"].quantize(MONEY_QUANT) for m in months]
 	expense = [m["despesa"].quantize(MONEY_QUANT) for m in months]
@@ -175,6 +185,7 @@ def _saude(months: list[dict], selected_index: int) -> dict:
 	# Mês sem movimento nenhum não entra na conta, e mês que empatou não
 	# "fechou com sobra": o cartão diz sobra, então só conta geração positiva.
 	with_movement = [idx for idx in range(len(months)) if income[idx] or expense[idx]]
+	with_movement_set = set(with_movement)
 	positive_months = len([idx for idx in with_movement if generation[idx] > 0])
 
 	# Os 3 meses que terminam no escolhido contra os 3 anteriores. Era o fim da
@@ -203,16 +214,21 @@ def _saude(months: list[dict], selected_index: int) -> dict:
 		"expense": expense,
 		"generation": generation,
 		"summary": {
-			"average_coverage": f"{avg_coverage:.2f}×",
+			"average_coverage": f"{_numero_regional(avg_coverage, 2)}×",
 			"average_coverage_class": "amount-positive" if avg_coverage >= 1 else "amount-negative",
 			"positive_months": positive_months,
 			"total_months": len(with_movement),
 			"trend_class": trend[0],
 			"trend_symbol": trend[1],
-			"trend_percent": f"{trend_percent:+.1f}%",
+			"trend_percent": f"{_numero_regional(trend_percent, 1, com_sinal=True)}%",
 			"trend_caption": trend[2],
 			"coverage": [_to_float(v) if v is not None else None for v in coverage],
-			"generation": [_to_float(v) for v in generation],
+			# Mês sem receita nem despesa fica sem ponto (lacuna), como na cobertura:
+			# zero desenharia uma queda que não aconteceu. A conta (média, tendência)
+			# segue usando a geração zerada.
+			"generation": [
+				_to_float(v) if idx in with_movement_set else None for idx, v in enumerate(generation)
+			],
 			"moving_average": [_to_float(v) if v is not None else None for v in moving_average],
 		},
 	}
@@ -338,6 +354,8 @@ def dashboard_view(request):
 		"currency_label": dict(CURRENCY_OPTIONS).get(currency, currency),
 		"currency_notice": currency_notice,
 		"selected_period": selected_period,
+		# Texto de tela (11/2026); `selected_period` segue ISO para input e URL.
+		"selected_period_label": regional.formatar_mes(month_start),
 		"selected_year": selected_year,
 		"selected_month": selected_month,
 		"today_period": today.strftime("%Y-%m"),

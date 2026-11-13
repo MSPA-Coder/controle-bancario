@@ -28,7 +28,7 @@
                             <select id="audit-filter-created-on" class="audit-filter-select" name="created_on">
                                 <option value="">{% trans "Todos" %}</option>
                                 {% for option in audit_filter_options.created_on %}
-                                <option value="{{ option }}" {% if audit_filters.created_on == option %}selected{% endif %}>{{ option }}</option>
+                                <option value="{{ option }}" {% if audit_filters.created_on == option %}selected{% endif %}>{{ option|udate }}</option>
                                 {% endfor %}
                             </select>
                         </th>

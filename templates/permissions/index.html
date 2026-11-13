@@ -60,7 +60,7 @@
             <div class="summary-card"><strong>{{ summary.critical_allowed_count }}/{{ summary.critical_total_count }}</strong><span>{% trans "permissões críticas marcadas" %}</span></div>
         </div>
         {% if summary.missing_recommended_permissions %}
-        <p class="permissions-help">{% blocktrans trimmed with permissoes=summary.missing_recommended_permissions|join:", " %}Faltam permissões comuns do perfil Operador: {{ permissoes }}.{% endblocktrans %}</p>
+        <p class="permissions-help">{% blocktrans trimmed with permissoes=summary.missing_recommended_labels|join:", " %}Faltam permissões comuns do perfil Operador: {{ permissoes }}.{% endblocktrans %}</p>
         {% endif %}
     </div>
 
@@ -131,7 +131,7 @@
                                     <input type="hidden" name="table" value="users">
                                     <input type="hidden" name="action" value="reset_password">
                                     <input type="hidden" name="id" value="{{ u.id }}">
-                                    <button type="submit" class="btn btn-secondary btn-sm"
+                                    <button type="submit" class="btn btn-ghost btn-sm"
                                             data-sa-confirmar="{% blocktrans trimmed with nome=u.username %}Redefinir a senha de {{ nome }}? O sistema vai gerar uma senha temporária, mostrada uma única vez.{% endblocktrans %}"
                                             data-sa-titulo="{% trans 'Redefinir senha' %}"
                                             data-sa-severidade="warning"
@@ -153,8 +153,8 @@
                                 </select>
                                 <input type="password" name="password" aria-label="{% trans 'Nova senha' %}" placeholder="{% trans 'Nova senha (opcional)' %}" maxlength="256" data-ui="flex-1">
                                 <input type="password" name="password_confirm" aria-label="{% trans 'Confirmar nova senha' %}" placeholder="{% trans 'Confirmar nova senha' %}" maxlength="256" data-ui="flex-1">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="must_change_password" {% if u.must_change_password %}checked{% endif %}>
+                                <label class="checkbox-label" for="perm-must-change-{{ u.id }}">
+                                    <input type="checkbox" name="must_change_password" id="perm-must-change-{{ u.id }}"{% if u.must_change_password %}checked{% endif %}>
                                     {% trans "Trocar no próximo login" %}
                                 </label>
                                 <button type="submit" class="btn btn-primary btn-sm" data-sa-confirmar="{% trans 'Salvar as alterações deste usuário?' %}" data-sa-titulo="{% trans 'Confirmar usuário' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Salvar' %}">{% icon 'save' %}<span>{% trans "Salvar" %}</span></button>

@@ -377,7 +377,7 @@ a:hover { text-decoration: underline; }
     min-width: 0;
 }
 .sidebar-brand-title    { font-size: 0.9rem; font-weight: 800; color: var(--text); line-height: 1.2; }
-.sidebar-brand-subtitle { font-size: 0.68rem; color: var(--muted); font-weight: 500; }
+.sidebar-brand-subtitle { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
 .sidebar-privacy-toggle {
     min-width: 1.45rem;
     height: 1.45rem;
@@ -409,7 +409,7 @@ a:hover { text-decoration: underline; }
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-.sidebar-privacy-label { font-size: 0.68rem; font-weight: 600; }
+.sidebar-privacy-label { font-size: 0.72rem; font-weight: 600; }
 .sidebar-global-filters { position: relative; }
 .sidebar-filter-toggle { display: inline-flex; }
 .sidebar-global-filters-menu {
@@ -461,7 +461,13 @@ a:hover { text-decoration: underline; }
     gap: 0.15rem;
     flex: 1 1 auto;
     min-height: 0;
+    /* A lista rola dentro da propria area; sem isso os itens vazam por baixo do rodape do menu. */
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
 }
+/* Rodape do menu (recolher + usuario): nunca encolhe e tem fundo opaco. */
+.sidebar-collapse-toggle, .sidebar-user-card { flex-shrink: 0; position: relative; z-index: 1; }
 
 .sidebar-link {
     width: 100%;
@@ -541,13 +547,13 @@ a:hover { text-decoration: underline; }
 }
 .sidebar-user-info { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; overflow: hidden; }
 .sidebar-user-info strong { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sidebar-user-info small  { color: var(--muted); font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-user-info small  { color: var(--muted); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user-actions { margin-left: auto; display: flex; align-items: center; gap: 0.3rem; }
 .sidebar-user-action-btn {
     width: 2.9rem; min-width: 2.9rem;
     height: 1.45rem;
     padding: 0.12rem 0.3rem;
-    font-size: 0.64rem;
+    font-size: 0.72rem;
     line-height: 1;
     justify-content: center;
 }
@@ -562,7 +568,7 @@ a:hover { text-decoration: underline; }
     padding: 0.36rem 0.55rem;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
-    background: transparent;
+    background: var(--card);
     color: var(--muted);
     font: inherit;
     font-size: 0.8rem;
@@ -722,6 +728,36 @@ main {
     scroll-behavior: smooth;
 }
 
+/* Celular: a barra de filtros nao pode ocupar quase metade da tela. A faixa da marca e do
+   botao Menu fica na barra lateral (fora de .app-content) e continua fixa no topo; o
+   cabecalho com os filtros passa a rolar junto com o conteudo, dentro de .app-content. */
+@media (max-width: 768px) {
+    .app-content { overflow-y: auto; overscroll-behavior: contain; }
+    .app-page-header { position: static; }
+    main { flex: 0 0 auto; overflow: visible; }
+    /* 16 px evita o zoom automatico do iOS ao focar; `body .app-shell` vence seletores como `.x select`. */
+    body .app-shell input:not([type="checkbox"]):not([type="radio"]), body .app-shell select,
+    body .app-shell textarea, body .app-shell .form-control { font-size: 16px; }
+}
+
+/* Utilitarios de acessibilidade, globais. */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.skip-link {
+    position: absolute; top: 0; left: 0; z-index: 1000;
+    padding: 0.6rem 1rem; background: var(--primary); color: #fff;
+    font-size: 0.9rem; font-weight: 700; text-decoration: none;
+    border-radius: 0 0 var(--radius-sm) 0;
+    transform: translateY(-120%);
+}
+/* O alvo do skip-link recebe o foco só para o Tab seguinte cair no conteúdo. */
+#appMain:focus { outline: none; }
+.skip-link:focus, .skip-link:focus-visible {
+    transform: translateY(0); color: #fff; outline: 2px solid #fff; outline-offset: -4px;
+}
+
 .app-modal .modal-content {
     max-height: calc(100dvh - 2rem);
     overflow-y: auto;
@@ -817,6 +853,14 @@ input:focus, select:focus, textarea:focus, .form-control:focus {
     border-color: var(--primary) !important;
     box-shadow: 0 0 0 2.5px var(--primary-light);
 }
+/* Foco de teclado visivel (WCAG 2.4.7): so :focus-visible, o mouse nao ganha anel em botao ou link. */
+input:focus-visible, select:focus-visible, textarea:focus-visible, .form-control:focus-visible,
+button:focus-visible, .btn:focus-visible, a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+/* Dentro de areas com overflow (lista do menu) o anel vai para dentro, para nao ser cortado. */
+.sidebar-menu a:focus-visible, .sidebar-menu button:focus-visible { outline-offset: -2px; }
 input::placeholder { color: var(--muted); opacity: 0.7; }
 select option { background-color: var(--card); color: var(--text); }
 input[type="checkbox"] { width: auto; accent-color: var(--primary); }
@@ -1272,14 +1316,24 @@ canvas { display: block; box-sizing: border-box; }
 /* Botao so-icone: quadrado, sem texto visivel */
 .btn-icon {
     padding: 0.24rem;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.875rem;
+    height: 1.875rem;
+    min-width: 1.875rem;
+    min-height: 1.875rem;
     justify-content: center;
 }
 .btn-icon.btn-sm {
-    width: 1.55rem;
-    height: 1.55rem;
+    width: 1.875rem;
+    height: 1.875rem;
+    min-width: 1.875rem;
+    min-height: 1.875rem;
     padding: 0.18rem;
+}
+/* Tela de toque: alvo de 40 px (WCAG 2.5.8 pede 24 px; 40 px e confortavel para o dedo). */
+@media (pointer: coarse) {
+    .btn-icon, .btn-icon.btn-sm, .tx-table .actions .btn-icon {
+        width: 2.5rem; height: 2.5rem; min-width: 2.5rem; min-height: 2.5rem;
+    }
 }
 
 /* ============================================================

@@ -22,7 +22,7 @@
     <div class="btn-group">
         <form method="post" action="{% url 'core:settings_health_check' %}" class="inline-form">
             {% csrf_token %}
-                <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Executar o health check do banco?' %}" data-sa-titulo="{% trans 'Confirmar verificação' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Executar' %}">{% icon 'database' %}<span>{% trans "Health Check" %}</span></button>
+                <button type="submit" class="btn btn-primary" data-sa-confirmar="{% trans 'Executar a verificação de saúde do banco?' %}" data-sa-titulo="{% trans 'Confirmar verificação' %}" data-sa-severidade="info" data-sa-ok="{% trans 'Executar' %}">{% icon 'database' %}<span>{% trans "Verificar saúde do banco" %}</span></button>
         </form>
         <form method="post" action="{% url 'core:settings_optimize' %}" class="inline-form">
             {% csrf_token %}

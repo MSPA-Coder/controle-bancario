@@ -24,7 +24,7 @@
 .situacao-matriz th, .situacao-matriz td { text-align:center; vertical-align:middle; padding:0.25rem 0.15rem; }
 .situacao-matriz th a { color:inherit; text-decoration:none; text-transform:capitalize; }
 .situacao-matriz th a:hover { text-decoration:underline; }
-.situacao-matriz th small { display:block; font-weight:400; color:var(--muted); white-space:normal; line-height:1.1; font-size:0.65rem; }
+.situacao-matriz th small { display:block; font-weight:400; color:var(--muted); white-space:normal; line-height:1.1; font-size:0.72rem; }
 .situacao-matriz .situacao-conta { text-align:left; position:sticky; left:0; background:var(--card); z-index:1; min-width:9rem; padding-left:0.5rem; padding-right:0.5rem; }
 .situacao-matriz thead .situacao-conta { background:var(--bg-header); }
 .situacao-matriz .situacao-referencia { box-shadow:inset 2px 0 0 var(--border), inset -2px 0 0 var(--border); }
