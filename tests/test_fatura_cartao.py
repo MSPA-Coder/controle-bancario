@@ -191,6 +191,9 @@ def test_parcela_invalida_e_recusada():
     [
         ("Pag Fatura Boleto", "300.00", True),
         ("Pagamentos Validos Normais", "10.00", True),
+        ("Inclusao de Pagamento · Mariano", "4000.00", True),
+        ("Inclusão de Pagamento", "4000.00", True),
+        ("Inclusao de Pagamento", "-4000.00", False),
         ("PAGUE MENOS", "30.00", False),
         ("Pag Fatura Boleto", "-300.00", False),
     ],
@@ -328,6 +331,37 @@ def test_previa_diz_o_que_cada_linha_vira(cenario):
     assert acoes[("Pag Fatura Boleto", Decimal("200.00"))].acao == fatura.PAGAMENTO_SEM_PAR
     assert acoes[("MERCADO BOM", Decimal("-200.00"))].categoria == cenario["mercado"]
     assert acoes[("FARMACIA", Decimal("-80.00"))].categoria == cenario["outros"]
+
+
+@pytest.mark.django_db
+def test_boleto_pago_em_partes_concilia_cada_parte_com_sua_transferencia(cenario):
+    # O C6 exporta o boleto pago em partes como "Pag Fatura Boleto" e como
+    # "Inclusao de Pagamento"; as duas são pagamento, nenhuma é estorno.
+    for valor in ("300.00", "400.00"):
+        create_transaction_batch(
+            TransactionRequest(
+                account_id=cenario["corrente"].id, category_id=cenario["transferencia"].id,
+                entry_type=ENTRY_TYPE_EXPENSE, description="Fatura", entry_amount=Decimal(valor),
+                installments=1, due_date=date(2026, 3, 25), status=STATUS_PROJECTED,
+                counterparty_account_id=cenario["cartao"].id,
+            ),
+            user=cenario["usuario"],
+        )
+    lote, _, _ = _importar(cenario, _c6(
+        "05/03/2026;MARIANO S;1111;Supermercados;MERCADO BOM;Única;0;0;700.00",
+        "25/03/2026;MARIANO S;1111;-;Pag Fatura Boleto;Única;0;0;-300.00",
+        "25/03/2026;MARIANO S;1111;-;Inclusao de Pagamento;Única;0;0;-400.00",
+    ))
+
+    planos = fatura.planejar(cenario["cartao"], fatura.linhas_novas(lote))
+    pagamentos = [p for p in planos if p.linha.amount > 0]
+
+    assert sorted(p.linha.amount for p in pagamentos) == [Decimal("300.00"), Decimal("400.00")]
+    assert {p.acao for p in pagamentos} == {fatura.PAGAMENTO}
+    resumo = fatura.resumir(fatura.linhas_novas(lote))
+    assert (resumo.pagamentos, resumo.creditos, resumo.total_da_fatura) == (
+        Decimal("700.00"), Decimal("0.00"), Decimal("700.00"),
+    )
 
 
 @pytest.mark.django_db

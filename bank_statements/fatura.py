@@ -116,9 +116,10 @@ _JANELA_PAGAMENTO = timedelta(days=10)
 _JANELA_PARCELA = timedelta(days=5)
 _JANELA_COMPRA = timedelta(days=3)
 
-# "Pag Fatura Boleto" (C6), "Pagamentos Validos Normais" (XP). A fronteira de
-# palavra impede "Pague Menos" de virar pagamento.
-_PAGAMENTO = re.compile(r"^pag(amentos?)?\b", re.IGNORECASE)
+# "Pag Fatura Boleto" e "Inclusao de Pagamento" (C6: o mesmo boleto pago em
+# partes vem com os dois nomes), "Pagamentos Validos Normais" (XP). A fronteira
+# de palavra impede "Pague Menos" de virar pagamento.
+_PAGAMENTO = re.compile(r"^(pag(amentos?)?|inclus[aã]o de pagamento)\b", re.IGNORECASE)
 _CATEGORIA_PADRAO = "Outros"
 # Chaves das operações que a fatura projetada cria (`fatura_projetada.py`).
 PREFIXO_ESTIMATIVA = "cartao-estimativa"
