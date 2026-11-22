@@ -340,53 +340,54 @@ def resolve_pending_uploads(
     lotes: list[BankStatementImport] = []
 
     for pending_id, account_id in choices.items():
-        try:
-            upload = PendingStatementUpload.objects.get(id=pending_id, uploaded_by=user)
-        except (PendingStatementUpload.DoesNotExist, ValueError, TypeError):
-            continue
+        with db_transaction.atomic():
+            try:
+                upload = PendingStatementUpload.objects.select_for_update().get(id=pending_id, uploaded_by=user)
+            except (PendingStatementUpload.DoesNotExist, ValueError, TypeError):
+                continue
 
-        if upload.detection_error:
-            erros.append((upload.original_filename, gettext(upload.detection_error)))
+            if upload.detection_error:
+                erros.append((upload.original_filename, gettext(upload.detection_error)))
+                _delete_pending(upload)
+                continue
+
+            # Antes do "não importar": o PDF trancado não tem seletor de conta, e
+            # descartá-lo calado esconderia que ele ficou de fora.
+            if upload.password_required:
+                erros.append((upload.original_filename, gettext(
+                    "PDF protegido por senha não foi importado: desbloqueie o arquivo antes de confirmar."
+                )))
+                _delete_pending(upload)
+                continue
+
+            if not account_id:
+                _delete_pending(upload)
+                continue
+
+            path = _pending_removal_path(upload)
+            raw = path.read_bytes()
+            file_like = SimpleUploadedFile(upload.original_filename, raw, content_type=upload.mime_type or "")
+            try:
+                batch, inserted, skipped = import_statement_file(
+                    user, account_id=account_id, uploaded_file=file_like
+                )
+                resultados.append((upload.original_filename, inserted, skipped))
+                vazio = (
+                    inserted == 0
+                    and batch.statement_balance is None
+                    and batch.statement_period_end is None
+                    and not batch.account.is_credit_card
+                )
+                if vazio:
+                    # Só duplicatas, sem saldo nem fim de período: o lote não guarda
+                    # nada e ficaria no histórico como uma importação de 0 linhas.
+                    # Fatura de cartão fica: ela segue para a prévia de processamento.
+                    # A mensagem do resultado já diz que tudo era repetido.
+                    batch.delete()
+                else:
+                    lotes.append(batch)
+            except ValueError as exc:
+                erros.append((upload.original_filename, str(exc)))
             _delete_pending(upload)
-            continue
-
-        # Antes do "não importar": o PDF trancado não tem seletor de conta, e
-        # descartá-lo calado esconderia que ele ficou de fora.
-        if upload.password_required:
-            erros.append((upload.original_filename, gettext(
-                "PDF protegido por senha não foi importado: desbloqueie o arquivo antes de confirmar."
-            )))
-            _delete_pending(upload)
-            continue
-
-        if not account_id:
-            _delete_pending(upload)
-            continue
-
-        path = _pending_removal_path(upload)
-        raw = path.read_bytes()
-        file_like = SimpleUploadedFile(upload.original_filename, raw, content_type=upload.mime_type or "")
-        try:
-            batch, inserted, skipped = import_statement_file(
-                user, account_id=account_id, uploaded_file=file_like
-            )
-            resultados.append((upload.original_filename, inserted, skipped))
-            vazio = (
-                inserted == 0
-                and batch.statement_balance is None
-                and batch.statement_period_end is None
-                and not batch.account.is_credit_card
-            )
-            if vazio:
-                # Só duplicatas, sem saldo nem fim de período: o lote não guarda
-                # nada e ficaria no histórico como uma importação de 0 linhas.
-                # Fatura de cartão fica: ela segue para a prévia de processamento.
-                # A mensagem do resultado já diz que tudo era repetido.
-                batch.delete()
-            else:
-                lotes.append(batch)
-        except ValueError as exc:
-            erros.append((upload.original_filename, str(exc)))
-        _delete_pending(upload)
 
     return resultados, erros, lotes

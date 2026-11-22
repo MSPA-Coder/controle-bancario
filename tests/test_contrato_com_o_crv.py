@@ -105,12 +105,13 @@ def tokens(monkeypatch, tmp_path):
 
 
 @pytest.fixture
-def cenario(tokens):
+def cenario(tokens, monkeypatch):
     """Um de cada coisa que o CRV lê, com as descrições que as corretoras imprimem."""
     # A categoria que uma migração semeia existe ou não conforme os testes que
     # rodaram antes no mesmo banco; o exemplo não pode depender disso.
     CashFlowCategory.objects.all().delete()
     titular = AccountOwner.objects.create(name="Titular")
+    monkeypatch.setenv("CRV_LINK_OWNER_ID", str(titular.id))
     genial = FinancialInstitution.objects.create(institution_name="Genial", institution_type="Corretora")
     avenue = FinancialInstitution.objects.create(institution_name="Avenue", institution_type="Corretora")
     banco = FinancialInstitution.objects.create(institution_name="Banco da Casa", institution_type="Banco")

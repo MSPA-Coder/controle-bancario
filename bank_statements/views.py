@@ -140,8 +140,10 @@ def unlock_pending_view(request, pending_id):
 @require_POST
 def process_imports_view(request):
     """Importa, de uma vez, cada arquivo pendente com a conta que o usuário confirmou."""
-    uploads = pending_imports.pending_uploads_for_user(request.user)
-    choices = {upload.id: request.POST.get(f'account_{upload.id}', '') for upload in uploads}
+    enviados = dict.fromkeys(request.POST.getlist("pending_id"))
+    enviados.update(dict.fromkeys(campo.removeprefix("account_") for campo in request.POST if campo.startswith("account_")))
+    choices = {pk: request.POST.get(f"account_{pk}", "") for pk in enviados
+               if pk.isascii() and pk.isdecimal() and len(pk) <= 18}
     resultados, erros, lotes = pending_imports.resolve_pending_uploads(request.user, choices)
 
     for lote in lotes:

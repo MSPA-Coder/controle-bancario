@@ -404,6 +404,24 @@ class _Resposta(io.BytesIO):
         self.close()
 
 
+def test_roteiro_so_consulta_o_crv_com_acesso_ao_titular(cenario, monkeypatch):
+    operador = AppUser.objects.create_user(username="operador-do-roteiro", user_type=USER_TYPE_USER)
+    monkeypatch.setenv("CRV_LINK_OWNER_ID", str(cenario.titular.id))
+    consultas = []
+
+    def status(alvo):
+        consultas.append(alvo)
+        return crv.StatusDoCrv(erro="Resposta do vínculo")
+
+    monkeypatch.setattr(crv, "status", status)
+    assert "crv" not in _itens(roteiro.montar(operador, CORTE, HOJE))
+    assert consultas == []
+    UserOwnerAccess.objects.create(user=operador, owner=cenario.titular, can_view=True)
+    autorizado = roteiro.montar(operador, CORTE, HOJE)
+    assert _itens(autorizado)["crv"].texto == "Resposta do vínculo"
+    assert consultas == [autorizado.alvo]
+
+
 def test_crv_sem_configuracao_nao_derruba_o_roteiro(monkeypatch):
     monkeypatch.delenv("CRV_FECHAMENTO_URL", raising=False)
     assert crv.status(CORTE).erro == "CRV não configurado neste ambiente."

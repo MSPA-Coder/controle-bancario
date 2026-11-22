@@ -541,6 +541,9 @@ def update_account(
     )
     clean_currency = _parse_currency(currency)
     clean_balance_date = _parse_initial_balance_date(initial_balance_date)
+    from transactions.services import lock_accounts
+
+    account = lock_accounts([account.pk])[account.pk]
     if not can_access_owner(user, account.owner_id, "update"):
         raise ValueError(gettext("Acesso negado: você não tem permissão para alterar contas deste titular."))
     if not can_access_owner(user, clean_owner_id, "update"):
@@ -552,6 +555,11 @@ def update_account(
     # significado de todo o passado dela: os mesmos valores passariam a valer
     # em outra moeda, sem nenhum registro de conversão. Conta com histórico não
     # muda de moeda -- se a moeda estiver errada, a saída é outra conta.
+    muda_base = (balance, clean_balance_date, clean_currency) != (
+        account.initial_balance, account.initial_balance_date, account.currency
+    )
+    if muda_base and account.month_closes.filter(active=True).exists():
+        raise ValueError(gettext("Reabra os meses fechados antes de alterar o saldo inicial, sua data ou a moeda."))
     if clean_currency != account.currency and account.transactions.exists():
         raise ValueError(
             gettext(

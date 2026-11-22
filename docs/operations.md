@@ -291,8 +291,8 @@ sudo chmod --reference=.secrets/django_secret_key .secrets/crv_link_token
 sudo cat .secrets/crv_link_token > ~/apps/controle-renda-variavel/.secrets/cb_patrimonio_token
 ```
 
-Um `crv_link_token` vazio ou curto demais vale como ausente: o vínculo volta a
-usar o token de integração, e o CRV, que já tem o valor novo, recebe 401.
+Um token do vínculo vazio ou curto deixa o vínculo indisponível. Configurar os
+dois tokens com o mesmo valor desabilita as duas integrações.
 
 ## Resumo publicado para o consolidador
 
@@ -322,7 +322,13 @@ público: no loopback (`127.0.0.1:5201`) o `SECURE_SSL_REDIRECT` responde **301*
 qualquer rota. O token vai pela entrada padrão (`-H @-`), e não na linha de
 comando, onde qualquer usuário da máquina o leria em `ps`.
 
-**O token é a permissão.** Quem o tem lê o saldo de todas as contas deste
+Para o vínculo com o CRV, configure um segredo exclusivo e `CRV_LINK_OWNER_ID`
+com o ID do titular no CB que corresponde à carteira autorizada do CRV.
+Se o nome diferir entre os sistemas, configure `CB_PATRIMONIO_TITULAR` no CRV com o nome no CB.
+O snapshot desse vínculo inclui somente as corretoras desse titular. O roteiro
+mostra o status do CRV a quem pode consultar esse titular.
+
+**O token do consolidador é a permissão.** Quem o tem lê o saldo de todas as contas deste
 sistema, sem escopo por titular -- um resumo filtrado produziria um patrimônio
 consolidado que esconde contas sem avisar, que é pior do que não responder.
 Guarde-o como se guarda uma senha de banco, e rode a rotação nos dois lados ao

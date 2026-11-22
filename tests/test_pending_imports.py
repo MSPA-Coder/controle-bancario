@@ -440,9 +440,13 @@ def test_process_imports_view_commits_confirmed_account_and_reports_summary(cena
     )
     pendente = PendingStatementUpload.objects.get(uploaded_by=cenario["usuario"])
 
+    outra_aba = stage_uploaded_files(cenario["usuario"], [
+        SimpleUploadedFile("outra.ofx", _ofx("41861-7"))
+    ])[0]
     resposta = client.post(
         "/banking/imports/confirm/process/", {f"account_{pendente.id}": cenario["conta_ofx"].id}
     )
+    assert PendingStatementUpload.objects.filter(id=outra_aba.id).exists()
     assert resposta.status_code == 302
     assert resposta["Location"] == "/banking/imports/"
     assert BankStatementLine.objects.filter(account=cenario["conta_ofx"]).count() == 1

@@ -41,7 +41,7 @@
             <tbody>
             {% for upload in uploads %}
                 <tr>
-                    <td>{{ upload.original_filename }}</td>
+                    <td><input type="hidden" name="pending_id" value="{{ upload.id }}">{{ upload.original_filename }}</td>
                     <td>
                         {% if upload.detection_error %}
                         <small style="color: var(--danger)">{{ upload.detection_error|traduzido }}</small>

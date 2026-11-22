@@ -43,8 +43,9 @@ ROTA = "/patrimonio/v3/projection"
 
 
 @pytest.fixture
-def contas():
+def contas(monkeypatch):
     owner = AccountOwner.objects.create(name="Mariano")
+    monkeypatch.setenv("CRV_LINK_OWNER_ID", str(owner.id))
     banco = FinancialInstitution.objects.create(institution_name="C6", institution_type="Banco")
     corretora = FinancialInstitution.objects.create(
         institution_name="Avenue", institution_type="Corretora"
@@ -400,6 +401,11 @@ def test_token_do_vinculo_recebe_so_as_contas_de_corretora(contas, monkeypatch, 
         status=STATUS_REALIZED,
     )
 
+    outra = contas["em_dolar"]
+    FinancialAccount.objects.create(
+        owner=AccountOwner.objects.create(name="Outro titular"), institution=outra.institution,
+        account_name="Corretora de outro titular", initial_balance_date=date(2026, 1, 1),
+    )
     corpo = _snapshot_com(vinculo).json()
 
     por_recurso = {}
@@ -440,19 +446,20 @@ def test_token_do_vinculo_nao_abre_as_outras_rotas(contas, monkeypatch, tmp_path
 
 
 @pytest.mark.django_db(transaction=True)
-def test_dois_arquivos_com_o_mesmo_valor_valem_a_foto_inteira(contas, monkeypatch, tmp_path):
+def test_tokens_iguais_desabilitam_as_integracoes(contas, monkeypatch, tmp_path):
     """Recortar a foto do consolidador faria o patrimônio dele encolher sem aviso."""
     integracao = configurar_token_v4(monkeypatch, tmp_path)
     configurar_token_do_vinculo(monkeypatch, tmp_path, integracao)
 
-    assert "scope" not in _snapshot_com(integracao).json()
+    assert _snapshot_com(integracao).status_code == 503
+    assert patrimonio.token_do_vinculo() is None
 
 
-def test_o_vinculo_usa_o_token_proprio_e_cai_no_de_integracao_sem_ele(monkeypatch, tmp_path):
-    integracao = configurar_token_v4(monkeypatch, tmp_path)
+def test_o_vinculo_exige_token_proprio(monkeypatch, tmp_path):
+    configurar_token_v4(monkeypatch, tmp_path)
     monkeypatch.delenv(patrimonio.NOME_DO_SEGREDO_DO_VINCULO, raising=False)
     monkeypatch.delenv(f"{patrimonio.NOME_DO_SEGREDO_DO_VINCULO}_FILE", raising=False)
-    assert patrimonio.token_do_vinculo() == integracao
+    assert patrimonio.token_do_vinculo() is None
 
     vinculo = configurar_token_do_vinculo(monkeypatch, tmp_path)
     assert patrimonio.token_do_vinculo() == vinculo

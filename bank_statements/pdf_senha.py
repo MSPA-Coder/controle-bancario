@@ -16,8 +16,12 @@ código de erro, sem adivinhar pela mensagem.
 from __future__ import annotations
 
 import io
+from threading import Lock
 
 from django.utils.translation import gettext
+
+# PDFium proíbe chamadas simultâneas no mesmo processo, inclusive em documentos distintos.
+_pdfium_lock = Lock()
 
 
 def _pdfium():
@@ -34,29 +38,31 @@ def _pdfium():
 def pede_senha(raw: bytes) -> bool:
     """Se o PDF só abre com senha. Arquivo ilegível por outro motivo dá `False`:
     o erro de leitura de sempre aparece adiante, na leitura do texto."""
-    pdfium, pdfium_c = _pdfium()
-    try:
-        documento = pdfium.PdfDocument(raw)
-    except pdfium.PdfiumError as exc:
-        return exc.err_code == pdfium_c.FPDF_ERR_PASSWORD
-    documento.close()
-    return False
+    with _pdfium_lock:
+        pdfium, pdfium_c = _pdfium()
+        try:
+            documento = pdfium.PdfDocument(raw)
+        except pdfium.PdfiumError as exc:
+            return exc.err_code == pdfium_c.FPDF_ERR_PASSWORD
+        documento.close()
+        return False
 
 
 def sem_senha(raw: bytes, senha: str) -> bytes:
     """O mesmo PDF, sem a proteção. `ValueError` se a senha não abre o arquivo."""
-    pdfium, pdfium_c = _pdfium()
     if not senha:
         raise ValueError(gettext("Informe a senha do PDF."))
-    try:
-        documento = pdfium.PdfDocument(raw, password=senha)
-    except pdfium.PdfiumError as exc:
-        if exc.err_code == pdfium_c.FPDF_ERR_PASSWORD:
-            raise ValueError(gettext("Senha do PDF incorreta.")) from None
-        raise ValueError(gettext("Não foi possível ler o PDF do extrato.")) from None
-    try:
-        saida = io.BytesIO()
-        documento.save(saida, flags=pdfium_c.FPDF_REMOVE_SECURITY)
-    finally:
-        documento.close()
+    with _pdfium_lock:
+        pdfium, pdfium_c = _pdfium()
+        try:
+            documento = pdfium.PdfDocument(raw, password=senha)
+        except pdfium.PdfiumError as exc:
+            if exc.err_code == pdfium_c.FPDF_ERR_PASSWORD:
+                raise ValueError(gettext("Senha do PDF incorreta.")) from None
+            raise ValueError(gettext("Não foi possível ler o PDF do extrato.")) from None
+        try:
+            saida = io.BytesIO()
+            documento.save(saida, flags=pdfium_c.FPDF_REMOVE_SECURITY)
+        finally:
+            documento.close()
     return saida.getvalue()

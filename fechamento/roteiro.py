@@ -35,6 +35,7 @@ from django.db.models import Count, Max
 from django.urls import reverse
 from django.utils.translation import gettext, gettext_lazy, ngettext
 
+from accounts.services import can_access_owner
 from bank_statements.fatura_projetada import _no_dia, faturas_importadas
 from bank_statements.models import LINE_STATUS_NEW, BankStatementImport, BankStatementLine
 from bank_statements.saldo import pendencia_da_movimentacao
@@ -42,7 +43,7 @@ from banking.models import FinancialAccount
 from banking.services import accessible_account_ids
 from core import regional
 from core.domain.finance import ACCOUNT_KIND_INVESTMENT, STATUS_REALIZED, VIEW_REALIZED
-from core.patrimonio import coberturas_de_extrato
+from core.patrimonio import coberturas_de_extrato, titular_do_vinculo
 from core.templatetags.money_filters import money_signed
 from reports.services import decimal_balances_before_by_account
 from transactions.models import AccountMonthClose, CashFlowEntry
@@ -640,7 +641,14 @@ def montar(user, corte: date, hoje: date | None = None) -> Roteiro:
                 saldos.get(conta.id, Decimal("0")), conta.id in movimentadas, coleta,
             ))
     por_etapa[ETAPA_MYPROFIT].insert(0, _item_da_coleta(coleta, corte, alvo, hoje))
-    for item in _itens_do_crv(crv.status(alvo)):
+    titular_crv = titular_do_vinculo()
+    if titular_crv is None:
+        status_crv = crv.StatusDoCrv(erro=gettext("CRV não configurado neste ambiente."))
+    elif can_access_owner(user, titular_crv):
+        status_crv = crv.status(alvo)
+    else:
+        status_crv = crv.StatusDoCrv()
+    for item in _itens_do_crv(status_crv):
         por_etapa[item.etapa].append(item)
     por_etapa[ETAPA_CONFERENCIAS][:0] = _conferencias_do_cb(user, contas, corte, alvo, coleta)
 

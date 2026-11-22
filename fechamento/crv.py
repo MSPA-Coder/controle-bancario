@@ -7,8 +7,7 @@ cada um com etapa, estado e texto. O roteiro só os mostra junto dos do CB; quem
 sabe se um negócio foi aplicado é o CRV.
 
 A chamada vai pela rede interna do VPS (`CRV_FECHAMENTO_URL`), com o token do
-vínculo CB <-> CRV: o `CRV_LINK_TOKEN` daqui (ou, sem ele, o
-`PATRIMONIO_INTEGRATION_TOKEN`), que o CRV conhece como `cb_patrimonio_token`.
+vínculo CB <-> CRV, o `CRV_LINK_TOKEN` que o CRV conhece como `cb_patrimonio_token`.
 Falha ou ausência de configuração não derrubam a
 tela: viram um item "CRV indisponível", com o motivo, e o resto do roteiro segue.
 """
@@ -28,7 +27,8 @@ from django.utils.translation import gettext
 from core.patrimonio import token_do_vinculo
 
 CONTRATO = "crv-fechamento/1"
-TIMEOUT_SEGUNDOS = 4
+# Inclui a consulta de retorno ao CB (timeout de 3 s) e a montagem do roteiro.
+TIMEOUT_SEGUNDOS = 8
 ESTADOS_ACEITOS = {"em_dia", "falta", "pendente", "espera", "fora", "depois", "sem_fonte"}
 ETAPAS_ACEITAS = {"myprofit", "conferencias"}
 

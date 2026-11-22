@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: controle-bancario\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 12:22-0300\n"
+"POT-Creation-Date: 2026-11-22 17:02-0300\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2013,6 +2013,10 @@ msgid "Acesso negado: você não tem permissão para transferir a conta para est
 msgstr "Access denied: you do not have permission to transfer the account to this account holder."
 
 #: banking/services.py
+msgid "Reabra os meses fechados antes de alterar o saldo inicial, sua data ou a moeda."
+msgstr "Reopen the closed months before changing the opening balance, its date, or the currency."
+
+#: banking/services.py
 msgid "Esta conta já tem lançamentos e não pode mudar de moeda: os valores já registrados continuariam iguais, valendo outra coisa. Crie uma conta na moeda correta e transfira o saldo."
 msgstr "This account already has entries and cannot change currency: the recorded amounts would stay the same but be worth something else. Create an account in the correct currency and transfer the balance."
 
@@ -3163,7 +3167,7 @@ msgstr "Declining cash generation"
 msgid "Estabilidade"
 msgstr "Stability"
 
-#: fechamento/crv.py
+#: fechamento/crv.py fechamento/roteiro.py
 msgid "CRV não configurado neste ambiente."
 msgstr "CRV is not configured in this environment."
 

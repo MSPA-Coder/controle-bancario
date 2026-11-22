@@ -67,6 +67,21 @@ def test_sem_valor_o_fechamento_calcula_o_saldo_realizado(cenario):
 
 
 @pytest.mark.django_db
+def test_conta_fechada_preserva_saldo_inicial(cenario):
+    from banking.services import update_account
+
+    usuario, conta, categoria = cenario
+    _receita(usuario, conta, categoria, "50.00")
+    fechado = services.close_month(conta, 2026, 8, None, usuario)
+    with pytest.raises(ValueError, match="Reabra"):
+        update_account(usuario, conta, owner_id=str(conta.owner_id), institution_id=str(conta.institution_id),
+                       account_name=conta.account_name, initial_balance="200", currency="BRL",
+                       initial_balance_date="2026-01-01")
+    conta.refresh_from_db()
+    assert conta.initial_balance == Decimal("100") and fechado.closing_balance == Decimal("150")
+
+
+@pytest.mark.django_db
 def test_realizacao_que_chega_antes_do_lock_entra_no_saldo(cenario, monkeypatch):
     """Simula a concorrência: a realização comita enquanto o fechamento espera o lock."""
     usuario, conta, categoria = cenario

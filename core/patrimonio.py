@@ -105,7 +105,7 @@ NOME_DO_SEGREDO_V4 = "PATRIMONIO_INTEGRATION_TOKEN"
 #: CRV lê só o snapshot, e só das contas de corretora (`RECORTE_DO_VINCULO`), e é
 #: ele que o CB apresenta ao pedir o status de fechamento do CRV. Assim o CRV não
 #: recebe o gasto da casa, de que não precisa, e trocar um token não derruba a
-#: outra integração. Opcional: sem ele, o vínculo segue pelo token de integração.
+#: outra integração. Sem o segredo exclusivo o vínculo fica indisponível.
 NOME_DO_SEGREDO_DO_VINCULO = "CRV_LINK_TOKEN"
 TIPO_DE_INSTITUICAO_DO_VINCULO = "Corretora"
 RECORTE_DO_VINCULO = {"institution_type": TIPO_DE_INSTITUICAO_DO_VINCULO, "resources": ["account", "category", "cash_entry"]}
@@ -187,7 +187,7 @@ def _autorizacao(request, contrato: str):
 
     ``contrato`` só rotula o log: a v4 e a projeção usam o mesmo token.
     """
-    esperado = _token_configurado()
+    esperado, _ = _tokens_distintos()
     if not esperado:
         return JsonResponse(
             {"erro": "integração de patrimônio não configurada neste servidor"},
@@ -200,20 +200,29 @@ def _autorizacao(request, contrato: str):
     return None
 
 
+def titular_do_vinculo() -> int | None:
+    valor = os.environ.get("CRV_LINK_OWNER_ID", "").strip()
+    if not valor.isascii() or not valor.isdecimal() or len(valor) > 18:
+        return None
+    return int(valor) or None
+
+
+def _tokens_distintos() -> tuple[str | None, str | None]:
+    integracao = _token_configurado()
+    vinculo = _token_configurado(NOME_DO_SEGREDO_DO_VINCULO)
+    if integracao and vinculo and secrets.compare_digest(integracao, vinculo):
+        logger.error("O consolidador e o vínculo com o CRV exigem credenciais distintas.")
+        return None, None
+    return integracao, vinculo
+
+
 def token_do_vinculo() -> str | None:
-    """O token que o CB e o CRV trocam: o do vínculo, ou o de integração sem ele."""
-    return _token_configurado(NOME_DO_SEGREDO_DO_VINCULO) or _token_configurado()
+    return _tokens_distintos()[1]
 
 
 def _autorizacao_do_snapshot(request):
-    """`(erro, recortado)`: o snapshot aceita os dois tokens, e o do vínculo recorta.
-
-    O token de integração é conferido primeiro: se os dois arquivos trouxerem o
-    mesmo valor, vale a foto inteira, e não um recorte que o consolidador leria
-    como patrimônio que sumiu.
-    """
-    integracao = _token_configurado()
-    vinculo = _token_configurado(NOME_DO_SEGREDO_DO_VINCULO)
+    """O token do consolidador publica a foto inteira e o do vínculo recorta por titular."""
+    integracao, vinculo = _tokens_distintos()
     if not integracao and not vinculo:
         return JsonResponse({"erro": "integração de patrimônio não configurada neste servidor"}, status=503), False
     recebido = _token_da_requisicao(request)
@@ -658,9 +667,15 @@ def snapshot_v4_view(request):
             cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
         watermark = _cursor_v4(_watermark_v4())
         metadata = _metadata_v4(referencia, watermark)
-        contas = list(FinancialAccount.objects.select_related("owner", "institution").order_by("id"))
+        consulta_contas = FinancialAccount.objects.select_related("owner", "institution").order_by("id")
         if recortado:
-            contas = [c for c in contas if c.institution.institution_type == TIPO_DE_INSTITUICAO_DO_VINCULO]
+            titular = titular_do_vinculo()
+            if titular is None:
+                return JsonResponse({"erro": "Titular do vínculo não configurado."}, status=503)
+            consulta_contas = consulta_contas.filter(
+                owner_id=titular, institution__institution_type=TIPO_DE_INSTITUICAO_DO_VINCULO
+            )
+        contas = list(consulta_contas)
         contas_ativas = [conta.id for conta in contas if conta.initial_balance_date <= referencia]
         saldos = decimal_balances_before_by_account(
             contas_ativas, referencia + timedelta(days=1), VIEW_REALIZED
@@ -739,7 +754,10 @@ def _recorte_do_vinculo(metadata: dict, contas: list, lancamentos: list) -> dict
         "due_date_from": min(vencimentos).isoformat() if vencimentos else None,
         "due_date_through": max(vencimentos).isoformat() if vencimentos else None,
     }
-    cobertura["transfer"] = {**cobertura["transfer"], "state": "partial", "note": "Transferências não entram no recorte do vínculo."}
+    cobertura["transfer"] = {
+        "state": "partial", "unlinked_cash_entries": 0, "incomplete_groups": 0,
+        "note": "Transferências não entram no recorte do vínculo.",
+    }
     capacidades = dict(metadata["capabilities"])
     capacidades["resources"] = {**capacidades["resources"], "transfer": False}
     return {"scope": RECORTE_DO_VINCULO, "coverage": cobertura, "capabilities": capacidades}

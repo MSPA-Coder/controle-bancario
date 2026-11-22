@@ -13,7 +13,7 @@ RUN apk upgrade --no-cache
 # The upstream gosu binary currently fails the HIGH/CRITICAL image gate.
 # Alpine's su-exec provides the same final-user exec behavior with a smaller
 # C implementation. Fail closed if upstream changes the entrypoint contract.
-RUN apk add --no-cache su-exec \
+RUN apk add --no-cache su-exec 'libxml2>=2.13.9-r3' \
     && test "$(grep -F -c 'exec gosu postgres "$BASH_SOURCE" "$@"' /usr/local/bin/docker-entrypoint.sh)" -eq 1 \
     && sed -i 's/exec gosu postgres/exec su-exec postgres/' /usr/local/bin/docker-entrypoint.sh \
     && test "$(grep -F -c 'exec su-exec postgres "$BASH_SOURCE" "$@"' /usr/local/bin/docker-entrypoint.sh)" -eq 1 \

@@ -270,6 +270,7 @@ services:
       # CRV lê só as contas de corretora, e é ele que o CB apresenta ao CRV. O
       # CRV o guarda como `cb_patrimonio_token`.
       CRV_LINK_TOKEN_FILE: /run/secrets/crv_link_token
+      CRV_LINK_OWNER_ID: ${CRV_LINK_OWNER_ID:-}
       # Status do CRV no Roteiro de fechamento. Sem URL, o roteiro diz "CRV não
       # configurado" e o resto funciona. No VPS: http://crv-api:5003/fechamento/status
       # (rede patrimonio-internal), autenticado pelo token do vínculo.

@@ -44,12 +44,14 @@ cadastrada, e de "Outros" (ver `classificacao`). A prévia deixa trocar cada uma
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction as db_transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
+from django.db.models.functions import Coalesce, Trim
 from django.utils.translation import gettext
 
 from accounts.services import has_function_permission
@@ -217,42 +219,45 @@ def _mais_perto(candidatos, data: date, usados: set[int], preferir=None) -> Cash
     return min(livres, key=lambda c: (0 if preferir and preferir(c) else 1, abs((c.due_date - data).days), c.id))
 
 
-def _transferencia(conta, linha, usados) -> CashFlowEntry | None:
-    # Lançamento realizado à mão também serve: a conciliação só o vincula.
-    candidatos = CashFlowEntry.objects.filter(
-        account=conta,
-        entry_type=ENTRY_TYPE_INCOME,
-        operation_type=OPERATION_INTERNAL_TRANSFER,
-        entry_amount=abs(linha.amount),
-        due_date__range=(linha.statement_date - _JANELA_PAGAMENTO, linha.statement_date + _JANELA_PAGAMENTO),
-    ).exclude(_conciliados())
-    return _mais_perto(candidatos, linha.statement_date, usados)
+class CandidatosDaFatura:
+    def __init__(self, conta, linhas):
+        dias = [linha.statement_date for linha in linhas]
+        valores = {abs(linha.amount) for linha in linhas}
+        intervalo = (min(dias) - _JANELA_PAGAMENTO, max(dias) + _JANELA_PAGAMENTO)
+        base = CashFlowEntry.objects.filter(account=conta)
+        livres = base.filter(due_date__range=intervalo, entry_amount__in=valores).exclude(_conciliados())
+        self.compras = defaultdict(list)
+        compras = livres.filter(operation_type=OPERATION_SINGLE, is_recurring=False).exclude(
+            bank_operation__operation_key__startswith=f"{PREFIXO_ESTIMATIVA}:"
+        )
+        for compra in compras:
+            self.compras[(compra.entry_type, compra.entry_amount)].append(compra)
+        self.pagamentos = defaultdict(list)
+        if any(eh_pagamento(linha) for linha in linhas):
+            for entrada in livres.filter(operation_type=OPERATION_INTERNAL_TRANSFER, entry_type=ENTRY_TYPE_INCOME):
+                self.pagamentos[entrada.entry_amount].append(entrada)
+        self.parcelas = defaultdict(list)
+        descricoes = {d for linha in linhas if linha.installment_current for d in _descricoes(linha)}
+        conciliadas = BankStatementLine.objects.filter(matched_entry_id=OuterRef("pk"), status=LINE_STATUS_RECONCILED)
+        for parcela in base.filter(operation_type=OPERATION_INSTALLMENT, entry_type=ENTRY_TYPE_EXPENSE,
+                                   description__in=descricoes).annotate(conciliada=Exists(conciliadas)):
+            self.parcelas[parcela.description].append(parcela)
+
+    def transferencia(self, linha, usados):
+        candidatos = [c for c in self.pagamentos[abs(linha.amount)]
+                      if abs(c.due_date - linha.statement_date) <= _JANELA_PAGAMENTO]
+        return _mais_perto(candidatos, linha.statement_date, usados)
+
+    def parcela(self, linha, data, usados, *, livres=True):
+        candidatos = [c for d in set(_descricoes(linha)) for c in self.parcelas[d]
+                      if abs(c.due_date - data) <= _JANELA_PARCELA and (not livres or not c.conciliada)]
+        return _mais_perto(candidatos, data, usados, preferir=lambda c: c.entry_amount == abs(linha.amount))
 
 
-def _parcela(conta, linha, data, usados, *, livres=True) -> CashFlowEntry | None:
-    candidatos = CashFlowEntry.objects.filter(
-        account=conta,
-        entry_type=ENTRY_TYPE_EXPENSE,
-        operation_type=OPERATION_INSTALLMENT,
-        description__in=_descricoes(linha),
-        due_date__range=(data - _JANELA_PARCELA, data + _JANELA_PARCELA),
-    )
-    if livres:
-        candidatos = candidatos.exclude(_conciliados())
-    valor = abs(linha.amount)
-    return _mais_perto(candidatos, data, usados, preferir=lambda c: c.entry_amount == valor)
-
-
-def _compra_lancada(conta, linha, usados) -> tuple[CashFlowEntry | None, bool]:
-    candidatos = CashFlowEntry.objects.filter(
-        account=conta,
-        entry_type=ENTRY_TYPE_EXPENSE if linha.amount < 0 else ENTRY_TYPE_INCOME,
-        operation_type=OPERATION_SINGLE,
-        is_recurring=False,
-        entry_amount=abs(linha.amount),
-        due_date__range=(linha.statement_date - _JANELA_COMPRA, linha.statement_date + _JANELA_COMPRA),
-    ).exclude(_conciliados()).exclude(bank_operation__operation_key__startswith=f"{PREFIXO_ESTIMATIVA}:")
-    candidatos = [c for c in candidatos if c.id not in usados]
+def _compra_lancada(indice, linha, usados) -> tuple[CashFlowEntry | None, bool]:
+    tipo = ENTRY_TYPE_EXPENSE if linha.amount < 0 else ENTRY_TYPE_INCOME
+    candidatos = [c for c in indice.compras[(tipo, abs(linha.amount))]
+                  if c.id not in usados and abs(c.due_date - linha.statement_date) <= _JANELA_COMPRA]
     descricoes = {" ".join(d.split()).casefold() for d in _descricoes(linha)}
     iguais = [c for c in candidatos if " ".join(c.description.split()).casefold() in descricoes]
     if len(iguais) == 1 and (
@@ -263,23 +268,16 @@ def _compra_lancada(conta, linha, usados) -> tuple[CashFlowEntry | None, bool]:
     return None, bool(candidatos)
 
 
-def _ja_importada(conta, linha: BankStatementLine) -> bool:
-    """Se uma importação anterior do cartão já trouxe esta linha: mesma data, valor e parcela.
-
-    O hash da fatura depende do texto, e o texto muda entre duas exportações da
-    mesma fatura: o portador só entra na descrição quando o arquivo tem mais de
-    um (`fatura_csv.ler_fatura`), então a fatura exportada aberta e de novo
-    depois de fechada pode não ter nenhuma linha reconhecida. Lançar de novo
-    dobraria as compras. Linha de texto idêntico não entra: se o hash não a
-    barrou, ela é outra compra igual no mesmo dia (dois cafés), não a mesma."""
-    return BankStatementLine.objects.filter(
-        account=conta,
-        statement_date=linha.statement_date,
-        amount=linha.amount,
-        installment_current=linha.installment_current,
-        installment_total=linha.installment_total,
-        import_batch_id__lt=linha.import_batch_id,
-    ).exclude(description__iexact=linha.description.strip()).exists()
+def _possiveis_duplicatas(conta, linhas) -> set[int]:
+    """Mesma assinatura de parcela em lote anterior, com texto diferente."""
+    base = BankStatementLine.objects.filter(account=conta).alias(
+        atual=Coalesce("installment_current", -1), total=Coalesce("installment_total", -1)
+    )
+    anteriores = base.filter(
+        statement_date=OuterRef("statement_date"), amount=OuterRef("amount"),
+        atual=OuterRef("atual"), total=OuterRef("total"), import_batch_id__lt=OuterRef("import_batch_id"),
+    ).exclude(description__iexact=Trim(OuterRef("description")))
+    return set(base.filter(pk__in=[linha.pk for linha in linhas]).filter(Exists(anteriores)).values_list("pk", flat=True))
 
 
 def _sugerir(plano: Plano, contexto: Contexto) -> None:
@@ -298,7 +296,12 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
     usados: set[int] = set()
     # A fatura só aceita receita e despesa; o contexto lê o histórico uma vez.
     contexto = Contexto(apenas_gerenciais=True)
-    for linha in sorted(linhas, key=lambda item: (item.statement_date, item.id)):
+    linhas = sorted(linhas, key=lambda item: (item.statement_date, item.id))
+    if not linhas:
+        return planos
+    indice = CandidatosDaFatura(conta, linhas)
+    duplicatas = _possiveis_duplicatas(conta, linhas)
+    for linha in linhas:
         plano = Plano(linha=linha, acao=COMPRA)
         antes_do_saldo = linha.statement_date < conta.initial_balance_date
         if antes_do_saldo:
@@ -317,18 +320,18 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
                 )
             if primeira is not None:
                 vencimento = add_months(linha.statement_date, primeira - atual)
-                if _parcela(conta, linha, vencimento, usados, livres=False) is None:
+                if indice.parcela(linha, vencimento, usados, livres=False) is None:
                     plano.futuras_a_partir_de = primeira
                     plano.futuras_vencimento = vencimento
                     _sugerir(plano, contexto)
         elif eh_pagamento(linha):
-            plano.lancamento = _transferencia(conta, linha, usados)
+            plano.lancamento = indice.transferencia(linha, usados)
             plano.acao = PAGAMENTO if plano.lancamento else PAGAMENTO_SEM_PAR
         elif linha.installment_current and linha.amount < 0:
-            plano.lancamento = _parcela(conta, linha, linha.statement_date, usados)
+            plano.lancamento = indice.parcela(linha, linha.statement_date, usados)
             plano.acao = PARCELA_LANCADA if plano.lancamento else PARCELADO_NOVO
         else:
-            plano.lancamento, pendente = _compra_lancada(conta, linha, usados)
+            plano.lancamento, pendente = _compra_lancada(indice, linha, usados)
             if plano.lancamento:
                 plano.acao = COMPRA_LANCADA
             elif pendente:
@@ -341,7 +344,7 @@ def planejar(conta: FinancialAccount, linhas) -> list[Plano]:
         ):
             plano.lancamento = None
             plano.acao = REALIZACAO_PENDENTE
-        if plano.cria_lancamento and _ja_importada(conta, linha):
+        if plano.cria_lancamento and linha.pk in duplicatas:
             plano.acao = DUPLICATA_PENDENTE
         if plano.cria_lancamento:
             _sugerir(plano, contexto)

@@ -279,6 +279,16 @@ def _saldo_realizado(conta):
 
 
 @pytest.mark.django_db
+def test_planejamento_de_cinquenta_compras_consulta_em_lote(cenario, django_assert_max_num_queries):
+    compras = [f"10/03/2026;TITULAR;1111;Mercado;LOJA {i};Única;0;0;{10+i}.00" for i in range(50)]
+    lote, _, _ = _importar(cenario, _c6(*compras))
+    linhas = list(fatura.linhas_novas(lote))
+    with django_assert_max_num_queries(8):
+        planos = fatura.planejar(cenario["cartao"], linhas)
+    assert len(planos) == 50
+
+
+@pytest.mark.django_db
 def test_fatura_em_conta_comum_e_recusada(cenario):
     with pytest.raises(ValueError, match="fatura de cartão"):
         import_statement_file(
